@@ -20,6 +20,19 @@ jobs:
         with:
           lfs: true
 
+      # The GameCI Unity editor image is several GB; reclaim space first or the
+      # docker pull fails with "no space left on device".
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: false
+          docker-images: false
+          swap-storage: false
+
       # Speeds up repeat runs massively (a cold Unity import is slow).
       - name: Cache Unity Library
         uses: actions/cache@v4
