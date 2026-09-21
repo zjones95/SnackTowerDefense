@@ -47,13 +47,33 @@ public partial class TDGameManager
 
     void OnMatchStarted()
     {
-        // Phase 1: every peer enters the existing single-board run locally.
-        // Phase 2 replaces this with per-player boards + shared wave timing.
         mpActive = true;
-        mpPlayerCount = NetworkSession.Instance != null ? NetworkSession.Instance.PlayerCount : 1;
-        StartRun();
-        message = "Multiplayer match started";
+        NetworkSession ns = NetworkSession.Instance;
+
+        int count = ns != null ? Mathf.Max(1, ns.PlayerCount) : 1;
+        int mySlot = 0;
+        if (ns != null)
+        {
+            for (int i = 0; i < ns.Players.Count; i++)
+                if (ns.Players[i].ClientId == NetworkManagerLocalClientId()) { mySlot = i; break; }
+        }
+
+        mpPlayerCount = count;
+        StartRun(BoardLayout.Position(mySlot, count));
+        BuildRemoteBoards(ns, mySlot, count);
+        message = "Multiplayer: " + count + " player(s)";
         messageTimer = 2.5f;
+    }
+
+    void BuildRemoteBoards(NetworkSession ns, int mySlot, int count)
+    {
+        if (ns == null || worldRoot == null) return;
+        for (int i = 0; i < ns.Players.Count; i++)
+        {
+            if (i == mySlot) continue;
+            RemoteBoard.Create(worldRoot, BoardLayout.Position(i, count),
+                ns.Players[i].ClientId, ns.Players[i].Name);
+        }
     }
 
     void MpBack()

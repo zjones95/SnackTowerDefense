@@ -50,6 +50,7 @@ public partial class TDGameManager : MonoBehaviour
     public Tower Selected { get; private set; }
 
     private TDMap map;
+    private Vector3 boardOffset;
     private Camera cam;
     private Vector3 camFocus;
     private float camYaw = 45f, camPitch = 42f;
@@ -203,16 +204,19 @@ public partial class TDGameManager : MonoBehaviour
         // keep the focus over the map
         float hx = map != null ? map.Width * map.Cell * 0.5f : 18f;
         float hz = map != null ? map.Height * map.Cell * 0.5f : 12f;
-        camFocus.x = Mathf.Clamp(camFocus.x, -hx, hx);
-        camFocus.z = Mathf.Clamp(camFocus.z, -hz, hz);
+        camFocus.x = Mathf.Clamp(camFocus.x, boardOffset.x - hx, boardOffset.x + hx);
+        camFocus.z = Mathf.Clamp(camFocus.z, boardOffset.z - hz, boardOffset.z + hz);
         camFocus.y = 0f;
 
         ApplyCamera();
     }
 
     // ------------------------------------------------------------ game flow
-    void StartRun()
+    void StartRun() { StartRun(Vector3.zero); }
+
+    void StartRun(Vector3 offset)
     {
+        boardOffset = offset;
         Mobs.Clear();
         towers.Clear();
         Selected = null;
@@ -227,6 +231,7 @@ public partial class TDGameManager : MonoBehaviour
         State = GameState.Playing;
         Round = RoundState.Preparing;
         prepTimer = TDBalance.PrepDuration;
+        camFocus = offset;
         message = "";
 
         BuildWorld();
@@ -246,65 +251,13 @@ public partial class TDGameManager : MonoBehaviour
         Vector2Int[] route = Route;
         float cell = 2f;
         int gw = layout[0].Length, gh = layout.Length;
-        map = new TDMap(layout, route, cell, new Vector3(-gw * cell * 0.5f, 0f, -gh * cell * 0.5f));
+        map = TDBoardBuilder.CreateMap(layout, route, cell, boardOffset);
 
         // (room floor is built by TDRoom)
 
-        // colourful foam play-mat tiles
-        Color[] tileCols =
-        {
-            new Color(0.82f, 0.34f, 0.34f),
-            new Color(0.34f, 0.56f, 0.86f),
-            new Color(0.88f, 0.76f, 0.30f),
-            new Color(0.42f, 0.76f, 0.44f)
-        };
-        Material[] tileMats = new Material[tileCols.Length];
-        for (int i = 0; i < tileCols.Length; i++)
-            tileMats[i] = TDVisuals.TexturedMat(TDTextures.Weave(), tileCols[i], new Vector2(3f, 3f));
-
-        Material pathMat = TDVisuals.TexturedMat(TDTextures.Road(), Color.white, Vector2.one);        // toy train track
-        Material crossMat = TDVisuals.TexturedMat(TDTextures.RoadCross(), Color.white, Vector2.one);  // track junctions
-        Material voidMat = TDVisuals.Mat(new Color(0.60f, 0.54f, 0.44f), 0f, 0.25f);                  // bare carpet
-        Material startMat = TDVisuals.Mat(new Color(0.25f, 0.80f, 0.35f), 0f, 0.3f);
-        Material endMat = TDVisuals.Mat(new Color(0.85f, 0.22f, 0.22f), 0f, 0.3f);
-
-        for (int ly = 0; ly < gh; ly++)
-        {
-            for (int x = 0; x < gw; x++)
-            {
-                char c = layout[ly][x];
-                Vector3 pos = map.CellCenter(x, ly) + Vector3.up * 0.05f;
-                Vector3 scale = new Vector3(cell * 0.97f, 0.10f, cell * 0.97f);
-                if (c == 'm')
-                {
-                    int o = PathOrientation(x, ly);
-                    GameObject tile = TDVisuals.Box(worldRoot, "Tile", pos, scale, o == 2 ? crossMat : pathMat);
-                    if (o == 1) tile.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
-                }
-                else
-                {
-                    Material m = voidMat;
-                    if (c == 't') m = tileMats[(x + ly) % tileMats.Length];
-                    else if (c == 's') m = startMat;
-                    else if (c == 'e') m = endMat;
-                    TDVisuals.Box(worldRoot, "Tile", pos, scale, m);
-                }
-            }
-        }
-
+        TDBoardBuilder.BuildTiles(worldRoot, map);
         BuildHover();
-        TDRoom.Build(worldRoot, map);
-    }
-
-    // 0 = horizontal road, 1 = vertical road, 2 = intersection
-    int PathOrientation(int x, int ly)
-    {
-        bool l = map.IsPath(x - 1, ly), r = map.IsPath(x + 1, ly);
-        bool u = map.IsPath(x, ly - 1), d = map.IsPath(x, ly + 1);
-        bool horiz = l || r, vert = u || d;
-        if (horiz && vert) return 2;
-        if (vert) return 1;
-        return 0;
+        TDBoardBuilder.BuildRoom(worldRoot, map, boardOffset);
     }
 
     void BuildHover()
