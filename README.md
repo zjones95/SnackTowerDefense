@@ -70,6 +70,16 @@ Defined in `Assets/Scripts/MobCatalog.cs`.
 | **Space** | Start the next wave immediately |
 | **Esc** | Back to the main menu |
 
+## Music & sound
+
+Everything is synthesised at runtime — there are no audio assets. Alongside the
+per-tower shot sounds there's a looping cinematic track (driving string ostinato,
+sub-bass drone, swelling pad, taiko hits and a riser, with reverb), generated
+into an exact-period loop so it repeats seamlessly. Press **`M`** to mute/unmute.
+
+Generation is pure DSP in `TDSynth`; `TDMusicCheck.Verify` prints its length, peak
+and RMS for a quick sanity check.
+
 ## Multiplayer (in progress)
 
 The main menu now splits into **Single Player** and **Multiplayer**.

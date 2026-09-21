@@ -5,8 +5,11 @@ public class TDAudio : MonoBehaviour
     public static TDAudio Instance;
 
     private AudioSource src;
+    private AudioSource music;
     private AudioClip[] shots;
     private AudioClip death, leak, build, merge, clear, click;
+
+    public bool MusicOn { get; private set; } = true;
 
     public static void Ensure()
     {
@@ -42,6 +45,28 @@ public class TDAudio : MonoBehaviour
         merge = TDSynth.Merge();
         clear = TDSynth.RoundClear();
         click = TDSynth.Click();
+
+        // looping background music (procedural, seamless)
+        GameObject mgo = new GameObject("Music");
+        mgo.transform.SetParent(transform, false);
+        music = mgo.AddComponent<AudioSource>();
+        music.clip = TDSynth.Music();
+        music.loop = true;
+        music.playOnAwake = false;
+        music.spatialBlend = 0f;
+        music.volume = 0.40f;
+        music.Play();
+    }
+
+    void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.M)) ToggleMusic();
+    }
+
+    public void ToggleMusic()
+    {
+        MusicOn = !MusicOn;
+        if (music != null) music.mute = !MusicOn;
     }
 
     public void Play(AudioClip c, float v)

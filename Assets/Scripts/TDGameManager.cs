@@ -658,7 +658,7 @@ public partial class TDGameManager : MonoBehaviour
         }
 
         GUI.Label(new Rect(0, Screen.height - 30, Screen.width, 24),
-            "Left-click: build ($" + TDBalance.BuildCost + ") / select   |   Merge ($" + TDBalance.MergeCost + ") -> same-tier   |   WASD: move   |   Middle-drag: rotate   |   Scroll: zoom   |   Esc: menu",
+            "Left-click: build ($" + TDBalance.BuildCost + ") / select   |   Merge ($" + TDBalance.MergeCost + ") -> same-tier   |   WASD: move   |   Middle-drag: rotate   |   Scroll: zoom   |   M: music   |   Esc: menu",
             Style(13, TextAnchor.MiddleCenter, new Color(0.8f, 0.8f, 0.8f)));
     }
 
