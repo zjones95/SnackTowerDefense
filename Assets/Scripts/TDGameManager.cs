@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class TDGameManager : MonoBehaviour
+public partial class TDGameManager : MonoBehaviour
 {
     public static TDGameManager Instance;
 
@@ -603,6 +603,7 @@ public class TDGameManager : MonoBehaviour
     void OnGUI()
     {
         if (State == GameState.MainMenu) { DrawMenu(); return; }
+        if (State == GameState.MultiplayerMenu || State == GameState.Lobby) { DrawMultiplayer(); return; }
         DrawHud();
         if (State == GameState.GameOver) DrawEnd(false);
         else if (State == GameState.Victory) DrawEnd(true);
@@ -628,12 +629,18 @@ public class TDGameManager : MonoBehaviour
 
         float bw = 260f, bh = 56f;
         float bx = (Screen.width - bw) * 0.5f;
-        if (GUI.Button(new Rect(bx, Screen.height * 0.5f, bw, bh), "Play"))
+        float by = Screen.height * 0.46f;
+        if (GUI.Button(new Rect(bx, by, bw, bh), "Single Player"))
         {
             if (TDAudio.Instance != null) TDAudio.Instance.Click();
             StartRun();
         }
-        if (GUI.Button(new Rect(bx, Screen.height * 0.5f + bh + 16f, bw, bh), "Quit")) Application.Quit();
+        if (GUI.Button(new Rect(bx, by + bh + 16f, bw, bh), "Multiplayer"))
+        {
+            if (TDAudio.Instance != null) TDAudio.Instance.Click();
+            EnterMultiplayer();
+        }
+        if (GUI.Button(new Rect(bx, by + 2f * (bh + 16f), bw, bh), "Quit")) Application.Quit();
     }
 
     void DrawHud()
@@ -644,6 +651,8 @@ public class TDGameManager : MonoBehaviour
         GUI.Label(new Rect(12, 58, 300, 24), "Tower: $" + TDBalance.BuildCost, Style(15, TextAnchor.MiddleLeft, new Color(0.8f, 0.9f, 1f)));
         GUI.Label(new Rect(Screen.width - 240, 10, 228, 24), "Wave: " + Mathf.Min(Wave, TDBalance.TotalWaves) + " / " + TDBalance.TotalWaves, Style(18, TextAnchor.MiddleRight, Color.white));
         GUI.Label(new Rect(Screen.width - 240, 34, 228, 24), "Enemies: " + Mobs.Count, Style(18, TextAnchor.MiddleRight, new Color(0.85f, 0.85f, 0.9f)));
+        if (mpActive)
+            GUI.Label(new Rect(Screen.width - 240, 58, 228, 24), "Multiplayer: " + mpPlayerCount, Style(16, TextAnchor.MiddleRight, new Color(0.65f, 0.85f, 1f)));
 
         if (State == GameState.Playing)
         {

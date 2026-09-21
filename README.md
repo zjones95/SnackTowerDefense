@@ -70,6 +70,30 @@ Defined in `Assets/Scripts/MobCatalog.cs`.
 | **Space** | Start the next wave immediately |
 | **Esc** | Back to the main menu |
 
+## Multiplayer (in progress)
+
+The main menu now splits into **Single Player** and **Multiplayer**.
+
+**Phase 1 (done): menu + connect + lobby.**
+
+- **Host Game** — creates a lobby. With Unity Gaming Services linked it produces a
+  6-character **Relay join code**; when UGS isn't configured it silently falls back
+  to a **LAN address** (`ip:port`) so it still works on one machine or a local network.
+- **Join Game** — accepts either a join code or an `ip:port` address.
+- **Lobby** — lists up to 8 players (host included), shows the code/address with a
+  **Copy** button, and only the host can press **Start**. The host may start at any
+  time, with fewer than 8 players.
+- The **skip-wave key was removed**; waves will advance when the last player finishes.
+- Esc/Back leaves the lobby or match and returns to the menu.
+
+**Still to come**
+- **Phase 2:** one board per player, shared wave timing (next wave once the last
+  player clears), per-player economy/lives, elimination to spectator.
+- **Phase 3:** cross-board spectating with live mobs/towers, camera switching, and
+  an end-of-match scoreboard.
+
+Built on **Netcode for GameObjects**, host-authoritative with owner-simulated boards.
+
 ## Project layout
 
 ```

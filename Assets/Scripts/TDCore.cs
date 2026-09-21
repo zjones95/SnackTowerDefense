@@ -2,6 +2,8 @@
 public enum GameState
 {
     MainMenu,
+    MultiplayerMenu,
+    Lobby,
     Playing,
     GameOver,
     Victory
