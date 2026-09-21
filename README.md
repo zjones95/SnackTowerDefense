@@ -95,8 +95,9 @@ The main menu now splits into **Single Player** and **Multiplayer**.
 Built on **Netcode for GameObjects**, host-authoritative with owner-simulated boards.
 
 **Local testing** — the project includes [ParrelSync](https://github.com/VeriorPies/ParrelSync)
-(editor-only, no runtime cost). Use *Window → ParrelSync → Clones Manager* to open a
-second editor instance, then host in one and join `127.0.0.1:7777` from the other.
+(editor-only, no runtime cost). Open its window from the top-level **ParrelSync →
+Clones Manager** menu, create a clone, then host in one editor and join
+`127.0.0.1:7777` from the other.
 
 ## Project layout
 
