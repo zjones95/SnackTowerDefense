@@ -198,15 +198,24 @@ public partial class TDGameManager
 
     void DrawMpConnecting(NetworkSession ns)
     {
+        if (ns == null) { mpScreen = MpScreen.Menu; return; }
+
+        // Connected -- move into the lobby screen.
+        if (ns.InLobby) { mpScreen = MpScreen.Lobby; return; }
+
         float cx = Screen.width * 0.5f;
         GUI.Label(new Rect(0, Screen.height * 0.40f, Screen.width, 30f),
             "Connecting to " + (mpJoinInput ?? "") + " ...",
             Style(22, TextAnchor.MiddleCenter, Color.white));
 
+        GUI.Label(new Rect(0, Screen.height * 0.45f, Screen.width, 24f),
+            Mathf.FloorToInt(ns.ConnectingSeconds) + "s   (gives up after 12s)",
+            Style(14, TextAnchor.MiddleCenter, new Color(0.7f, 0.72f, 0.76f)));
+
         if (GUI.Button(new Rect(cx - 110f, Screen.height * 0.52f, 220f, 48f), "Cancel"))
         {
             Click();
-            if (ns != null) ns.Leave();
+            ns.Leave();
             mpScreen = MpScreen.Menu;
         }
     }
@@ -263,17 +272,14 @@ public partial class TDGameManager
             "Players (" + count + " / " + NetConfig.MaxPlayers + ")",
             Style(19, TextAnchor.MiddleCenter, Color.white));
 
-        if (ns.Lobby != null && ns.Lobby.IsSpawned)
+        var players = ns.Players;
+        for (int i = 0; i < players.Count; i++)
         {
-            var players = ns.Lobby.Players;
-            for (int i = 0; i < players.Count; i++)
-            {
-                string nm = players[i].Name.ToString();
-                if (players[i].ClientId == NetworkManagerLocalClientId())
-                    nm += "   (you)";
-                GUI.Label(new Rect(cx - 200f, listY + 30f + i * 24f, 400f, 22f),
-                    "• " + nm, Style(16, TextAnchor.MiddleLeft, new Color(0.9f, 0.92f, 0.95f)));
-            }
+            string nm = players[i].Name;
+            if (players[i].IsHost) nm += "  (host)";
+            if (players[i].ClientId == NetworkManagerLocalClientId()) nm += "   (you)";
+            GUI.Label(new Rect(cx - 200f, listY + 30f + i * 24f, 400f, 22f),
+                "• " + nm, Style(16, TextAnchor.MiddleLeft, new Color(0.9f, 0.92f, 0.95f)));
         }
 
         // ---- actions ----------------------------------------------------

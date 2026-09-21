@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
+using Unity.Collections;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using Unity.Services.Authentication;
@@ -15,13 +16,23 @@ using UnityEngine;
 /// Owns the Netcode for GameObjects NetworkManager and the connect flow.
 ///
 /// Hosting tries Unity Relay first (real 6-character join codes). If UGS isn't
-/// configured yet -- or the relay call fails -- it silently falls back to a
-/// direct LAN host, and the "code" shown is the host's ip:port. Joining accepts
-/// either: a 6-char relay code, or an "ip:port" (or bare ip) target.
+/// configured -- or the relay call fails -- it falls back to a direct LAN host,
+/// and the "code" shown is the host's ip:port. Joining accepts either.
+///
+/// Lobby state is exchanged with custom named messages rather than a spawned
+/// NetworkObject: the world is built from code with no prefabs, so registering
+/// and hashing a network prefab is both unnecessary and failure-prone.
 /// </summary>
 public class NetworkSession : MonoBehaviour
 {
     public static NetworkSession Instance { get; private set; }
+
+    static class Msg
+    {
+        public const string Hello = "td.hello";
+        public const string Lobby = "td.lobby";
+        public const string Start = "td.start";
+    }
 
     public enum SessionState { Idle, Hosting, Connecting, InLobby, Failed }
 
@@ -30,20 +41,29 @@ public class NetworkSession : MonoBehaviour
     public bool AddressIsRelay { get; private set; }
     public string Error { get; private set; } = "";
 
-    public LobbyState Lobby { get; private set; }
-    public bool IsHost => Manager != null && Manager.IsListening && Manager.IsServer;
-    public bool InLobby => State == SessionState.InLobby || State == SessionState.Hosting;
-    public int PlayerCount => Lobby != null && Lobby.IsSpawned ? Lobby.Players.Count : (IsHost ? 1 : 0);
+    /// <summary>Authoritative on the host; populated from messages on clients.</summary>
+    public readonly List<LobbyPlayerInfo> Players = new List<LobbyPlayerInfo>();
 
-    /// <summary>Raised on every peer (host included) when the host starts the match.</summary>
+    public bool IsHost => Manager != null && Manager.IsListening && Manager.IsServer;
+    public bool InLobby => State == SessionState.Hosting || State == SessionState.InLobby;
+    public int PlayerCount => Players.Count;
+    public float ConnectingSeconds => State == SessionState.Connecting ? Time.time - connectStart : 0f;
+
     public event Action MatchStarted;
+    public event Action LobbyChanged;
 
     private NetworkManager Manager;
     private UnityTransport Transport;
     private string localName = "Player";
     private bool servicesReady;
+    private bool servicesFailed;
+    private bool handlersReady;
+    private bool leaving;
     private bool pendingLeave;
+    private float connectStart;
     private readonly Dictionary<ulong, string> namesByClient = new Dictionary<ulong, string>();
+
+    const float ConnectTimeoutSeconds = 12f;
 
     public static NetworkSession Ensure()
     {
@@ -72,13 +92,13 @@ public class NetworkSession : MonoBehaviour
         {
             pendingLeave = false;
             string msg = Error;
-            Leave();
+            LeaveInternal();
             Error = msg;
+            State = SessionState.Failed;
         }
 
-        // client: once the lobby object has replicated we're officially in the lobby
-        if (State == SessionState.Connecting && Lobby != null && Lobby.IsSpawned)
-            State = SessionState.InLobby;
+        if (State == SessionState.Connecting && Time.time - connectStart > ConnectTimeoutSeconds)
+            Fail("Timed out connecting to " + Address);
     }
 
     // ---------------------------------------------------------------- manager
@@ -96,13 +116,26 @@ public class NetworkSession : MonoBehaviour
             NetworkTransport = Transport,
             EnableSceneManagement = false,   // the world is built from code
             ConnectionApproval = true,       // lets us read the player's name
-            PlayerPrefab = null              // no player prefab; see LobbyState
+            PlayerPrefab = null              // no player prefab; lobby uses messages
         };
 
         Manager.ConnectionApprovalCallback += OnConnectionApproval;
         Manager.OnClientConnectedCallback += OnClientConnected;
         Manager.OnClientDisconnectCallback += OnClientDisconnected;
+        EnsureHandlers();
         return Manager;
+    }
+
+    void EnsureHandlers()
+    {
+        if (handlersReady || Manager == null) return;
+        var cm = Manager.CustomMessagingManager;
+        if (cm == null) return;
+
+        cm.RegisterNamedMessageHandler(Msg.Hello, OnHelloMessage);
+        cm.RegisterNamedMessageHandler(Msg.Lobby, OnLobbyMessage);
+        cm.RegisterNamedMessageHandler(Msg.Start, OnStartMessage);
+        handlersReady = true;
     }
 
     // ------------------------------------------------------------------ host
@@ -110,29 +143,41 @@ public class NetworkSession : MonoBehaviour
     {
         localName = SanitizeName(playerName);
         Error = ""; Address = ""; AddressIsRelay = false;
+        leaving = false;
         EnsureManager();
         Manager.NetworkConfig.ConnectionData = Encoding.UTF8.GetBytes(localName);
 
+        bool started;
         if (await TryRelayHost())
         {
             AddressIsRelay = true;
+            started = true;
         }
         else
         {
-            // LAN / direct fallback
             Transport.SetConnectionData("0.0.0.0", NetConfig.DefaultPort);
-            if (!Manager.StartHost())
+            started = Manager.StartHost();
+            if (started)
             {
-                Fail("Could not start host.");
-                return;
+                AddressIsRelay = false;
+                Address = LocalAddress() + ":" + NetConfig.DefaultPort;
             }
-            AddressIsRelay = false;
+        }
+
+        if (!started)
+        {
+            Fail("Could not start hosting.");
+            return;
         }
 
         State = SessionState.Hosting;
-        SpawnLobby();
-        AddOrUpdatePlayer(Manager.LocalClientId, localName);
-        if (!AddressIsRelay) Address = LocalAddress() + ":" + NetConfig.DefaultPort;
+        EnsureHandlers();
+
+        Players.Clear();
+        namesByClient.Clear();
+        namesByClient[Manager.LocalClientId] = localName;
+        Players.Add(new LobbyPlayerInfo { ClientId = Manager.LocalClientId, Name = localName, IsHost = true });
+        BroadcastLobby();
     }
 
     async Task<bool> TryRelayHost()
@@ -163,20 +208,20 @@ public class NetworkSession : MonoBehaviour
     {
         localName = SanitizeName(playerName);
         Error = ""; Address = ""; AddressIsRelay = false;
+        leaving = false;
         EnsureManager();
         Manager.NetworkConfig.ConnectionData = Encoding.UTF8.GetBytes(localName);
 
         target = (target ?? "").Trim();
-        bool looksLikeCode = target.Length == NetConfig.RelayCodeLength && !target.Contains(":") && !target.Contains(".");
+        bool looksLikeCode = target.Length == NetConfig.RelayCodeLength
+                             && !target.Contains(":") && !target.Contains(".");
 
+        bool started;
         if (looksLikeCode)
         {
             AddressIsRelay = true;
-            if (!await JoinViaRelay(target))
-            {
-                if (string.IsNullOrEmpty(Error)) Fail("Could not join that code.");
-                return;
-            }
+            started = await JoinViaRelay(target);
+            if (!started && string.IsNullOrEmpty(Error)) Error = "Could not join that code.";
         }
         else
         {
@@ -186,14 +231,19 @@ public class NetworkSession : MonoBehaviour
                 return;
             }
             Transport.SetConnectionData(ip, port);
-            if (!Manager.StartClient())
-            {
-                Fail("Could not start client.");
-                return;
-            }
+            started = Manager.StartClient();
+            if (!started) Error = "Could not start the client.";
         }
 
+        if (!started)
+        {
+            Fail(string.IsNullOrEmpty(Error) ? "Could not connect." : Error);
+            return;
+        }
+
+        EnsureHandlers();
         Address = target;
+        connectStart = Time.time;
         State = SessionState.Connecting;
     }
 
@@ -201,7 +251,7 @@ public class NetworkSession : MonoBehaviour
     {
         try
         {
-            if (!await EnsureServices()) return false;
+            if (!await EnsureServices()) { Error = "Online play needs Unity Gaming Services (not set up yet)."; return false; }
             var join = await RelayService.Instance.JoinAllocationAsync(code.ToUpperInvariant());
             Transport.SetClientRelayData(
                 join.RelayServer.IpV4, (ushort)join.RelayServer.Port,
@@ -210,37 +260,63 @@ public class NetworkSession : MonoBehaviour
         }
         catch (Exception e)
         {
-            Fail("Join failed: " + e.Message);
+            Error = "Join failed: " + e.Message;
             return false;
         }
     }
 
-    // ----------------------------------------------------------------- lobby
-    void SpawnLobby()
-    {
-        if (Lobby != null) return;
-        GameObject go = new GameObject("Lobby");
-        DontDestroyOnLoad(go);
-        go.AddComponent<NetworkObject>();
-        Lobby = go.AddComponent<LobbyState>();
-        go.GetComponent<NetworkObject>().Spawn();
-    }
-
+    // ---------------------------------------------------------------- lobby
     public void StartMatch()
     {
-        if (!IsHost || Lobby == null || !Lobby.IsSpawned) return;
-        Lobby.MatchStarted.Value = true;
-        Lobby.BeginMatchClientRpc();
-        NotifyMatchStarted();
+        if (!IsHost) return;
+        if (Manager.CustomMessagingManager != null)
+        {
+            using var writer = new FastBufferWriter(1, Allocator.Temp);
+            Manager.CustomMessagingManager.SendNamedMessageToAll(Msg.Start, writer);
+        }
+        MatchStarted?.Invoke();
     }
 
-    public static void NotifyMatchStarted()
+    void BroadcastLobby()
     {
-        if (Instance != null) Instance.MatchStarted?.Invoke();
+        LobbyChanged?.Invoke();
+        if (!IsHost || Manager.CustomMessagingManager == null) return;
+
+        using var writer = new FastBufferWriter(4 + NetConfig.MaxPlayers * 48, Allocator.Temp);
+        writer.WriteValueSafe(Players.Count);
+        for (int i = 0; i < Players.Count; i++)
+        {
+            writer.WriteValueSafe(Players[i].ClientId);
+            writer.WriteValueSafe(Players[i].Name ?? "");
+            writer.WriteValueSafe(Players[i].IsHost);
+        }
+        Manager.CustomMessagingManager.SendNamedMessageToAll(Msg.Lobby, writer);
     }
 
-    public void SetLobby(LobbyState lobby) { Lobby = lobby; }
-    public void ClearLobby(LobbyState lobby) { if (Lobby == lobby) Lobby = null; }
+    void OnLobbyMessage(ulong sender, FastBufferReader reader)
+    {
+        reader.ReadValueSafe(out int count);
+        Players.Clear();
+        for (int i = 0; i < count && i < NetConfig.MaxPlayers; i++)
+        {
+            reader.ReadValueSafe(out ulong id);
+            reader.ReadValueSafe(out string name);
+            reader.ReadValueSafe(out bool isHost);
+            Players.Add(new LobbyPlayerInfo { ClientId = id, Name = name, IsHost = isHost });
+        }
+        LobbyChanged?.Invoke();
+        Debug.Log("[net] roster: " + Players.Count + " player(s)");
+    }
+
+    void OnStartMessage(ulong sender, FastBufferReader reader)
+    {
+        MatchStarted?.Invoke();
+    }
+
+    void OnHelloMessage(ulong sender, FastBufferReader reader)
+    {
+        if (IsHost) BroadcastLobby();
+    }
 
     // ---------------------------------------------------------- connections
     void OnConnectionApproval(NetworkManager.ConnectionApprovalRequest request,
@@ -265,75 +341,76 @@ public class NetworkSession : MonoBehaviour
 
     void OnClientConnected(ulong id)
     {
-        if (!Manager.IsServer) return;
-        string name;
-        if (!namesByClient.TryGetValue(id, out name)) name = "Player " + id;
-        AddOrUpdatePlayer(id, name);
+        if (leaving) return;
+
+        if (Manager.IsServer)
+        {
+            string name;
+            if (!namesByClient.TryGetValue(id, out name)) name = "Player " + id;
+            bool exists = false;
+            for (int i = 0; i < Players.Count; i++)
+                if (Players[i].ClientId == id) { exists = true; break; }
+            if (!exists)
+                Players.Add(new LobbyPlayerInfo { ClientId = id, Name = name, IsHost = id == Manager.LocalClientId });
+            BroadcastLobby();
+            Debug.Log("[net] client " + id + " connected (" + Players.Count + " in lobby)");
+        }
+        else if (id == Manager.LocalClientId)
+        {
+            // We're through to the host: announce ourselves so it sends the roster.
+            State = SessionState.InLobby;
+            Debug.Log("[net] connected to host as client " + id);
+            if (Manager.CustomMessagingManager != null)
+            {
+                using var writer = new FastBufferWriter(1, Allocator.Temp);
+                Manager.CustomMessagingManager.SendNamedMessage(Msg.Hello, NetworkManager.ServerClientId, writer);
+            }
+        }
     }
 
     void OnClientDisconnected(ulong id)
     {
-        if (Manager == null) return;
+        if (leaving || Manager == null) return;
 
         if (Manager.IsServer)
         {
-            RemovePlayer(id);
+            for (int i = Players.Count - 1; i >= 0; i--)
+                if (Players[i].ClientId == id) Players.RemoveAt(i);
             namesByClient.Remove(id);
+            BroadcastLobby();
+            Debug.Log("[net] client " + id + " left");
         }
-
-        // A client that loses the host returns to the menu.
-        if (!Manager.IsServer && id == Manager.LocalClientId && State != SessionState.Idle)
+        else if (id == Manager.LocalClientId)
         {
             Error = "Disconnected from host.";
             pendingLeave = true;
         }
     }
 
-    void AddOrUpdatePlayer(ulong id, string name)
-    {
-        if (Lobby == null || !Lobby.IsServer) return;
-        for (int i = 0; i < Lobby.Players.Count; i++)
-        {
-            if (Lobby.Players[i].ClientId == id)
-            {
-                var updated = Lobby.Players[i];
-                updated.Name = name;
-                Lobby.Players[i] = updated;
-                return;
-            }
-        }
-        Lobby.Players.Add(new LobbyPlayerInfo { ClientId = id, Name = name });
-    }
-
-    void RemovePlayer(ulong id)
-    {
-        if (Lobby == null || !Lobby.IsServer) return;
-        for (int i = Lobby.Players.Count - 1; i >= 0; i--)
-        {
-            if (Lobby.Players[i].ClientId == id) Lobby.Players.RemoveAt(i);
-        }
-    }
-
     // ----------------------------------------------------------------- leave
     public void Leave()
     {
+        LeaveInternal();
+        Error = ""; Address = ""; AddressIsRelay = false;
+        State = SessionState.Idle;
+    }
+
+    void LeaveInternal()
+    {
+        leaving = true;
+        handlersReady = false;
+
         if (Manager != null && Manager.IsListening) Manager.Shutdown();
-
-        if (Lobby != null) { Destroy(Lobby.gameObject); Lobby = null; }
-
         if (Manager != null) Destroy(Manager.gameObject);
         Manager = null; Transport = null;
 
+        Players.Clear();
         namesByClient.Clear();
-        State = SessionState.Idle;
-        Address = ""; AddressIsRelay = false;
     }
 
     void Fail(string message)
     {
-        Error = message;
-        State = SessionState.Failed;
-        Leave();
+        LeaveInternal();
         Error = message;
         State = SessionState.Failed;
     }
@@ -342,19 +419,35 @@ public class NetworkSession : MonoBehaviour
     async Task<bool> EnsureServices()
     {
         if (servicesReady) return true;
+        if (servicesFailed) return false;
+
         try
         {
-            await UnityServices.InitializeAsync();
-            if (!AuthenticationService.Instance.IsSignedIn)
-                await AuthenticationService.Instance.SignInAnonymouslyAsync();
+            Task work = InitServicesAsync();
+            Task done = await Task.WhenAny(work, Task.Delay(6000));
+            if (done != work)
+            {
+                servicesFailed = true;
+                Debug.Log("[net] Unity Services init timed out; using LAN.");
+                return false;
+            }
+            await work;
             servicesReady = true;
             return true;
         }
         catch (Exception e)
         {
+            servicesFailed = true;
             Debug.Log("[net] Unity Services unavailable (Relay disabled): " + e.Message);
             return false;
         }
+    }
+
+    static async Task InitServicesAsync()
+    {
+        await UnityServices.InitializeAsync();
+        if (!AuthenticationService.Instance.IsSignedIn)
+            await AuthenticationService.Instance.SignInAnonymouslyAsync();
     }
 
     static string SanitizeName(string n)
