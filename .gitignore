@@ -68,3 +68,7 @@ sysinfo.txt
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Unity crash-recovery scenes (auto-generated)
+[Rr]ecovery/
+_Recovery/
