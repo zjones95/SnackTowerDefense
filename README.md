@@ -107,8 +107,18 @@ The main menu now splits into **Single Player** and **Multiplayer**.
   defeat when every board is out.
 - The skip-wave key was removed.
 
-**Still to come (Phase 3):** cross-board spectating with live mobs/towers and a
-camera that jumps between boards, plus an end-of-match scoreboard.
+**Phase 3 (done): live spectating.**
+
+- Every peer streams a compact snapshot of its board (mobs, towers, projectiles)
+  to the host, who relays a board **only to the players watching it**, so
+  bandwidth scales with how many boards are actually being watched rather than
+  N x N.
+- Press **1-8** to jump the camera to a board, **0** (or **H**) to return to your
+  own. While spectating you are read-only — build/merge only works on your board.
+- Remote boards show the other player's mobs (health bars included), towers with
+  tier badges, and projectiles, smoothly interpolated.
+- The match ends with a **scoreboard** (wave, lives, money per player); the host
+  can start another match from the lobby.
 
 Built on **Netcode for GameObjects**, host-authoritative with owner-simulated boards.
 

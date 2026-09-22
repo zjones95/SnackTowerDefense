@@ -7,6 +7,7 @@ public class Mob : MonoBehaviour
     public float Health;
     public float MaxHealth;
     public float Progress;   // distance travelled along the path (for targeting)
+    public ushort NetId;     // stable id for spectating
 
     private List<Vector3> path;
     private int pathIndex;
@@ -32,34 +33,8 @@ public class Mob : MonoBehaviour
         pathIndex = 1;
         transform.position = path[0];
 
-        GameObject prefab = def.type == MobType.Basic ? SnackModels.Load(SnackModels.CrackerPath) : null;
-        bool hasModel = prefab != null;
-        float barY;
-        if (hasModel)
-        {
-            GameObject m = Instantiate(prefab, transform);
-            m.name = "Model";
-            m.transform.localPosition = Vector3.zero;
-            m.transform.localScale = Vector3.one * (def.scale * 1.5f);
-            SnackModels.CenterOn(m, transform.position);
-            barY = 0.9f;
-        }
-        else
-        {
-            ChildModel model = gameObject.AddComponent<ChildModel>();
-            Color pants = new Color(def.color.r * 0.45f, def.color.g * 0.45f, def.color.b * 0.55f);
-            model.Build(def.color, pants, new Color(0.95f, 0.78f, 0.62f), new Color(0.25f, 0.15f, 0.09f), def.scale);
-            barY = def.scale * 1.6f + 0.3f;
-        }
-
-        GameObject hp = new GameObject("HPBar");
-        hp.transform.SetParent(transform, false);
-        hp.transform.localPosition = new Vector3(0f, barY, 0f);
-        hpRoot = hp.transform;
-
-        TDVisuals.Box(hpRoot, "Bg", Vector3.zero, new Vector3(barWidth, 0.16f, 0.06f), TDVisuals.Mat(new Color(0.08f, 0.08f, 0.09f), 0f, 0.2f));
-        GameObject fill = TDVisuals.Box(hpRoot, "Fill", new Vector3(0f, 0f, 0.035f), new Vector3(barWidth, 0.115f, 0.06f), TDVisuals.Mat(new Color(0.28f, 0.90f, 0.30f), 0f, 0.3f));
-        hpFill = fill.transform;
+        hpRoot = MobVisual.Build(transform, def, out hpFill);
+        barWidth = MobVisual.BarWidth;
     }
 
     void Update()

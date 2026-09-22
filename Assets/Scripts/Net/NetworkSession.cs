@@ -54,7 +54,7 @@ public class NetworkSession : MonoBehaviour
 
     // Match messages are forwarded to whoever registers (MatchSync), looked up
     // at delivery time so registration order doesn't matter.
-    static readonly string[] matchNames = { "td.state", "td.boards" };
+    static readonly string[] matchNames = { "td.state", "td.boards", "td.snap", "td.relay", "td.watch" };
     static readonly Dictionary<string, Action<ulong, FastBufferReader>> named =
         new Dictionary<string, Action<ulong, FastBufferReader>>();
 
@@ -89,6 +89,13 @@ public class NetworkSession : MonoBehaviour
         var m = Instance != null ? Instance.Manager : null;
         if (m != null && m.CustomMessagingManager != null)
             m.CustomMessagingManager.SendNamedMessage(name, NetworkManager.ServerClientId, writer);
+    }
+
+    public static void SendNamedToClients(string name, IReadOnlyList<ulong> clientIds, FastBufferWriter writer)
+    {
+        var m = Instance != null ? Instance.Manager : null;
+        if (m != null && m.CustomMessagingManager != null && clientIds != null && clientIds.Count > 0)
+            m.CustomMessagingManager.SendNamedMessage(name, clientIds, writer);
     }
 
     private NetworkManager Manager;

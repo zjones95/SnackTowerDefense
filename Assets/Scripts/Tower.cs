@@ -15,6 +15,7 @@ public class Tower : MonoBehaviour
 
     public TowerTierStats Stats { get { return TowerCatalog.Get(Type).Stats(Tier); } }
     public string DisplayName { get { return TowerCatalog.Get(Type).displayName; } }
+    public float TurretYaw { get { return turret != null ? turret.eulerAngles.y : 0f; } }
 
     public void Setup(TowerType type, int tier, int cx, int cy)
     {
@@ -25,65 +26,9 @@ public class Tower : MonoBehaviour
 
     void BuildVisual()
     {
-        GameObject prefab = SnackModels.Load(SnackModels.TowerPath(Type));
-        if (prefab != null)
-        {
-            GameObject model = Instantiate(prefab, transform);
-            model.name = "Model";
-            model.transform.localPosition = Vector3.zero;
-            model.transform.localScale = Vector3.one;
-            SnackModels.CenterOn(model, transform.position);
+        turret = TowerVisual.Build(transform, Type, Tier);
 
-            // split base (pedestal/rim) from the rotating head
-            Transform pivot = new GameObject("HeadPivot").transform;
-            pivot.SetParent(transform, false);
-            List<Transform> heads = new List<Transform>();
-            foreach (Transform tr in model.GetComponentsInChildren<Transform>())
-            {
-                if (tr == model.transform) continue;
-                string n = tr.name.ToLower();
-                if (n.Contains("pedestal") || n.Contains("rim")) continue;
-                heads.Add(tr);
-            }
-            foreach (Transform h in heads) h.SetParent(pivot, true);
-            turret = pivot;
-        }
-        else
-        {
-            GameObject tg = new GameObject("Turret");
-            tg.transform.SetParent(transform, false);
-            tg.transform.localPosition = new Vector3(0f, 0.70f, 0f);
-            turret = tg.transform;
-            SnackArt.BuildTower(transform, turret, Type, Tier);
-        }
-
-        // tier number above the tower (replaces the old pips)
-        GameObject tierGO = new GameObject("TierLabel");
-        tierGO.transform.SetParent(transform, false);
-        tierGO.transform.localPosition = new Vector3(0f, 1.55f, 0f);
-        tierLabel = tierGO.transform;
-
-        TDVisuals.Box(tierGO.transform, "Badge", new Vector3(0f, 0f, 0.02f), new Vector3(0.40f, 0.52f, 0.02f),
-            TDVisuals.TransparentMat(new Color(0.08f, 0.08f, 0.10f), 0.5f, 0.3f));
-
-        GameObject txtGO = new GameObject("Text");
-        txtGO.transform.SetParent(tierGO.transform, false);
-        txtGO.transform.localPosition = new Vector3(0f, 0f, -0.02f);
-        TextMesh tm = txtGO.AddComponent<TextMesh>();
-        tm.text = Tier.ToString();
-        tm.characterSize = 0.055f;
-        tm.fontSize = 110;
-        tm.anchor = TextAnchor.MiddleCenter;
-        tm.alignment = TextAlignment.Center;
-        tm.color = new Color(1f, 0.96f, 0.70f);
-        Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        if (font == null) font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-        if (font != null)
-        {
-            tm.font = font;
-            MeshRenderer tr = txtGO.GetComponent<MeshRenderer>();
-            if (tr != null) tr.sharedMaterial = font.material;
-        }
+        tierLabel = TowerVisual.BuildTierLabel(transform, Tier);
 
         // pronounced selection highlight: pulsing ring + beam
         selectHighlight = new GameObject("SelectHighlight");

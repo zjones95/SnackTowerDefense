@@ -21,8 +21,62 @@ public partial class TDGameManager
     private bool eliminated;        // local board is out of lives
     private readonly List<RemoteBoard> remoteBoards = new List<RemoteBoard>();
 
+    // spectating
+    private Vector3 viewOffset;     // board the camera is currently on
+    private int mySlot;             // this player's board slot
+    private int viewSlot;           // slot being viewed
+    private int slotCount = 1;
+
     public bool Cleared => cleared;
     public bool Eliminated => eliminated;
+    public bool ViewingOwnBoard => !mpActive || viewSlot == mySlot;
+
+    string SpectateName()
+    {
+        NetworkSession ns = NetworkSession.Instance;
+        if (ns != null && viewSlot >= 0 && viewSlot < ns.Players.Count)
+            return ns.Players[viewSlot].Name;
+        return "player";
+    }
+
+    void UpdateSpectate()
+    {
+        NetworkSession ns = NetworkSession.Instance;
+        if (ns == null) return;
+
+        int count = Mathf.Max(1, slotCount);
+        for (int i = 0; i < count && i < 9; i++)
+            if (Input.GetKeyDown(KeyCode.Alpha1 + i)) SetViewSlot(i);
+
+        if (Input.GetKeyDown(KeyCode.Alpha0) || Input.GetKeyDown(KeyCode.H))
+            SetViewSlot(mySlot);
+    }
+
+    void SetViewSlot(int slot)
+    {
+        NetworkSession ns = NetworkSession.Instance;
+        if (ns == null || slot < 0 || slot >= ns.Players.Count) return;
+
+        viewSlot = slot;
+        viewOffset = BoardLayout.Position(slot, Mathf.Max(1, slotCount));
+        camFocus = viewOffset;
+        SetSelected(null);
+
+        if (SpectateSync.Instance != null)
+            SpectateSync.Instance.SetWatching(slot == mySlot ? 0UL : ns.Players[slot].ClientId);
+    }
+
+    public void ApplyRemoteSnapshot(ulong boardId, BoardSnapshot snap)
+    {
+        for (int i = 0; i < remoteBoards.Count; i++)
+        {
+            if (remoteBoards[i] != null && remoteBoards[i].ClientId == boardId)
+            {
+                remoteBoards[i].Apply(snap);
+                return;
+            }
+        }
+    }
 
     // ------------------------------------------------------------------ flow
     void EnterMultiplayer()
@@ -59,20 +113,26 @@ public partial class TDGameManager
         mpActive = true;
         cleared = false;
         eliminated = false;
+        SetSelected(null);
 
         NetworkSession ns = NetworkSession.Instance;
         int count = ns != null ? Mathf.Max(1, ns.PlayerCount) : 1;
-        int mySlot = 0;
+        int slot = 0;
         if (ns != null)
         {
             for (int i = 0; i < ns.Players.Count; i++)
-                if (ns.Players[i].ClientId == NetworkManagerLocalClientId()) { mySlot = i; break; }
+                if (ns.Players[i].ClientId == NetworkManagerLocalClientId()) { slot = i; break; }
         }
 
         mpPlayerCount = count;
-        StartRun(BoardLayout.Position(mySlot, count));
-        BuildRemoteBoards(ns, mySlot, count);
+        slotCount = count;
+        mySlot = slot;
+        viewSlot = slot;
+
+        StartRun(BoardLayout.Position(slot, count));
+        BuildRemoteBoards(ns, slot, count);
         MatchSync.Ensure().BeginMatch();
+        SpectateSync.Ensure().Begin();
         message = "Multiplayer: " + count + " player(s)";
         messageTimer = 2.5f;
     }
@@ -151,13 +211,36 @@ public partial class TDGameManager
 
     void ReturnToLobby()
     {
+        if (SpectateSync.Instance != null) SpectateSync.Instance.SetWatching(0);
         ClearWorld();
         remoteBoards.Clear();
         mpActive = false;
         cleared = false;
         eliminated = false;
+        viewSlot = mySlot;
+        viewOffset = Vector3.zero;
         mpScreen = MpScreen.Lobby;
         State = GameState.MultiplayerMenu;
+    }
+
+    void DrawScoreboard()
+    {
+        MatchSync ms = MatchSync.Instance;
+        if (ms == null) return;
+
+        float y = Screen.height * 0.47f;
+        GUI.Label(new Rect(0, y - 26f, Screen.width, 24f), "Scoreboard",
+            Style(18, TextAnchor.MiddleCenter, new Color(0.9f, 0.92f, 1f)));
+
+        for (int i = 0; i < ms.Boards.Count; i++)
+        {
+            MatchSync.BoardState b = ms.Boards[i];
+            string name = string.IsNullOrEmpty(b.Name) ? ("Player " + b.ClientId) : b.Name;
+            string line = name.PadRight(18) + "wave " + b.Wave + "    " + b.Lives + " lives    $" + b.Money +
+                          (b.Eliminated ? "    OUT" : "");
+            GUI.Label(new Rect(Screen.width * 0.5f - 280f, y + i * 22f, 560f, 20f), line,
+                Style(15, TextAnchor.MiddleLeft, b.Eliminated ? new Color(0.8f, 0.65f, 0.65f) : Color.white));
+        }
     }
 
     void MpBack()

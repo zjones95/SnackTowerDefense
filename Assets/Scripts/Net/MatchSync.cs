@@ -290,6 +290,7 @@ public class MatchSync : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             reader.ReadValueSafe(out ulong id);
+            reader.ReadValueSafe(out string bname);
             reader.ReadValueSafe(out int lives);
             reader.ReadValueSafe(out int money);
             reader.ReadValueSafe(out int bwave);
@@ -297,7 +298,7 @@ public class MatchSync : MonoBehaviour
             reader.ReadValueSafe(out bool eliminated);
             Boards.Add(new BoardState
             {
-                ClientId = id, Lives = lives, Money = money, Wave = bwave,
+                ClientId = id, Name = bname, Lives = lives, Money = money, Wave = bwave,
                 Cleared = cleared, Eliminated = eliminated, HasStatus = true
             });
         }
@@ -327,7 +328,7 @@ public class MatchSync : MonoBehaviour
     void Broadcast()
     {
         if (!host) return;
-        using var w = new FastBufferWriter(16 + NetConfig.MaxPlayers * 40, Allocator.Temp);
+        using var w = new FastBufferWriter(16 + NetConfig.MaxPlayers * 72, Allocator.Temp);
         w.WriteValueSafe(Wave);
         w.WriteValueSafe(Prep);
         w.WriteValueSafe(Over);
@@ -337,6 +338,7 @@ public class MatchSync : MonoBehaviour
         {
             BoardState b = Boards[i];
             w.WriteValueSafe(b.ClientId);
+            w.WriteValueSafe(b.Name ?? "");
             w.WriteValueSafe(b.Lives);
             w.WriteValueSafe(b.Money);
             w.WriteValueSafe(b.Wave);

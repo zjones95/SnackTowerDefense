@@ -16,6 +16,12 @@ public partial class TDGameManager : MonoBehaviour
 
     public readonly List<Mob> Mobs = new List<Mob>();
 
+    /// <summary>Live towers on the local board (spectating snapshots).</summary>
+    public IEnumerable<Tower> AllTowers { get { return towers.Values; } }
+    public Vector3 BoardOffset { get { return boardOffset; } }
+
+    private ushort nextMobId = 1;
+
     // map layout + ordered waypoints (shared with tools/previews)
     public static readonly string[] Layout =
     {
@@ -204,8 +210,8 @@ public partial class TDGameManager : MonoBehaviour
         // keep the focus over the map
         float hx = map != null ? map.Width * map.Cell * 0.5f : 18f;
         float hz = map != null ? map.Height * map.Cell * 0.5f : 12f;
-        camFocus.x = Mathf.Clamp(camFocus.x, boardOffset.x - hx, boardOffset.x + hx);
-        camFocus.z = Mathf.Clamp(camFocus.z, boardOffset.z - hz, boardOffset.z + hz);
+        camFocus.x = Mathf.Clamp(camFocus.x, viewOffset.x - hx, viewOffset.x + hx);
+        camFocus.z = Mathf.Clamp(camFocus.z, viewOffset.z - hz, viewOffset.z + hz);
         camFocus.y = 0f;
 
         ApplyCamera();
@@ -217,6 +223,7 @@ public partial class TDGameManager : MonoBehaviour
     void StartRun(Vector3 offset)
     {
         boardOffset = offset;
+        viewOffset = offset;
         Mobs.Clear();
         towers.Clear();
         Selected = null;
@@ -354,6 +361,7 @@ public partial class TDGameManager : MonoBehaviour
         go.transform.SetParent(mobsRoot, false);
         Mob m = go.AddComponent<Mob>();
         m.Init(def, map.Waypoints, this, TDBalance.HealthMult(Wave), TDBalance.SpeedMult(Wave));
+        m.NetId = nextMobId++;
         Mobs.Add(m);
     }
 
@@ -427,11 +435,17 @@ public partial class TDGameManager : MonoBehaviour
         UpdateCamera(Time.deltaTime);
         HandleMouse();
         UpdateHover();
-        if (mpActive) UpdateRemoteBoards();
+        if (mpActive) { UpdateRemoteBoards(); UpdateSpectate(); }
     }
 
     void UpdateHover()
     {
+        if (!ViewingOwnBoard)
+        {
+            if (hover != null) hover.gameObject.SetActive(false);
+            return;
+        }
+
         if (hover == null) return;
         if (MouseOverUI()) { hover.gameObject.SetActive(false); return; }
 
@@ -473,6 +487,8 @@ public partial class TDGameManager : MonoBehaviour
 
     void HandleMouse()
     {
+        if (!ViewingOwnBoard) { SetSelected(null); return; }
+
         if (Input.GetMouseButtonDown(1))
         {
             if (merging) { merging = false; message = "Merge cancelled"; messageTimer = 1.5f; }
@@ -636,6 +652,9 @@ public partial class TDGameManager : MonoBehaviour
         GUI.Label(new Rect(Screen.width - 240, 34, 228, 24), "Enemies: " + Mobs.Count, Style(18, TextAnchor.MiddleRight, new Color(0.85f, 0.85f, 0.9f)));
         if (mpActive)
             GUI.Label(new Rect(Screen.width - 240, 58, 228, 24), "Multiplayer: " + mpPlayerCount, Style(16, TextAnchor.MiddleRight, new Color(0.65f, 0.85f, 1f)));
+        if (mpActive && !ViewingOwnBoard)
+            GUI.Label(new Rect(0, 84, Screen.width, 26), "SPECTATING " + SpectateName() + "   -   press 0 for your board",
+                Style(18, TextAnchor.MiddleCenter, new Color(1f, 0.85f, 0.5f)));
 
         if (State == GameState.Playing)
         {
@@ -712,7 +731,8 @@ public partial class TDGameManager : MonoBehaviour
 
         if (mpActive)
         {
-            if (GUI.Button(new Rect(bx, Screen.height * 0.55f, bw, bh), "Back to Lobby"))
+            DrawScoreboard();
+            if (GUI.Button(new Rect(bx, Screen.height * 0.74f, bw, bh), "Back to Lobby"))
             {
                 Click();
                 ReturnToLobby();
