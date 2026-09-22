@@ -61,9 +61,6 @@ public partial class TDGameManager
         viewOffset = BoardLayout.Position(slot, Mathf.Max(1, slotCount));
         camFocus = viewOffset;
         SetSelected(null);
-
-        if (SpectateSync.Instance != null)
-            SpectateSync.Instance.SetWatching(slot == mySlot ? 0UL : ns.Players[slot].ClientId);
     }
 
     public void ApplyRemoteSnapshot(ulong boardId, BoardSnapshot snap)
@@ -211,7 +208,6 @@ public partial class TDGameManager
 
     void ReturnToLobby()
     {
-        if (SpectateSync.Instance != null) SpectateSync.Instance.SetWatching(0);
         ClearWorld();
         remoteBoards.Clear();
         mpActive = false;

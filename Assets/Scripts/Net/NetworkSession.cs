@@ -54,7 +54,7 @@ public class NetworkSession : MonoBehaviour
 
     // Match messages are forwarded to whoever registers (MatchSync), looked up
     // at delivery time so registration order doesn't matter.
-    static readonly string[] matchNames = { "td.state", "td.boards", "td.snap", "td.relay", "td.watch" };
+    static readonly string[] matchNames = { "td.state", "td.boards", "td.snap", "td.relay" };
     static readonly Dictionary<string, Action<ulong, FastBufferReader>> named =
         new Dictionary<string, Action<ulong, FastBufferReader>>();
 
@@ -84,18 +84,34 @@ public class NetworkSession : MonoBehaviour
             m.CustomMessagingManager.SendNamedMessageToAll(name, writer);
     }
 
-    public static void SendNamedToServer(string name, FastBufferWriter writer)
+    public static void SendNamedToServer(string name, FastBufferWriter writer,
+                                         NetworkDelivery delivery = NetworkDelivery.ReliableSequenced)
     {
         var m = Instance != null ? Instance.Manager : null;
         if (m != null && m.CustomMessagingManager != null)
-            m.CustomMessagingManager.SendNamedMessage(name, NetworkManager.ServerClientId, writer);
+            m.CustomMessagingManager.SendNamedMessage(name, NetworkManager.ServerClientId, writer, delivery);
     }
 
-    public static void SendNamedToClients(string name, IReadOnlyList<ulong> clientIds, FastBufferWriter writer)
+    public static void SendNamedToClients(string name, IReadOnlyList<ulong> clientIds, FastBufferWriter writer,
+                                          NetworkDelivery delivery = NetworkDelivery.ReliableSequenced)
     {
         var m = Instance != null ? Instance.Manager : null;
         if (m != null && m.CustomMessagingManager != null && clientIds != null && clientIds.Count > 0)
-            m.CustomMessagingManager.SendNamedMessage(name, clientIds, writer);
+            m.CustomMessagingManager.SendNamedMessage(name, clientIds, writer, delivery);
+    }
+
+    /// <summary>Client ids to fan a snapshot out to: everyone but its owner and the host itself.</summary>
+    public static void FillRelayTargets(List<ulong> into, ulong excludeOwner)
+    {
+        into.Clear();
+        var m = Instance != null ? Instance.Manager : null;
+        if (m == null || !m.IsListening || !m.IsServer) return;
+        foreach (ulong id in m.ConnectedClientsIds)
+        {
+            if (id == excludeOwner) continue;
+            if (id == m.LocalClientId) continue;   // the host applies snapshots directly
+            into.Add(id);
+        }
     }
 
     private NetworkManager Manager;

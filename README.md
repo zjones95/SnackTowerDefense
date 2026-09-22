@@ -107,12 +107,14 @@ The main menu now splits into **Single Player** and **Multiplayer**.
   defeat when every board is out.
 - The skip-wave key was removed.
 
-**Phase 3 (done): live spectating.**
+**Phase 3 (done): live synchronised boards.**
 
 - Every peer streams a compact snapshot of its board (mobs, towers, projectiles)
-  to the host, who relays a board **only to the players watching it**, so
-  bandwidth scales with how many boards are actually being watched rather than
-  N x N.
+  to the host, which fans it out to all other clients, so **every board is live
+  for everyone** — zoom out and watch the whole match at once.
+- Snapshots go over **unreliable sequenced** delivery (each is a self-contained
+  full state), so a dropped packet costs one stale frame instead of a
+  retransmit stall.
 - Press **1-8** to jump the camera to a board, **0** (or **H**) to return to your
   own. While spectating you are read-only — build/merge only works on your board.
 - Remote boards show the other player's mobs (health bars included), towers with
