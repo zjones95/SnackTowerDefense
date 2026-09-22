@@ -12,6 +12,14 @@ public class RemoteBoard : MonoBehaviour
     public Vector3 BoardOffset;
 
     private Transform nameplate;
+    private TextMesh plateText;
+
+    public void SetStatus(string status)
+    {
+        if (plateText == null) return;
+        string s = PlayerName + "\n" + status;
+        if (plateText.text != s) plateText.text = s;
+    }
 
     public static RemoteBoard Create(Transform parent, Vector3 offset, ulong clientId, string playerName)
     {
@@ -43,6 +51,7 @@ public class RemoteBoard : MonoBehaviour
         tm.anchor = TextAnchor.MiddleCenter;
         tm.alignment = TextAlignment.Center;
         tm.color = new Color(1f, 0.96f, 0.75f);
+        plateText = tm;
 
         Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         if (font == null) font = Resources.GetBuiltinResource<Font>("Arial.ttf");

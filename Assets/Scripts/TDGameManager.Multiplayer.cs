@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 // Multiplayer menu, join screen and lobby. Split into a partial class so the
@@ -14,6 +15,14 @@ public partial class TDGameManager
     private string mpError = "";
     private bool mpActive;          // local player is in a multiplayer match
     private int mpPlayerCount = 1;
+
+    // match state (multiplayer only)
+    private bool cleared;           // local board has cleared the current wave
+    private bool eliminated;        // local board is out of lives
+    private readonly List<RemoteBoard> remoteBoards = new List<RemoteBoard>();
+
+    public bool Cleared => cleared;
+    public bool Eliminated => eliminated;
 
     // ------------------------------------------------------------------ flow
     void EnterMultiplayer()
@@ -48,8 +57,10 @@ public partial class TDGameManager
     void OnMatchStarted()
     {
         mpActive = true;
-        NetworkSession ns = NetworkSession.Instance;
+        cleared = false;
+        eliminated = false;
 
+        NetworkSession ns = NetworkSession.Instance;
         int count = ns != null ? Mathf.Max(1, ns.PlayerCount) : 1;
         int mySlot = 0;
         if (ns != null)
@@ -61,19 +72,92 @@ public partial class TDGameManager
         mpPlayerCount = count;
         StartRun(BoardLayout.Position(mySlot, count));
         BuildRemoteBoards(ns, mySlot, count);
+        MatchSync.Ensure().BeginMatch();
         message = "Multiplayer: " + count + " player(s)";
         messageTimer = 2.5f;
     }
 
     void BuildRemoteBoards(NetworkSession ns, int mySlot, int count)
     {
+        remoteBoards.Clear();
         if (ns == null || worldRoot == null) return;
         for (int i = 0; i < ns.Players.Count; i++)
         {
             if (i == mySlot) continue;
-            RemoteBoard.Create(worldRoot, BoardLayout.Position(i, count),
+            RemoteBoard rb = RemoteBoard.Create(worldRoot, BoardLayout.Position(i, count),
                 ns.Players[i].ClientId, ns.Players[i].Name);
+            remoteBoards.Add(rb);
         }
+    }
+
+    // ------------------------------------------------------------- match flow
+    /// <summary>Called when the match moves to a (new) wave.</summary>
+    public void MatchWaveStart(int wave, float prepSeconds)
+    {
+        if (!mpActive) return;
+        Wave = wave;
+        cleared = false;
+        Round = RoundState.Preparing;
+        prepTimer = prepSeconds;
+    }
+
+    /// <summary>Called when the match says the wave is live.</summary>
+    public void BeginWaveFromMatch()
+    {
+        if (!mpActive || eliminated) return;
+        cleared = false;
+        BeginWave();
+    }
+
+    public void OnMatchOver(bool victory)
+    {
+        if (!mpActive) return;
+        State = victory ? GameState.Victory : GameState.GameOver;
+    }
+
+    void EliminateLocal()
+    {
+        eliminated = true;
+        cleared = true;   // an out board no longer holds up the wave
+        Round = RoundState.Preparing;
+        prepTimer = 0f;
+
+        for (int i = Mobs.Count - 1; i >= 0; i--)
+            if (Mobs[i] != null) Destroy(Mobs[i].gameObject);
+        Mobs.Clear();
+        spawnQueue.Clear();
+
+        message = "Your board is out - waiting for the others";
+        messageTimer = 3f;
+        if (MatchSync.Instance != null)
+            MatchSync.Instance.ReportLocal(Lives, Money, Wave, true, true);
+    }
+
+    void UpdateRemoteBoards()
+    {
+        if (MatchSync.Instance == null) return;
+        for (int i = 0; i < remoteBoards.Count; i++)
+        {
+            RemoteBoard rb = remoteBoards[i];
+            if (rb == null) continue;
+
+            MatchSync.BoardState b = MatchSync.Instance.BoardFor(rb.ClientId);
+            if (b == null) { rb.SetStatus("disconnected"); continue; }
+
+            string phase = b.Eliminated ? "out" : (b.Cleared ? "cleared" : "wave " + b.Wave);
+            rb.SetStatus(phase + "   |   " + b.Lives + " lives");
+        }
+    }
+
+    void ReturnToLobby()
+    {
+        ClearWorld();
+        remoteBoards.Clear();
+        mpActive = false;
+        cleared = false;
+        eliminated = false;
+        mpScreen = MpScreen.Lobby;
+        State = GameState.MultiplayerMenu;
     }
 
     void MpBack()

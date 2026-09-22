@@ -221,6 +221,8 @@ public partial class TDGameManager : MonoBehaviour
         towers.Clear();
         Selected = null;
         merging = false;
+        cleared = false;
+        eliminated = false;
         if (worldRoot != null) Destroy(worldRoot.gameObject);
 
         Money = TDBalance.StartMoney;
@@ -311,6 +313,17 @@ public partial class TDGameManager : MonoBehaviour
         messageTimer = 2.5f;
         if (TDAudio.Instance != null) TDAudio.Instance.RoundClear();
 
+        if (mpActive)
+        {
+            // Hold here until every other board clears; the host advances.
+            cleared = true;
+            Round = RoundState.Preparing;
+            prepTimer = 0f;
+            if (MatchSync.Instance != null)
+                MatchSync.Instance.ReportLocal(Lives, Money, Wave, true, eliminated);
+            return;
+        }
+
         Wave++;
         if (Wave > TDBalance.TotalWaves)
         {
@@ -357,7 +370,12 @@ public partial class TDGameManager : MonoBehaviour
         if (Lives <= 0)
         {
             Lives = 0;
-            State = GameState.GameOver;
+            if (mpActive) EliminateLocal();
+            else State = GameState.GameOver;
+        }
+        else if (mpActive && MatchSync.Instance != null)
+        {
+            MatchSync.Instance.ReportLocal(Lives, Money, Wave, cleared, eliminated);
         }
     }
 
@@ -384,10 +402,21 @@ public partial class TDGameManager : MonoBehaviour
             return;
         }
 
-        if (Round == RoundState.Preparing)
+        if (mpActive)
+        {
+            // The match decides when waves start; this countdown is display-only.
+            if (Round == RoundState.Preparing)
+            {
+                if (prepTimer > 0f) prepTimer -= Time.deltaTime;
+            }
+            else
+            {
+                TickWave();
+            }
+        }
+        else if (Round == RoundState.Preparing)
         {
             prepTimer -= Time.deltaTime;
-            if (Input.GetKeyDown(KeyCode.Space)) prepTimer = 0f;
             if (prepTimer <= 0f) BeginWave();
         }
         else
@@ -398,6 +427,7 @@ public partial class TDGameManager : MonoBehaviour
         UpdateCamera(Time.deltaTime);
         HandleMouse();
         UpdateHover();
+        if (mpActive) UpdateRemoteBoards();
     }
 
     void UpdateHover()
@@ -679,6 +709,17 @@ public partial class TDGameManager : MonoBehaviour
 
         float bw = 220f, bh = 52f;
         float bx = (Screen.width - bw) * 0.5f;
+
+        if (mpActive)
+        {
+            if (GUI.Button(new Rect(bx, Screen.height * 0.55f, bw, bh), "Back to Lobby"))
+            {
+                Click();
+                ReturnToLobby();
+            }
+            return;
+        }
+
         if (GUI.Button(new Rect(bx - 120f, Screen.height * 0.55f, bw, bh), "Retry"))
         {
             if (TDAudio.Instance != null) TDAudio.Instance.Click();

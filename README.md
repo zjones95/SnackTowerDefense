@@ -96,11 +96,19 @@ The main menu now splits into **Single Player** and **Multiplayer**.
 - The **skip-wave key was removed**; waves will advance when the last player finishes.
 - Esc/Back leaves the lobby or match and returns to the menu.
 
-**Still to come**
-- **Phase 2:** one board per player, shared wave timing (next wave once the last
-  player clears), per-player economy/lives, elimination to spectator.
-- **Phase 3:** cross-board spectating with live mobs/towers, camera switching, and
-  an end-of-match scoreboard.
+**Phase 2 (done): per-player boards + shared waves.**
+
+- One board per player, laid out side by side. Other boards show a nameplate with
+  the player's name, lives and status (their current wave / `cleared` / `out`).
+- The **host owns the wave clock**: every board gets a 10s prep, then the wave goes
+  live; the next wave begins once the **last** non-eliminated board clears.
+- Money and lives are **per-player**. At 0 lives you're **out** — your board stops
+  and the match continues; victory is shared when the survivors clear wave 5, and
+  defeat when every board is out.
+- The skip-wave key was removed.
+
+**Still to come (Phase 3):** cross-board spectating with live mobs/towers and a
+camera that jumps between boards, plus an end-of-match scoreboard.
 
 Built on **Netcode for GameObjects**, host-authoritative with owner-simulated boards.
 

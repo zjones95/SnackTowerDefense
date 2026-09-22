@@ -52,6 +52,45 @@ public class NetworkSession : MonoBehaviour
     public event Action MatchStarted;
     public event Action LobbyChanged;
 
+    // Match messages are forwarded to whoever registers (MatchSync), looked up
+    // at delivery time so registration order doesn't matter.
+    static readonly string[] matchNames = { "td.state", "td.boards" };
+    static readonly Dictionary<string, Action<ulong, FastBufferReader>> named =
+        new Dictionary<string, Action<ulong, FastBufferReader>>();
+
+    public static void RegisterNamed(string name, Action<ulong, FastBufferReader> callback)
+    {
+        named[name] = callback;
+    }
+
+    public static ulong LocalClientId
+    {
+        get { return Instance != null && Instance.Manager != null ? Instance.Manager.LocalClientId : ulong.MaxValue; }
+    }
+
+    public static bool IsConnected(ulong id)
+    {
+        var m = Instance != null ? Instance.Manager : null;
+        if (m == null || !m.IsListening) return false;
+        if (m.IsServer && id == m.LocalClientId) return true;
+        foreach (var c in m.ConnectedClientsIds) if (c == id) return true;
+        return false;
+    }
+
+    public static void SendNamedToAll(string name, FastBufferWriter writer)
+    {
+        var m = Instance != null ? Instance.Manager : null;
+        if (m != null && m.CustomMessagingManager != null)
+            m.CustomMessagingManager.SendNamedMessageToAll(name, writer);
+    }
+
+    public static void SendNamedToServer(string name, FastBufferWriter writer)
+    {
+        var m = Instance != null ? Instance.Manager : null;
+        if (m != null && m.CustomMessagingManager != null)
+            m.CustomMessagingManager.SendNamedMessage(name, NetworkManager.ServerClientId, writer);
+    }
+
     private NetworkManager Manager;
     private UnityTransport Transport;
     private string localName = "Player";
@@ -135,6 +174,17 @@ public class NetworkSession : MonoBehaviour
         cm.RegisterNamedMessageHandler(Msg.Hello, OnHelloMessage);
         cm.RegisterNamedMessageHandler(Msg.Lobby, OnLobbyMessage);
         cm.RegisterNamedMessageHandler(Msg.Start, OnStartMessage);
+
+        for (int i = 0; i < matchNames.Length; i++)
+        {
+            string n = matchNames[i];
+            cm.RegisterNamedMessageHandler(n, (sender, reader) =>
+            {
+                Action<ulong, FastBufferReader> cb;
+                if (named.TryGetValue(n, out cb) && cb != null) cb(sender, reader);
+            });
+        }
+
         handlersReady = true;
     }
 
