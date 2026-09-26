@@ -376,8 +376,7 @@ public partial class TDGameManager : MonoBehaviour
             State = GameState.Victory;
             return;
         }
-        Round = RoundState.Preparing;
-        prepTimer = TDBalance.PrepDuration;
+        BeginWave();   // no prep wait: the next wave starts the moment the last mob dies
     }
 
     void TickWave()

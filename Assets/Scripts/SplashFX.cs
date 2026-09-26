@@ -8,6 +8,7 @@ using UnityEngine;
 public class SplashFX : MonoBehaviour
 {
     private const float Life = 0.32f;
+    private const float MaxAlpha = 0.2f;   // explosion opacity (rest fades out)
 
     private Material mat;
     private Color tint;
@@ -29,7 +30,7 @@ public class SplashFX : MonoBehaviour
     {
         tint = color;
         targetRadius = radius;
-        mat = TDVisuals.TransparentMat(color, 0.85f, 0.15f);
+        mat = NewFxMaterial(color, MaxAlpha);
 
         GameObject coreGO = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         Strip(coreGO);
@@ -62,6 +63,23 @@ public class SplashFX : MonoBehaviour
         if (c != null) Object.Destroy(c);
     }
 
+    static Shader fxShader;
+
+    /// <summary>Build-safe unlit alpha material (Resources shader, so the
+    /// transparent variant can't be stripped from the player build).</summary>
+    static Material NewFxMaterial(Color c, float alpha)
+    {
+        if (fxShader == null) fxShader = Resources.Load<Shader>("Snack/Fx");
+        if (fxShader == null) fxShader = Shader.Find("Snack/Fx");
+
+        Material m = fxShader != null ? new Material(fxShader)
+                                      : TDVisuals.TransparentMat(c, alpha, 0.15f);
+        Color col = new Color(c.r, c.g, c.b, alpha);
+        if (m.HasProperty("_Color")) m.SetColor("_Color", col);
+        if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", col);
+        return m;
+    }
+
     void Update()
     {
         t += Time.deltaTime;
@@ -83,7 +101,7 @@ public class SplashFX : MonoBehaviour
 
         if (mat != null)
         {
-            Color c = new Color(tint.r, tint.g, tint.b, (1f - k) * 0.85f);
+            Color c = new Color(tint.r, tint.g, tint.b, (1f - k) * MaxAlpha);
             if (mat.HasProperty("_Color")) mat.SetColor("_Color", c);
             if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", c);
         }
