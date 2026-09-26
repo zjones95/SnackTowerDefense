@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Builds the *visual* of a tower (model, rotating head, tier glow) without any
+/// Builds the *visual* of a tower (model, rotating head, tier label) without any
 /// gameplay logic, so both live towers and remote/spectated copies share one look.
 /// </summary>
 public static class TowerVisual
@@ -56,8 +56,6 @@ public static class TowerVisual
             SnackArt.BuildTower(modelRoot.transform, turret, type, tier);
         }
 
-        BuildTierGlow(parent, tier);
-
         return turret;
     }
 
@@ -74,102 +72,53 @@ public static class TowerVisual
         return TierColours[Mathf.Clamp(tier, 1, TierColours.Length) - 1];
     }
 
-    /// <summary>Additive billboard flare tinted by tier — soft, bright and
-    /// see-through, so it reads as light rather than a solid shape. Same palette
-    /// for every tower type.</summary>
-    static void BuildTierGlow(Transform parent, int tier)
+    /// <summary>Floating tier number above the tower, tinted with the tier colour.</summary>
+    public static Transform BuildTierLabel(Transform parent, int tier)
+    {
+        GameObject tierGO = new GameObject("TierLabel");
+        tierGO.transform.SetParent(parent, false);
+        tierGO.transform.localPosition = new Vector3(0f, LabelHeight(parent), 0f);
+        tierGO.AddComponent<BillboardLabel>();
+
+        GameObject txtGO = new GameObject("Text");
+        txtGO.transform.SetParent(tierGO.transform, false);
+        TextMesh tm = txtGO.AddComponent<TextMesh>();
+        tm.text = tier.ToString();
+        tm.characterSize = 0.06f;
+        tm.fontSize = 120;
+        tm.anchor = TextAnchor.MiddleCenter;
+        tm.alignment = TextAlignment.Center;
+        tm.color = TierColour(tier);          // tier colour, no plate behind it
+        Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        if (font == null) font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        if (font != null)
+        {
+            tm.font = font;
+            MeshRenderer tr = txtGO.GetComponent<MeshRenderer>();
+            if (tr != null) tr.sharedMaterial = font.material;
+        }
+
+        return tierGO.transform;
+    }
+
+    /// <summary>Top of whatever model already sits under parent, plus a small gap.</summary>
+    static float LabelHeight(Transform parent)
     {
         Renderer[] rs = parent.GetComponentsInChildren<Renderer>();
-        if (rs == null || rs.Length == 0) return;
-
-        Material m = GlowMat(TierColour(tier));
-        if (m == null) return;
-
+        if (rs == null || rs.Length == 0) return 1.55f;
         Bounds b = rs[0].bounds;
         for (int i = 1; i < rs.Length; i++) b.Encapsulate(rs[i].bounds);
-
-        float size = Mathf.Max(1.0f, b.size.y * 1.5f);
-        GameObject quad = TDVisuals.Quad(parent, "TierGlow", Vector3.zero, size, m);
-        TierGlow tg = quad.AddComponent<TierGlow>();
-        tg.Center = parent.InverseTransformPoint(new Vector3(b.center.x, b.min.y, b.center.z));   // base of the model
-        tg.Push = Mathf.Max(0.15f, b.extents.magnitude * 0.75f);   // clear of its own model
-        tg.FaceNow();                                              // correct on frame one
-    }
-
-    const float GlowIntensity = 0.2f;
-
-    static readonly Dictionary<Color, Material> glowMats = new Dictionary<Color, Material>();
-    static Texture2D glowTex;
-
-    static Material GlowMat(Color c)
-    {
-        Material m;
-        if (glowMats.TryGetValue(c, out m) && m != null) return m;
-
-        Shader sh = Resources.Load<Shader>("Snack/Glow");
-        if (sh == null) sh = Shader.Find("Snack/Glow");
-        if (sh == null) return null;
-
-        m = new Material(sh);
-        m.mainTexture = GlowTexture();
-        m.SetColor("_Color", new Color(c.r, c.g, c.b, GlowIntensity));
-        glowMats[c] = m;
-        return m;
-    }
-
-    /// <summary>A soft ambient radial glow (no rays), generated once at runtime.</summary>
-    static Texture2D GlowTexture()
-    {
-        if (glowTex != null) return glowTex;
-
-        const int n = 256;
-        glowTex = new Texture2D(n, n, TextureFormat.RGBA32, false);
-        glowTex.name = "TierGlowTex";
-        glowTex.wrapMode = TextureWrapMode.Clamp;
-        glowTex.filterMode = FilterMode.Bilinear;
-
-        float c0 = (n - 1) * 0.5f;
-        Color[] px = new Color[n * n];
-        for (int y = 0; y < n; y++)
-        {
-            for (int x = 0; x < n; x++)
-            {
-                float dx = (x - c0) / c0;
-                float dy = (y - c0) / c0;
-                float r2 = dx * dx + dy * dy;   // squared radius
-
-                // tight falloff that dies out well before the quad edge, so there
-                // is no hard cut-off where the texture ends
-                float glow = Mathf.Exp(-r2 * 5.5f) + Mathf.Exp(-r2 * 20f) * 0.15f;
-                px[y * n + x] = new Color(1f, 1f, 1f, Mathf.Clamp01(glow));
-            }
-        }
-        glowTex.SetPixels(px);
-        glowTex.Apply();
-        return glowTex;
+        return Mathf.Max(1.0f, b.max.y - parent.position.y + 0.42f);
     }
 }
 
-/// <summary>Billboards an additive glow quad toward the camera each frame,
-/// pushed just in front of the model it belongs to.</summary>
-public class TierGlow : MonoBehaviour
+/// <summary>Keeps a label facing the camera (TextMesh reads from its -Z face).</summary>
+public class BillboardLabel : MonoBehaviour
 {
-    public Vector3 Center;   // local offset of the model centre
-    public float Push;       // distance toward the camera, so the flare sits in front of its model
-
-    void LateUpdate() { FaceNow(); }
-
-    // Also runs during manual Camera.Render(), so the editor previews match.
-    void OnWillRenderObject() { FaceNow(); }
-
-    public void FaceNow()
+    void LateUpdate()
     {
-        Camera cam = Camera.main;
-        if (cam == null) return;
-
-        transform.rotation = cam.transform.rotation;
-        Vector3 center = transform.parent != null ? transform.parent.TransformPoint(Center) : transform.position;
-        transform.position = center - cam.transform.forward * Push;
+        if (Camera.main != null)
+            transform.rotation = Camera.main.transform.rotation;
     }
 }
 

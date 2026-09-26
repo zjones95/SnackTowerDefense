@@ -44,6 +44,8 @@ public class Tower : MonoBehaviour
             }
         }
 
+        TowerVisual.BuildTierLabel(transform, Tier);
+
         // pronounced selection highlight: pulsing ring + beam
         selectHighlight = new GameObject("SelectHighlight");
         selectHighlight.transform.SetParent(transform, false);

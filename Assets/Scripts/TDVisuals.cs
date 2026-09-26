@@ -114,19 +114,6 @@ public static class TDVisuals
         return g;
     }
 
-    // Flat quad facing -Z (used for billboarded glows); scale is square in X/Y.
-    public static GameObject Quad(Transform parent, string name, Vector3 pos, float size, Material m)
-    {
-        GameObject g = GameObject.CreatePrimitive(PrimitiveType.Quad);
-        Strip(g);
-        g.name = name;
-        g.transform.SetParent(parent, false);
-        g.transform.localPosition = pos;
-        g.transform.localScale = new Vector3(size, size, 1f);
-        g.GetComponent<Renderer>().sharedMaterial = m;
-        return g;
-    }
-
     // Capsule-ish limb stretched between two points (arms and legs).
     public static GameObject Limb(Transform parent, string name, Vector3 from, Vector3 to, float radius, Material m)
     {
