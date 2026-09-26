@@ -112,6 +112,8 @@ public partial class TDGameManager
         }
         mpActive = false;
         mpScreen = MpScreen.Menu;
+        settingsOpen = false;
+        RestoreTimeScale();
         State = GameState.MainMenu;
         ClearWorld();
     }
@@ -181,6 +183,7 @@ public partial class TDGameManager
     public void OnMatchOver(bool victory)
     {
         if (!mpActive) return;
+        RestoreTimeScale();
         State = victory ? GameState.Victory : GameState.GameOver;
     }
 
@@ -332,7 +335,8 @@ public partial class TDGameManager
                                    ns.State == NetworkSession.SessionState.Connecting);
         GUI.enabled = !busy;
 
-        if (GUI.Button(new Rect(bx, by, bw, bh), "Host Game"))
+        GUIStyle btn = PaperButton(22);
+        if (GUI.Button(new Rect(bx, by, bw, bh), "Host Game", btn))
         {
             Click();
             PersistName();
@@ -340,7 +344,7 @@ public partial class TDGameManager
             NetworkSession.Ensure().HostGame(mpName);
             mpScreen = MpScreen.Lobby;
         }
-        if (GUI.Button(new Rect(bx, by + bh + 14f, bw, bh), "Join Game"))
+        if (GUI.Button(new Rect(bx, by + bh + 14f, bw, bh), "Join Game", btn))
         {
             Click();
             PersistName();
@@ -350,7 +354,7 @@ public partial class TDGameManager
         }
         GUI.enabled = true;
 
-        if (GUI.Button(new Rect(bx, by + 2f * (bh + 14f), bw, bh), "Back"))
+        if (GUI.Button(new Rect(bx, by + 2f * (bh + 14f), bw, bh), "Back", btn))
         {
             Click();
             LeaveMultiplayer();
@@ -374,7 +378,8 @@ public partial class TDGameManager
         mpJoinInput = GUI.TextField(new Rect(cx - 170f, by - 32f, 340f, 34f), mpJoinInput, 32);
 
         GUI.enabled = !string.IsNullOrEmpty((mpJoinInput ?? "").Trim());
-        if (GUI.Button(new Rect(bx, by + 18f, bw, bh), "Join"))
+        GUIStyle btn = PaperButton(22);
+        if (GUI.Button(new Rect(bx, by + 18f, bw, bh), "Join", btn))
         {
             Click();
             PersistName();
@@ -384,7 +389,7 @@ public partial class TDGameManager
         }
         GUI.enabled = true;
 
-        if (GUI.Button(new Rect(bx, by + 18f + bh + 14f, bw, bh), "Back"))
+        if (GUI.Button(new Rect(bx, by + 18f + bh + 14f, bw, bh), "Back", btn))
         {
             Click();
             mpScreen = MpScreen.Menu;
@@ -407,7 +412,7 @@ public partial class TDGameManager
             Mathf.FloorToInt(ns.ConnectingSeconds) + "s   (gives up after 12s)",
             Style(14, TextAnchor.MiddleCenter, new Color(0.7f, 0.72f, 0.76f)));
 
-        if (GUI.Button(new Rect(cx - 110f, Screen.height * 0.52f, 220f, 48f), "Cancel"))
+        if (GUI.Button(new Rect(cx - 110f, Screen.height * 0.52f, 220f, 48f), "Cancel", PaperButton(22)))
         {
             Click();
             ns.Leave();
@@ -449,7 +454,7 @@ public partial class TDGameManager
             Style(30, TextAnchor.MiddleCenter, new Color(0.55f, 1f, 0.6f)));
 
         if (!string.IsNullOrEmpty(ns.Address) &&
-            GUI.Button(new Rect(cx - 70f, Screen.height * 0.355f, 140f, 28f), "Copy"))
+            GUI.Button(new Rect(cx - 70f, Screen.height * 0.355f, 140f, 28f), "Copy", PaperButton(15)))
         {
             Click();
             GUIUtility.systemCopyBuffer = ns.Address;
@@ -492,9 +497,9 @@ public partial class TDGameManager
             {
                 Difficulty d = (Difficulty)i;
                 bool sel = (int)ns.MatchDifficulty == i;
-                GUIStyle st = new GUIStyle(GUI.skin.button);
-                st.fontSize = 14;
-                st.normal.textColor = sel ? Color.white : TDBalance.DifficultyColour(d);
+                GUIStyle st = PaperButton(14);
+                st.normal.textColor = Color.black;
+                st.fontStyle = sel ? FontStyle.Bold : FontStyle.Normal;
                 if (GUI.Button(new Rect(dx + i * (dbw + gap), dy + 26f, dbw, dbh),
                         (sel ? "> " : "") + TDBalance.DifficultyName(d), st))
                 {
@@ -515,7 +520,7 @@ public partial class TDGameManager
         if (host)
         {
             GUI.enabled = count >= 1;
-            if (GUI.Button(new Rect(cx - 150f, ay, 300f, 52f), "Start Game"))
+            if (GUI.Button(new Rect(cx - 150f, ay, 300f, 52f), "Start Game", PaperButton(22)))
             {
                 Click();
                 ns.StartMatch();
@@ -526,7 +531,7 @@ public partial class TDGameManager
                 Style(13, TextAnchor.MiddleCenter, new Color(0.65f, 0.68f, 0.72f)));
         }
 
-        if (GUI.Button(new Rect(cx - 100f, ay + 88f, 200f, 40f), "Leave"))
+        if (GUI.Button(new Rect(cx - 100f, ay + 88f, 200f, 40f), "Leave", PaperButton(20)))
         {
             Click();
             LeaveMultiplayer();

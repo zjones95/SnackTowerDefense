@@ -115,4 +115,83 @@ public static class TDTextures
         roadCross = t;
         return t;
     }
+
+    // ------------------------------------------------------------ paper (UI)
+    static Texture2D paper, paperHover, paperPressed, menuFade;
+
+    /// <summary>Off-white construction paper (≈ #F2EEE4) for menu buttons.</summary>
+    public static Texture2D Paper() { return paper != null ? paper : (paper = BuildPaper(1f)); }
+
+    /// <summary>Paper a touch darker, for the hover state of a paper button.</summary>
+    public static Texture2D PaperHover() { return paperHover != null ? paperHover : (paperHover = BuildPaper(0.94f)); }
+
+    /// <summary>Paper darker still, for the pressed state of a paper button.</summary>
+    public static Texture2D PaperPressed() { return paperPressed != null ? paperPressed : (paperPressed = BuildPaper(0.87f)); }
+
+    // Light sheet with subtle mottling, fine grain, pressed fibres and flecks.
+    // Kept deliberately light so black UI text stays crisp on top.
+    static Texture2D BuildPaper(float shade)
+    {
+        int S = 128;
+        Texture2D t = New(S);
+        t.wrapMode = TextureWrapMode.Clamp;      // stretched across the button, not tiled
+        Color baseC = new Color(0.949f, 0.933f, 0.894f); // ~#F2EEE4
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float mottle = (N(x / 7, y / 7) - 0.5f) * 0.045f;   // broad blotches
+                float grain = (N(x + 11, y + 53) - 0.5f) * 0.030f;  // fine tooth
+                float fleck = N(x * 5 + 3, y * 5 + 7) > 0.986f ? -0.09f : 0f;
+                float v = mottle + grain + fleck;
+                Color c = new Color(baseC.r + v, baseC.g + v * 0.97f, baseC.b + v * 0.90f) * shade;
+                t.SetPixel(x, y, c);
+            }
+        }
+
+        // Short fibres pressed into the sheet.
+        for (int i = 0; i < 140; i++)
+        {
+            int x0 = (int)(N(i * 17 + 1, 5) * S);
+            int y0 = (int)(N(i * 29 + 3, 11) * S);
+            int len = 3 + (int)(N(i * 13 + 7, 23) * 8f);
+            bool diag = N(i * 31 + 9, 41) > 0.72f;
+            float tone = 0.03f + N(i * 3 + 2, 17) * 0.035f;
+            for (int k = 0; k < len; k++)
+            {
+                int x = (x0 + k) & (S - 1);
+                int y = (diag ? y0 + k : y0) & (S - 1);
+                Color c = t.GetPixel(x, y);
+                c.r -= tone; c.g -= tone * 0.92f; c.b -= tone * 0.80f;
+                t.SetPixel(x, y, c);
+            }
+        }
+
+        t.Apply();
+        t.filterMode = FilterMode.Bilinear;
+        return t;
+    }
+
+    /// <summary>
+    /// Full-screen vertical scrim for the menus: nearly clear at the bottom
+    /// (so the orbiting board shows through) and darker at the top (so the
+    /// title and buttons stay readable). 1×N so the gradient is smooth.
+    /// </summary>
+    public static Texture2D MenuFade()
+    {
+        if (menuFade != null) return menuFade;
+        int S = 64;
+        Texture2D t = new Texture2D(1, S, TextureFormat.RGBA32, false);
+        t.wrapMode = TextureWrapMode.Clamp;
+        t.filterMode = FilterMode.Bilinear;
+        for (int y = 0; y < S; y++)
+        {
+            float f = y / (float)(S - 1);                     // 1 = top row of the texture
+            float a = Mathf.Lerp(0.22f, 0.62f, f);            // darker toward the top of the screen
+            t.SetPixel(0, y, new Color(0.05f, 0.06f, 0.09f, a));
+        }
+        t.Apply();
+        menuFade = t;
+        return t;
+    }
 }

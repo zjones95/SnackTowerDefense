@@ -63,6 +63,8 @@ public partial class TDGameManager : MonoBehaviour
     private float camYaw = 45f, camPitch = 42f;
     private float camDist = 32f;
     private readonly float camDistMin = 12f, camDistMax = 90f;
+    private float menuYaw = 35f;                       // slow orbit for the menu backdrop
+    private const float MenuOrbitDegPerSec = 3f;
     private Transform worldRoot, towersRoot, mobsRoot;
     private readonly Dictionary<int, Tower> towers = new Dictionary<int, Tower>();
 
@@ -205,11 +207,44 @@ public partial class TDGameManager : MonoBehaviour
         ApplyCamera();
     }
 
+    // --------------------------------------------------------- menu backdrop
+    /// <summary>
+    /// Builds a real game board for the menus, but only if one isn't already
+    /// around (ClearWorld() destroys the board when leaving a match, so the
+    /// menu has to rebuild it on the way back).
+    /// </summary>
+    void EnsureMenuWorld()
+    {
+        if (worldRoot != null) return;
+        boardOffset = Vector3.zero;
+        viewOffset = Vector3.zero;
+        BuildWorld();
+    }
+
+    /// <summary>Slowly orbits the camera over the menu board, independent of the in-game yaw.</summary>
+    void UpdateMenuBackdrop()
+    {
+        EnsureMenuWorld();
+        if (cam == null) return;
+
+        menuYaw += MenuOrbitDegPerSec * Time.deltaTime;
+        if (menuYaw > 360f) menuYaw -= 360f;
+
+        camFocus = Vector3.zero;
+        camYaw = menuYaw;
+        camPitch = 38f;
+        camDist = 31f;
+        ApplyCamera();
+    }
+
     // ------------------------------------------------------------ game flow
     void StartRun() { StartRun(Vector3.zero); }
 
     void StartRun(Vector3 offset)
     {
+        paused = false;
+        settingsOpen = false;
+        RestoreTimeScale();
         boardOffset = offset;
         viewOffset = offset;
         Mobs.Clear();
@@ -317,6 +352,7 @@ public partial class TDGameManager : MonoBehaviour
         Wave++;
         if (Wave > TDBalance.TotalWaves)
         {
+            RestoreTimeScale();
             State = GameState.Victory;
             return;
         }
@@ -364,7 +400,7 @@ public partial class TDGameManager : MonoBehaviour
         {
             Lives = 0;
             if (mpActive) EliminateLocal();
-            else State = GameState.GameOver;
+            else { RestoreTimeScale(); State = GameState.GameOver; }
         }
         else if (mpActive && MatchSync.Instance != null)
         {
@@ -384,14 +420,26 @@ public partial class TDGameManager : MonoBehaviour
         if (State != GameState.Playing)
         {
             if (hover != null) hover.gameObject.SetActive(false);
+
+            // Settings can be opened over the main menu; Esc closes it there.
+            if (settingsOpen && Input.GetKeyDown(KeyCode.Escape)) CloseSettings();
+
+            if (State == GameState.MainMenu || State == GameState.DifficultySelect)
+                UpdateMenuBackdrop();
+            return;
+        }
+
+        // Paused: freeze gameplay input and simulation, run only the menu.
+        if (paused)
+        {
+            HandlePauseInput();
             return;
         }
 
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             if (merging) { merging = false; return; }
-            State = GameState.MainMenu;
-            ClearWorld();
+            OpenPause();
             return;
         }
 
@@ -586,14 +634,21 @@ public partial class TDGameManager : MonoBehaviour
     // --------------------------------------------------------------- GUI
     void OnGUI()
     {
-        if (State == GameState.MainMenu) { DrawMenu(); return; }
-        if (State == GameState.DifficultySelect) { DrawDifficulty(); return; }
-        if (State == GameState.TowerViewer) { DrawTowerViewer(); return; }
-        if (State == GameState.MobViewer) { DrawMobViewer(); return; }
-        if (State == GameState.MultiplayerMenu || State == GameState.Lobby) { DrawMultiplayer(); return; }
-        DrawHud();
-        if (State == GameState.GameOver) DrawEnd(false);
-        else if (State == GameState.Victory) DrawEnd(true);
+        if (State == GameState.MainMenu) DrawMenu();
+        else if (State == GameState.DifficultySelect) DrawDifficulty();
+        else if (State == GameState.TowerViewer) DrawTowerViewer();
+        else if (State == GameState.MobViewer) DrawMobViewer();
+        else if (State == GameState.MultiplayerMenu || State == GameState.Lobby) DrawMultiplayer();
+        else
+        {
+            DrawHud();
+            if (State == GameState.GameOver) DrawEnd(false);
+            else if (State == GameState.Victory) DrawEnd(true);
+            DrawPauseMenu();
+        }
+
+        // Drawn last so it sits on top of whichever screen opened it.
+        if (settingsOpen) DrawSettings();
     }
 
     GUIStyle Style(int size, TextAnchor anchor, Color color)
@@ -605,62 +660,107 @@ public partial class TDGameManager : MonoBehaviour
         return s;
     }
 
-    void DrawMenu()
+    /// <summary>
+    /// Menu button drawn on a light construction-paper texture with black text
+    /// (hover/active use slightly darker sheets).
+    /// </summary>
+    GUIStyle PaperButton(int size)
+    {
+        GUIStyle s = new GUIStyle(GUI.skin.button);
+        s.fontSize = size;
+        s.alignment = TextAnchor.MiddleCenter;
+        s.padding = new RectOffset(10, 10, 6, 6);
+        s.border = new RectOffset(0, 0, 0, 0);   // stretch the sheet flat, no 9-slice edges
+        s.normal.background = TDTextures.Paper();
+        s.hover.background = TDTextures.PaperHover();
+        s.active.background = TDTextures.PaperPressed();
+        s.focused.background = TDTextures.Paper();
+        s.normal.textColor = Color.black;
+        s.hover.textColor = Color.black;
+        s.active.textColor = new Color(0.14f, 0.14f, 0.14f);
+        s.focused.textColor = Color.black;
+        return s;
+    }
+
+    /// <summary>Soft vertical scrim for the menus so the board backdrop shows through.</summary>
+    void DrawMenuOverlay()
     {
         Color old = GUI.color;
-        GUI.color = new Color(0.05f, 0.06f, 0.09f, 0.92f);
-        GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
+        GUI.color = Color.white;
+        GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), TDTextures.MenuFade());
         GUI.color = old;
+    }
 
-        GUI.Label(new Rect(0, Screen.height * 0.22f, Screen.width, 70), "SNACK TOWER DEFENSE", Style(46, TextAnchor.MiddleCenter, new Color(1f, 0.85f, 0.4f)));
+    void DrawMenu()
+    {
+        if (settingsOpen && !settingsFromPause) return;   // the settings overlay draws its own backdrop
 
-        float bw = 260f, bh = 54f;
+        DrawMenuOverlay();
+
+        GUI.Label(new Rect(0, Screen.height * 0.20f, Screen.width, 70), "SNACK TOWER DEFENSE", Style(46, TextAnchor.MiddleCenter, new Color(1f, 0.85f, 0.4f)));
+
+        float bw = 280f, bh = 48f, gap = 11f;
         float bx = (Screen.width - bw) * 0.5f;
-        float by = Screen.height * 0.33f;
-        if (GUI.Button(new Rect(bx, by, bw, bh), "Single Player"))
+        float by = Screen.height * 0.30f;
+        GUIStyle btn = PaperButton(22);
+
+        if (GUI.Button(new Rect(bx, by, bw, bh), "Single Player", btn))
         {
-            if (TDAudio.Instance != null) TDAudio.Instance.Click();
+            Click();
             State = GameState.DifficultySelect;
         }
-        if (GUI.Button(new Rect(bx, by + bh + 12f, bw, bh), "Multiplayer"))
+        if (GUI.Button(new Rect(bx, by + 1f * (bh + gap), bw, bh), "Multiplayer", btn))
         {
-            if (TDAudio.Instance != null) TDAudio.Instance.Click();
+            Click();
             EnterMultiplayer();
         }
-        if (GUI.Button(new Rect(bx, by + 2f * (bh + 12f), bw, bh), "Tower Viewer"))
+        if (GUI.Button(new Rect(bx, by + 2f * (bh + gap), bw, bh), "Tower Viewer", btn))
         {
-            if (TDAudio.Instance != null) TDAudio.Instance.Click();
+            Click();
             OpenTowerViewer();
         }
-        if (GUI.Button(new Rect(bx, by + 3f * (bh + 12f), bw, bh), "Mob Viewer"))
+        if (GUI.Button(new Rect(bx, by + 3f * (bh + gap), bw, bh), "Mob Viewer", btn))
         {
-            if (TDAudio.Instance != null) TDAudio.Instance.Click();
+            Click();
             OpenMobViewer();
         }
-        if (GUI.Button(new Rect(bx, by + 4f * (bh + 12f), bw, bh), "Quit")) Application.Quit();
+        if (GUI.Button(new Rect(bx, by + 4f * (bh + gap), bw, bh), "Settings", btn))
+        {
+            Click();
+            OpenSettings(false);
+        }
+        if (GUI.Button(new Rect(bx, by + 5f * (bh + gap), bw, bh), "Quit", btn))
+        {
+            Click();
+            QuitGame();
+        }
     }
 
     void DrawDifficulty()
     {
-        Color old = GUI.color;
-        GUI.color = new Color(0.05f, 0.06f, 0.09f, 0.94f);
-        GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.whiteTexture);
-        GUI.color = old;
+        DrawMenuOverlay();
 
         GUI.Label(new Rect(0f, Screen.height * 0.11f, Screen.width, 60f), "SELECT DIFFICULTY",
             Style(40, TextAnchor.MiddleCenter, new Color(1f, 0.85f, 0.4f)));
 
-        float bw = 300f, bh = 56f;
+        float bw = 300f, bh = 52f, gap = 12f;
         float bx = (Screen.width - bw) * 0.5f - 120f;
         float by = Screen.height * 0.30f;
+        GUIStyle btn = PaperButton(22);
+
+        // Dark strip behind the blurbs keeps the coloured text readable over the board.
+        Color old = GUI.color;
+        GUI.color = new Color(0f, 0f, 0f, 0.45f);
+        GUI.DrawTexture(new Rect(bx + bw + 10f, by - 4f, 320f, 4f * (bh + gap) + 4f), Texture2D.whiteTexture);
+        GUI.color = old;
 
         for (int i = 0; i < 4; i++)
         {
             Difficulty d = (Difficulty)i;
-            float y = by + i * (bh + 12f);
-            if (GUI.Button(new Rect(bx, y, bw, bh), TDBalance.DifficultyName(d)))
+            float y = by + i * (bh + gap);
+            if (GUI.Button(new Rect(bx, y, bw, bh), TDBalance.DifficultyName(d), btn))
             {
-                if (TDAudio.Instance != null) TDAudio.Instance.Click();
+                Click();
                 CurrentDifficulty = d;
                 StartRun();
             }
@@ -668,14 +768,14 @@ public partial class TDGameManager : MonoBehaviour
                 Style(16, TextAnchor.MiddleLeft, TDBalance.DifficultyColour(d)));
         }
 
-        if (GUI.Button(new Rect(bx, by + 4f * (bh + 12f) + 12f, bw, 46f), "Back"))
+        if (GUI.Button(new Rect(bx, by + 4f * (bh + gap) + 12f, bw, 46f), "Back", btn))
         {
-            if (TDAudio.Instance != null) TDAudio.Instance.Click();
+            Click();
             State = GameState.MainMenu;
         }
 
         GUI.Label(new Rect(0f, Screen.height - 30f, Screen.width, 24f),
-            "Esc to go back", Style(13, TextAnchor.MiddleCenter, new Color(0.7f, 0.73f, 0.78f)));
+            "Esc to go back", Style(13, TextAnchor.MiddleCenter, new Color(0.85f, 0.88f, 0.92f)));
 
         if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Escape)
             State = GameState.MainMenu;
@@ -819,7 +919,7 @@ public partial class TDGameManager : MonoBehaviour
         if (mpActive)
         {
             DrawScoreboard();
-            if (GUI.Button(new Rect(bx, Screen.height * 0.74f, bw, bh), "Back to Lobby"))
+            if (GUI.Button(new Rect(bx, Screen.height * 0.74f, bw, bh), "Back to Lobby", PaperButton(22)))
             {
                 Click();
                 ReturnToLobby();
@@ -827,16 +927,16 @@ public partial class TDGameManager : MonoBehaviour
             return;
         }
 
-        if (GUI.Button(new Rect(bx - 120f, Screen.height * 0.55f, bw, bh), "Retry"))
+        GUIStyle btn = PaperButton(22);
+        if (GUI.Button(new Rect(bx - 120f, Screen.height * 0.55f, bw, bh), "Retry", btn))
         {
-            if (TDAudio.Instance != null) TDAudio.Instance.Click();
+            Click();
             StartRun();
         }
-        if (GUI.Button(new Rect(bx + 120f, Screen.height * 0.55f, bw, bh), "Main Menu"))
+        if (GUI.Button(new Rect(bx + 120f, Screen.height * 0.55f, bw, bh), "Main Menu", btn))
         {
-            if (TDAudio.Instance != null) TDAudio.Instance.Click();
-            State = GameState.MainMenu;
-            ClearWorld();
+            Click();
+            ReturnToMainMenu();
         }
     }
 }

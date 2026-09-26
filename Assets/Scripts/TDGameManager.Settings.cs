@@ -1,0 +1,186 @@
+using UnityEngine;
+
+// Pause menu + settings overlay. Split into a partial class so both share
+// TDGameManager's state, styles and audio helpers.
+//
+// The settings overlay is a single IMGUI screen reused from two places: the
+// main menu (return context = menu) and the in-game pause menu (return context
+// = pause). A bool pair tracks that context instead of adding GameState values.
+public partial class TDGameManager
+{
+    private bool paused;            // in-game pause menu open (timeScale = 0)
+    private bool settingsOpen;      // settings overlay visible
+    private bool settingsFromPause; // Esc/Back returns to the pause menu, not the menu
+
+    // --------------------------------------------------------------- helpers
+    /// <summary>Un-freezes the game and clears the pause flag. Safe to call anywhere.</summary>
+    void RestoreTimeScale()
+    {
+        Time.timeScale = 1f;
+        paused = false;
+    }
+
+    void OpenPause()
+    {
+        paused = true;
+        settingsOpen = false;
+        Time.timeScale = 0f;
+    }
+
+    void ResumeGame()
+    {
+        settingsOpen = false;
+        settingsFromPause = false;
+        RestoreTimeScale();
+    }
+
+    /// <summary>Esc while paused: close settings first, otherwise resume.</summary>
+    void HandlePauseInput()
+    {
+        if (!Input.GetKeyDown(KeyCode.Escape)) return;
+        if (settingsOpen) CloseSettings();
+        else ResumeGame();
+    }
+
+    /// <summary>Leaves a run (single-player or multiplayer) cleanly for the main menu.</summary>
+    void ReturnToMainMenu()
+    {
+        settingsOpen = false;
+        settingsFromPause = false;
+        RestoreTimeScale();
+        if (mpActive)
+        {
+            LeaveMultiplayer();   // unhooks, NetworkSession.Leave(), ClearWorld(), State = MainMenu
+            return;
+        }
+        State = GameState.MainMenu;
+        ClearWorld();
+    }
+
+    void QuitGame()
+    {
+        RestoreTimeScale();
+        Application.Quit();
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+#endif
+    }
+
+    // ------------------------------------------------------------ pause menu
+    void DrawPauseMenu()
+    {
+        if (!paused || State != GameState.Playing) return;
+        if (settingsOpen && settingsFromPause) return;   // the settings overlay covers the pause menu
+
+        Color old = GUI.color;
+        GUI.color = new Color(0f, 0f, 0f, 0.62f);
+        GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.whiteTexture);
+        GUI.color = old;
+
+        GUI.Label(new Rect(0f, Screen.height * 0.26f, Screen.width, 60f), "PAUSED",
+            Style(44, TextAnchor.MiddleCenter, new Color(1f, 0.85f, 0.4f)));
+
+        float bw = 300f, bh = 52f, gap = 14f;
+        float bx = (Screen.width - bw) * 0.5f;
+        float by = Screen.height * 0.40f;
+        GUIStyle btn = PaperButton(22);
+
+        if (GUI.Button(new Rect(bx, by, bw, bh), "Settings", btn))
+        {
+            Click();
+            OpenSettings(true);
+        }
+        if (GUI.Button(new Rect(bx, by + 1f * (bh + gap), bw, bh), "Quit to Main Menu", btn))
+        {
+            Click();
+            ReturnToMainMenu();
+        }
+        if (GUI.Button(new Rect(bx, by + 2f * (bh + gap), bw, bh), "Quit Game", btn))
+        {
+            Click();
+            QuitGame();
+        }
+
+        GUI.Label(new Rect(0f, Screen.height - 30f, Screen.width, 24f), "Esc to resume",
+            Style(13, TextAnchor.MiddleCenter, new Color(0.78f, 0.8f, 0.84f)));
+    }
+
+    // -------------------------------------------------------------- settings
+    void OpenSettings(bool fromPause)
+    {
+        settingsOpen = true;
+        settingsFromPause = fromPause;
+    }
+
+    void CloseSettings()
+    {
+        settingsOpen = false;
+        settingsFromPause = false;   // pause (if any) stays open behind it
+    }
+
+    void DrawSettings()
+    {
+        TDAudio audio = TDAudio.Instance;
+
+        // scrim over whatever opened this
+        Color old = GUI.color;
+        GUI.color = new Color(0.03f, 0.04f, 0.06f, 0.80f);
+        GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.whiteTexture);
+        GUI.color = old;
+
+        GUI.Label(new Rect(0f, Screen.height * 0.19f, Screen.width, 64f), "SETTINGS",
+            Style(40, TextAnchor.MiddleCenter, new Color(1f, 0.85f, 0.4f)));
+
+        float w = Mathf.Min(560f, Screen.width - 80f);
+        float x = (Screen.width - w) * 0.5f;
+        float y = Screen.height * 0.35f;
+
+        // panel behind the rows
+        old = GUI.color;
+        GUI.color = new Color(0f, 0f, 0f, 0.35f);
+        GUI.DrawTexture(new Rect(x - 24f, y - 24f, w + 48f, 220f), Texture2D.whiteTexture);
+        GUI.color = old;
+
+        float labelW = 120f, pctW = 80f;
+        float sliderX = x + labelW + 12f;
+        float sliderW = w - labelW - pctW - 24f;
+
+        // ---- music ----
+        float mv = audio != null ? audio.MusicVolume : 0.40f;
+        GUI.Label(new Rect(x, y, labelW, 30f), "Music",
+            Style(20, TextAnchor.MiddleLeft, Color.white));
+        float nm = GUI.HorizontalSlider(new Rect(sliderX, y + 8f, sliderW, 20f), mv, 0f, 1f);
+        GUI.Label(new Rect(x + w - pctW, y, pctW, 30f), Mathf.RoundToInt(nm * 100f) + "%",
+            Style(20, TextAnchor.MiddleRight, Color.white));
+        if (audio != null && Mathf.Abs(nm - mv) > 0.0001f)
+        {
+            audio.MusicVolume = nm;
+            if (Event.current.type == EventType.MouseUp) Click();
+        }
+
+        // ---- sfx ----
+        float sy = y + 62f;
+        float sv = audio != null ? audio.SfxVolume : 1f;
+        GUI.Label(new Rect(x, sy, labelW, 30f), "SFX",
+            Style(20, TextAnchor.MiddleLeft, Color.white));
+        float ns = GUI.HorizontalSlider(new Rect(sliderX, sy + 8f, sliderW, 20f), sv, 0f, 1f);
+        GUI.Label(new Rect(x + w - pctW, sy, pctW, 30f), Mathf.RoundToInt(ns * 100f) + "%",
+            Style(20, TextAnchor.MiddleRight, Color.white));
+        if (audio != null && Mathf.Abs(ns - sv) > 0.0001f)
+        {
+            audio.SfxVolume = ns;
+            if (Event.current.type == EventType.MouseUp) Click();
+        }
+
+        // ---- back ----
+        float bw = 220f, bh = 50f;
+        if (GUI.Button(new Rect((Screen.width - bw) * 0.5f, y + 126f, bw, bh), "Back", PaperButton(20)))
+        {
+            Click();
+            CloseSettings();
+        }
+
+        GUI.Label(new Rect(0f, Screen.height - 30f, Screen.width, 24f), "Esc to close",
+            Style(13, TextAnchor.MiddleCenter, new Color(0.78f, 0.8f, 0.84f)));
+    }
+}

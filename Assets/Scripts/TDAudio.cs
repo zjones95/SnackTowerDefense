@@ -4,12 +4,47 @@ public class TDAudio : MonoBehaviour
 {
     public static TDAudio Instance;
 
+    const string MusicVolKey = "td_music_vol";
+    const string SfxVolKey = "td_sfx_vol";
+
     private AudioSource src;
     private AudioSource music;
     private AudioClip[] shots;
     private AudioClip death, leak, build, merge, clear, click;
 
     public bool MusicOn { get; private set; } = true;
+
+    private float musicVolume = 0.40f;
+    private float sfxVolume = 1f;
+
+    /// <summary>Background-music level (0..1). Applied live and persisted.</summary>
+    public float MusicVolume
+    {
+        get { return musicVolume; }
+        set
+        {
+            float v = Mathf.Clamp01(value);
+            if (Mathf.Approximately(v, musicVolume)) return;
+            musicVolume = v;
+            if (music != null) music.volume = musicVolume;
+            PlayerPrefs.SetFloat(MusicVolKey, musicVolume);
+            PlayerPrefs.Save();
+        }
+    }
+
+    /// <summary>Sound-effect level (0..1) multiplied into every one-shot. Applied live and persisted.</summary>
+    public float SfxVolume
+    {
+        get { return sfxVolume; }
+        set
+        {
+            float v = Mathf.Clamp01(value);
+            if (Mathf.Approximately(v, sfxVolume)) return;
+            sfxVolume = v;
+            PlayerPrefs.SetFloat(SfxVolKey, sfxVolume);
+            PlayerPrefs.Save();
+        }
+    }
 
     public static void Ensure()
     {
@@ -22,6 +57,9 @@ public class TDAudio : MonoBehaviour
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
+
+        musicVolume = Mathf.Clamp01(PlayerPrefs.GetFloat(MusicVolKey, 0.40f));
+        sfxVolume = Mathf.Clamp01(PlayerPrefs.GetFloat(SfxVolKey, 1f));
 
         src = gameObject.AddComponent<AudioSource>();
         src.playOnAwake = false;
@@ -53,7 +91,7 @@ public class TDAudio : MonoBehaviour
         music.loop = true;
         music.playOnAwake = false;
         music.spatialBlend = 0f;
-        music.volume = 0.40f;
+        music.volume = musicVolume;
         music.Play();
     }
 
@@ -70,7 +108,7 @@ public class TDAudio : MonoBehaviour
 
     public void Play(AudioClip c, float v)
     {
-        if (c != null && src != null) src.PlayOneShot(c, v);
+        if (c != null && src != null) src.PlayOneShot(c, v * sfxVolume);
     }
 
     public void Shot(TowerType t)

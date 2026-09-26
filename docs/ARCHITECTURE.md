@@ -39,6 +39,7 @@ MainMenu ─┬─ DifficultySelect ── StartingRun ── Playing ─┬─ 
 | `TDGameManager.Multiplayer.cs` | Multiplayer menu, join screen, lobby, match wiring |
 | `TDGameManager.TowerViewer.cs` | Tower gallery screen |
 | `TDGameManager.MobViewer.cs` | Mob gallery screen |
+| `TDGameManager.Settings.cs` | Pause menu + music/SFX settings overlay, time-scale handling |
 | `TDBalance.cs` | Money/lives/prep, difficulty, **35-wave table**, health & speed curves |
 | `TowerCatalog.cs` | 7 tower types × 3 tiers |
 | `Tower.cs` | Targeting, firing, merging, muzzle, model composition |
@@ -89,7 +90,11 @@ wave, 35 waves, a standalone boss every 5th. Health is
 `1.13^(wave-1) × difficulty multiplier`.
 
 **UI** — all IMGUI, drawn from `TDGameManager.OnGUI` and dispatched to the
-partial-class screens.
+partial-class screens. The main/difficulty menus build a real board
+(`EnsureMenuWorld`) and orbit a camera over it (`UpdateMenuBackdrop`), softened by
+a scrim (`TDTextures.MenuFade`); menu buttons use `TDTextures.Paper`.
+Esc in a run opens the pause menu (`TDGameManager.Settings.cs`), which freezes
+`Time.timeScale` and offers Settings / Quit to Main Menu / Quit Game.
 
 **Multiplayer** — host-authoritative. Each peer simulates its **own** board and
 streams a `BoardSnapshot` to the host; the host fans each board out to the other
@@ -107,7 +112,7 @@ clients over **unreliable sequenced** delivery. The host owns the wave clock
   `Snack/Projectiles/<TowerName>`. Anything missing falls back to procedural art.
 - **Model requirements**: authored ~1 unit tall, sitting on **z = 0**, centred
   in X/Y. `SnackModels.CenterOn` then aligns the base and centres it on the cell.
-- **Partial classes**: `TDGameManager` is split across four files; state and
+- **Partial classes**: `TDGameManager` is split across five files; state and
   helpers are shared.
 - **No scene/prefab edits are ever needed** — if you find yourself opening Unity
   to wire something up, something is off.

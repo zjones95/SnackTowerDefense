@@ -77,14 +77,28 @@ Defined in `Assets/Scripts/MobCatalog.cs`; models live in
 | **Scroll wheel** | Zoom |
 | **1–8** / **0** or **H** | In a match: jump to another player's board / back to yours |
 | **M** | Mute / unmute the music |
-| **Esc** | Back to the main menu |
+| **Esc** | Open the pause menu (Settings / Quit to Main Menu / Quit Game); during a merge it cancels the merge |
+
+## Menus & settings
+
+The main menu floats over a slowly orbiting view of a real game board, so you can
+see what you're about to defend. Menu buttons are drawn on a procedural
+construction-paper texture.
+
+- **Settings** — reachable from the main menu and from the in-game pause menu.
+  It has **Music** and **SFX** volume sliders (shown as a percentage), both
+  persisted between sessions (`PlayerPrefs`), plus a Back button (Esc closes it).
+- **Pause menu** — press **Esc** in a run to freeze the game and choose
+  **Settings**, **Quit to Main Menu** or **Quit Game**. Quitting a multiplayer
+  match leaves the session cleanly.
 
 ## Music & sound
 
 Everything is synthesised at runtime — there are no audio assets. Alongside the
 per-tower shot sounds there's a looping cinematic track (driving string ostinato,
 sub-bass drone, swelling pad, taiko hits and a riser, with reverb), generated
-into an exact-period loop so it repeats seamlessly. Press **`M`** to mute/unmute.
+into an exact-period loop so it repeats seamlessly. Press **`M`** to mute/unmute,
+or set the level with the **Music** / **SFX** sliders in Settings.
 
 Generation is pure DSP in `TDSynth`; `TDMusicCheck.Verify` prints its length, peak
 and RMS for a quick sanity check.
@@ -103,7 +117,8 @@ The main menu now splits into **Single Player** and **Multiplayer**.
   **Copy** button, and only the host can press **Start**. The host may start at any
   time, with fewer than 8 players.
 - The **skip-wave key was removed**; waves will advance when the last player finishes.
-- Esc/Back leaves the lobby or match and returns to the menu.
+- Esc/Back leaves the lobby; in a match, Esc opens the pause menu, where **Quit to
+  Main Menu** leaves the session.
 
 **Phase 2 (done): per-player boards + shared waves.**
 

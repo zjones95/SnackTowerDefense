@@ -43,12 +43,13 @@ public partial class TDGameManager
         GUI.DrawTexture(panel, v.Texture, ScaleMode.ScaleToFit, false);
 
         float ay = panel.y + panel.height * 0.5f - 50f;
-        if (GUI.Button(new Rect(panel.x - 92f, ay, 72f, 100f), "<"))
+        GUIStyle arrow = PaperButton(28);
+        if (GUI.Button(new Rect(panel.x - 92f, ay, 72f, 100f), "<", arrow))
         {
             Click();
             v.Next(-1);
         }
-        if (GUI.Button(new Rect(panel.xMax + 20f, ay, 72f, 100f), ">"))
+        if (GUI.Button(new Rect(panel.xMax + 20f, ay, 72f, 100f), ">", arrow))
         {
             Click();
             v.Next(1);
@@ -68,7 +69,7 @@ public partial class TDGameManager
         }
 
         float bw = 200f, bh = 46f;
-        if (GUI.Button(new Rect(cx - bw * 0.5f, Screen.height - 72f, bw, bh), "Back"))
+        if (GUI.Button(new Rect(cx - bw * 0.5f, Screen.height - 72f, bw, bh), "Back", PaperButton(20)))
         {
             Click();
             CloseMobViewer();
