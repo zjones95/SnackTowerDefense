@@ -31,6 +31,8 @@ public class RemoteBoard : MonoBehaviour
     {
         public GameObject Go;
         public Transform Turret;
+        public byte Type;
+        public byte Tier;
     }
 
     private readonly Dictionary<ushort, RemoteMob> mobs = new Dictionary<ushort, RemoteMob>();
@@ -174,14 +176,25 @@ public class RemoteBoard : MonoBehaviour
             towerSeen.Add(key);
 
             RemoteTower rt;
-            if (!towers.TryGetValue(key, out rt))
+            bool exists = towers.TryGetValue(key, out rt);
+            // A merge (tier up) or re-roll (type change) replaces the tower at the
+            // same cell, so rebuild when the type or tier differs from the snapshot.
+            if (exists && (rt.Go == null || rt.Type != ts.Type || rt.Tier != ts.Tier))
+            {
+                if (rt.Go != null) Destroy(rt.Go);
+                towers.Remove(key);
+                exists = false;
+                rt = null;
+            }
+
+            if (!exists)
             {
                 GameObject go = new GameObject("RTower");
                 go.transform.SetParent(liveRoot, false);
                 go.transform.position = map.CellCenter(ts.Cx, ts.Cy);
                 Transform turret = TowerVisual.Build(go.transform, (TowerType)ts.Type, ts.Tier);
                 TowerVisual.BuildTierLabel(go.transform, ts.Tier);
-                rt = new RemoteTower { Go = go, Turret = turret };
+                rt = new RemoteTower { Go = go, Turret = turret, Type = ts.Type, Tier = ts.Tier };
                 towers[key] = rt;
             }
 
