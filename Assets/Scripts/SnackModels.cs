@@ -29,7 +29,7 @@ public static class SnackModels
             case TowerType.SingleShot: return "Popcorn";
             case TowerType.Splash: return "Soda";
             case TowerType.Slow: return "Gum";
-            case TowerType.Sniper: return "Pretzel";
+            case TowerType.Sniper: return "SourStraw";
             case TowerType.Chain: return "Chain";
             case TowerType.Pierce: return "Pierce";
             case TowerType.Bounce: return "Bounce";
