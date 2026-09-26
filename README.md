@@ -127,7 +127,7 @@ The main menu now splits into **Single Player** and **Multiplayer**.
 - Press **1-8** to jump the camera to a board, **0** (or **H**) to return to your
   own. While spectating you are read-only — build/merge only works on your board.
 - Remote boards show the other player's mobs (health bars included), towers with
-  tier badges, and projectiles, smoothly interpolated.
+  tier glows, and projectiles, smoothly interpolated.
 - The match ends with a **scoreboard** (wave, lives, money per player); the host
   can start another match from the lobby.
 

@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Builds the *visual* of a tower (model, rotating head, tier badge) without any
+/// Builds the *visual* of a tower (model, rotating head, tier glow) without any
 /// gameplay logic, so both live towers and remote/spectated copies share one look.
 /// </summary>
 public static class TowerVisual
@@ -56,60 +56,46 @@ public static class TowerVisual
             SnackArt.BuildTower(modelRoot.transform, turret, type, tier);
         }
 
+        BuildTierGlow(parent, tier);
+
         return turret;
     }
 
-    /// <summary>Top of whatever model already sits under parent, plus a small gap.</summary>
-    static float LabelHeight(Transform parent)
+    /// <summary>Tier palette — the same three colours for every tower type.</summary>
+    public static readonly Color[] TierColours =
+    {
+        new Color(0.80f, 0.82f, 0.86f),  // 1 - grey
+        new Color(0.30f, 0.60f, 1.00f),  // 2 - blue
+        new Color(0.30f, 0.92f, 0.42f)   // 3 - green
+    };
+
+    public static Color TierColour(int tier)
+    {
+        return TierColours[Mathf.Clamp(tier, 1, TierColours.Length) - 1];
+    }
+
+    /// <summary>Coloured glow marking the tower's tier: a bright pad on the mat
+    /// plus a soft aura hugging the model. Same palette for every tower type.</summary>
+    static void BuildTierGlow(Transform parent, int tier)
     {
         Renderer[] rs = parent.GetComponentsInChildren<Renderer>();
-        if (rs == null || rs.Length == 0) return 1.55f;
+        if (rs == null || rs.Length == 0) return;
+
         Bounds b = rs[0].bounds;
         for (int i = 1; i < rs.Length; i++) b.Encapsulate(rs[i].bounds);
-        return Mathf.Max(1.0f, b.max.y - parent.position.y + 0.42f);
-    }
 
-    /// <summary>Tier number badge above the tower; billboard it toward the camera.</summary>
-    public static Transform BuildTierLabel(Transform parent, int tier)
-    {
-        GameObject tierGO = new GameObject("TierLabel");
-        tierGO.transform.SetParent(parent, false);
-        tierGO.transform.localPosition = new Vector3(0f, LabelHeight(parent), 0f);
-        tierGO.AddComponent<BillboardLabel>();
+        float top = Mathf.Max(0.5f, b.max.y - parent.position.y);
+        float half = Mathf.Max(b.extents.x, b.extents.z);
 
-        TDVisuals.Box(tierGO.transform, "Badge", new Vector3(0f, 0f, 0.02f), new Vector3(0.40f, 0.52f, 0.02f),
-            TDVisuals.TransparentMat(new Color(0.08f, 0.08f, 0.10f), 0.5f, 0.3f));
+        Color c = TierColour(tier);
+        Material pad = TDVisuals.TransparentMat(c, 0.80f, 0.9f);
+        Material halo = TDVisuals.TransparentMat(c, 0.20f, 0.9f);
+        Material aura = TDVisuals.TransparentMat(c, 0.09f, 0.9f);
 
-        GameObject txtGO = new GameObject("Text");
-        txtGO.transform.SetParent(tierGO.transform, false);
-        txtGO.transform.localPosition = new Vector3(0f, 0f, -0.02f);
-        TextMesh tm = txtGO.AddComponent<TextMesh>();
-        tm.text = tier.ToString();
-        tm.characterSize = 0.055f;
-        tm.fontSize = 110;
-        tm.anchor = TextAnchor.MiddleCenter;
-        tm.alignment = TextAlignment.Center;
-        tm.color = new Color(1f, 0.96f, 0.70f);
-        Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        if (font == null) font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-        if (font != null)
-        {
-            tm.font = font;
-            MeshRenderer tr = txtGO.GetComponent<MeshRenderer>();
-            if (tr != null) tr.sharedMaterial = font.material;
-        }
-
-        return tierGO.transform;
-    }
-}
-
-/// <summary>Keeps a label facing the camera (TextMesh reads from its -Z face).</summary>
-public class BillboardLabel : MonoBehaviour
-{
-    void LateUpdate()
-    {
-        if (Camera.main != null)
-            transform.rotation = Camera.main.transform.rotation;
+        // bright pad on the mat, a wider soft halo, and a gentle aura around the model
+        TDVisuals.Cyl(parent, "TierPad", new Vector3(0f, 0.02f, 0f), half + 0.12f, 0.035f, pad);
+        TDVisuals.Cyl(parent, "TierHalo", new Vector3(0f, 0.01f, 0f), half + 0.32f, 0.02f, halo);
+        TDVisuals.Cyl(parent, "TierAura", new Vector3(0f, top * 0.5f, 0f), half + 0.09f, top * 0.95f, aura);
     }
 }
 

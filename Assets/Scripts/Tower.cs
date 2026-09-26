@@ -10,7 +10,6 @@ public class Tower : MonoBehaviour
     private float cooldown;
     private Transform turret;
     private GameObject selectHighlight;
-    private Transform tierLabel;
     private bool isSelected;
 
     // where shots leave the model: half its height, just clear of its body
@@ -45,8 +44,6 @@ public class Tower : MonoBehaviour
             }
         }
 
-        tierLabel = TowerVisual.BuildTierLabel(transform, Tier);
-
         // pronounced selection highlight: pulsing ring + beam
         selectHighlight = new GameObject("SelectHighlight");
         selectHighlight.transform.SetParent(transform, false);
@@ -77,9 +74,6 @@ public class Tower : MonoBehaviour
             selectHighlight.transform.localScale = new Vector3(pulse, 1f, pulse);
             selectHighlight.transform.localRotation = Quaternion.Euler(0f, Time.time * 45f, 0f);
         }
-
-        if (tierLabel != null && Camera.main != null)
-            tierLabel.rotation = Camera.main.transform.rotation; // match the camera so the digit reads the right way up
 
         TowerTierStats s = Stats;
         var mobs = TDGameManager.Instance != null ? TDGameManager.Instance.Mobs : null;

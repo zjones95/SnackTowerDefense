@@ -180,7 +180,6 @@ public class RemoteBoard : MonoBehaviour
                 go.transform.SetParent(liveRoot, false);
                 go.transform.position = map.CellCenter(ts.Cx, ts.Cy);
                 Transform turret = TowerVisual.Build(go.transform, (TowerType)ts.Type, ts.Tier);
-                TowerVisual.BuildTierLabel(go.transform, ts.Tier);
                 rt = new RemoteTower { Go = go, Turret = turret };
                 towers[key] = rt;
             }
