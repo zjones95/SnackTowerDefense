@@ -149,7 +149,11 @@ public class MatchSync : MonoBehaviour
         }
         Broadcast();
         if (TDGameManager.Instance != null)
+        {
+            // Set the local board's wave number before starting it, then begin at once.
+            TDGameManager.Instance.MatchWaveStart(Wave, 0f);
             TDGameManager.Instance.BeginWaveFromMatch();
+        }
     }
 
     void EndMatch(bool victory)
