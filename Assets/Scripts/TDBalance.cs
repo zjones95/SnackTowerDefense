@@ -34,6 +34,18 @@ public static class TDBalance
         return 0;
     }
 
+    // Gold never merges and tops out at tier 3, so it is upgraded with cash at
+    // tiers 1->2 and 2->3 only (see docs/TierPlan.md).
+    public const int GoldUpgrade1to2 = 50;
+    public const int GoldUpgrade2to3 = 100;
+
+    public static int GoldUpgradeCost(int fromTier)
+    {
+        if (fromTier == 1) return GoldUpgrade1to2;
+        if (fromTier == 2) return GoldUpgrade2to3;
+        return 0;
+    }
+
     /// <summary>Global mob-health knob, applied once in <see cref="Mob.Init"/>.
     /// Stacked on top of the per-wave and difficulty multipliers (never inside
     /// HealthMultiplier, so it is not double-applied).</summary>

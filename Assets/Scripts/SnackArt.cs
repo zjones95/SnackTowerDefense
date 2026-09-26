@@ -222,6 +222,7 @@ public static class SnackArt
             model.name = "Model";
             model.transform.localPosition = Vector3.zero;
             model.transform.localScale = Vector3.one;
+            model.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);   // mirror the "?" horizontally
 
             // normalise to ~1 unit tall, then seat its base on the cell centre
             float h = HeightOf(model);
