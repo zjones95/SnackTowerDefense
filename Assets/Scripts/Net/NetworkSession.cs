@@ -7,9 +7,11 @@ using System.Threading.Tasks;
 using Unity.Collections;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
+using Unity.Networking.Transport.Relay;
 using Unity.Services.Authentication;
 using Unity.Services.Core;
 using Unity.Services.Relay;
+using Unity.Services.Relay.Models;
 using UnityEngine;
 
 /// <summary>
@@ -183,12 +185,6 @@ public class NetworkSession : MonoBehaviour
         Manager = go.AddComponent<NetworkManager>();
         Transport = go.AddComponent<UnityTransport>();
 
-#if UNITY_WEBGL && !UNITY_EDITOR
-        // Browsers have no UDP sockets; Unity Transport must use WebSockets
-        // (WSS to Unity Relay). Required for online play from a WebGL build.
-        Transport.UseWebSockets = true;
-#endif
-
         Manager.NetworkConfig = new NetworkConfig
         {
             NetworkTransport = Transport,
@@ -244,6 +240,7 @@ public class NetworkSession : MonoBehaviour
         }
         else
         {
+            Transport.UseWebSockets = false;
             Transport.SetConnectionData("0.0.0.0", NetConfig.DefaultPort);
             started = Manager.StartHost();
             if (started)
@@ -277,9 +274,9 @@ public class NetworkSession : MonoBehaviour
             var allocation = await RelayService.Instance.CreateAllocationAsync(NetConfig.MaxPlayers - 1);
             string code = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
 
-            Transport.SetHostRelayData(
-                allocation.RelayServer.IpV4, (ushort)allocation.RelayServer.Port,
-                allocation.AllocationIdBytes, allocation.Key, allocation.ConnectionData, true);
+            RelayServerEndpoint ep = PickEndpoint(allocation.ServerEndpoints, RelayConnectionType());
+            if (ep == null) { Debug.Log("[net] Relay returned no usable endpoint."); return false; }
+            ApplyRelayData(ep, allocation.AllocationIdBytes, allocation.ConnectionData, null, allocation.Key);
 
             if (!Manager.StartHost()) return false;
             Address = code;
@@ -319,6 +316,7 @@ public class NetworkSession : MonoBehaviour
                 Fail("Enter a 6-character join code, or an address like 192.168.1.20:7777");
                 return;
             }
+            Transport.UseWebSockets = false;
             Transport.SetConnectionData(ip, port);
             started = Manager.StartClient();
             if (!started) Error = "Could not start the client.";
@@ -342,9 +340,9 @@ public class NetworkSession : MonoBehaviour
         {
             if (!await EnsureServices()) { Error = "Online play needs Unity Gaming Services (not set up yet)."; return false; }
             var join = await RelayService.Instance.JoinAllocationAsync(code.ToUpperInvariant());
-            Transport.SetClientRelayData(
-                join.RelayServer.IpV4, (ushort)join.RelayServer.Port,
-                join.AllocationIdBytes, join.Key, join.ConnectionData, join.HostConnectionData, true);
+            RelayServerEndpoint ep = PickEndpoint(join.ServerEndpoints, RelayConnectionType());
+            if (ep == null) { Error = "Relay returned no usable endpoint."; return false; }
+            ApplyRelayData(ep, join.AllocationIdBytes, join.ConnectionData, join.HostConnectionData, join.Key);
             return Manager.StartClient();
         }
         catch (Exception e)
@@ -352,6 +350,36 @@ public class NetworkSession : MonoBehaviour
             Error = "Join failed: " + e.Message;
             return false;
         }
+    }
+
+    /// <summary>Relay connection type: WebSockets in the browser (no UDP), DTLS
+    /// on desktop.</summary>
+    static string RelayConnectionType()
+    {
+#if UNITY_WEBGL && !UNITY_EDITOR
+        return RelayServerEndpoint.ConnectionTypeWss;
+#else
+        return RelayServerEndpoint.ConnectionTypeDtls;
+#endif
+    }
+
+    static RelayServerEndpoint PickEndpoint(List<RelayServerEndpoint> eps, string type)
+    {
+        if (eps == null) return null;
+        for (int i = 0; i < eps.Count; i++)
+            if (eps[i] != null && eps[i].ConnectionType == type) return eps[i];
+        return null;
+    }
+
+    /// <summary>Builds Relay transport data from the endpoint matching the chosen
+    /// connection type. The allocation's RelayServer.Port is the plain UDP port,
+    /// so using it for a secure/WebSocket connection binds to the wrong port.</summary>
+    void ApplyRelayData(RelayServerEndpoint ep, byte[] allocationId, byte[] connectionData, byte[] hostConnectionData, byte[] key)
+    {
+        bool ws = ep.ConnectionType == RelayServerEndpoint.ConnectionTypeWss;
+        Transport.UseWebSockets = ws;
+        Transport.SetRelayServerData(new RelayServerData(
+            ep.Host, (ushort)ep.Port, allocationId, connectionData, hostConnectionData, key, ep.Secure, ws));
     }
 
     // ---------------------------------------------------------------- lobby
