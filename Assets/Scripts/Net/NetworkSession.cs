@@ -183,6 +183,12 @@ public class NetworkSession : MonoBehaviour
         Manager = go.AddComponent<NetworkManager>();
         Transport = go.AddComponent<UnityTransport>();
 
+#if UNITY_WEBGL && !UNITY_EDITOR
+        // Browsers have no UDP sockets; Unity Transport must use WebSockets
+        // (WSS to Unity Relay). Required for online play from a WebGL build.
+        Transport.UseWebSockets = true;
+#endif
+
         Manager.NetworkConfig = new NetworkConfig
         {
             NetworkTransport = Transport,
