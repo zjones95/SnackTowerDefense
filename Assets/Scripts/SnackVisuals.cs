@@ -72,7 +72,12 @@ public static class TowerVisual
         return TierColours[Mathf.Clamp(tier, 1, TierColours.Length) - 1];
     }
 
-    /// <summary>Floating tier number above the tower, tinted with the tier colour.</summary>
+    /// <summary>Thin dark outline drawn behind the digit, in world units.</summary>
+    const float OutlineOffset = 0.012f;
+    static readonly Color OutlineColour = new Color(0.07f, 0.06f, 0.09f);
+
+    /// <summary>Floating tier number above the tower, tinted with the tier colour
+    /// and outlined in dark so it stays readable without a background plate.</summary>
     public static Transform BuildTierLabel(Transform parent, int tier)
     {
         GameObject tierGO = new GameObject("TierLabel");
@@ -80,25 +85,43 @@ public static class TowerVisual
         tierGO.transform.localPosition = new Vector3(0f, LabelHeight(parent), 0f);
         tierGO.AddComponent<BillboardLabel>();
 
+        // a ring of offset copies behind the coloured digit makes a thin outline
+        for (int i = 0; i < 8; i++)
+        {
+            float a = i / 8f * Mathf.PI * 2f;
+            AddTierText(tierGO.transform, tier,
+                new Vector3(Mathf.Cos(a) * OutlineOffset, Mathf.Sin(a) * OutlineOffset, 0.004f),
+                OutlineColour, 0);
+        }
+        AddTierText(tierGO.transform, tier, Vector3.zero, TierColour(tier), 1);
+
+        return tierGO.transform;
+    }
+
+    static void AddTierText(Transform parent, int tier, Vector3 offset, Color colour, int order)
+    {
         GameObject txtGO = new GameObject("Text");
-        txtGO.transform.SetParent(tierGO.transform, false);
+        txtGO.transform.SetParent(parent, false);
+        txtGO.transform.localPosition = offset;
         TextMesh tm = txtGO.AddComponent<TextMesh>();
         tm.text = tier.ToString();
         tm.characterSize = 0.06f;
         tm.fontSize = 120;
         tm.anchor = TextAnchor.MiddleCenter;
         tm.alignment = TextAlignment.Center;
-        tm.color = TierColour(tier);          // tier colour, no plate behind it
+        tm.color = colour;
         Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         if (font == null) font = Resources.GetBuiltinResource<Font>("Arial.ttf");
         if (font != null)
         {
             tm.font = font;
             MeshRenderer tr = txtGO.GetComponent<MeshRenderer>();
-            if (tr != null) tr.sharedMaterial = font.material;
+            if (tr != null)
+            {
+                tr.sharedMaterial = font.material;
+                tr.sortingOrder = order;   // outline first, coloured digit on top
+            }
         }
-
-        return tierGO.transform;
     }
 
     /// <summary>Top of whatever model already sits under parent, plus a small gap.</summary>
