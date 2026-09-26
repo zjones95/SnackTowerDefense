@@ -13,6 +13,10 @@ public class Tower : MonoBehaviour
     private Transform tierLabel;
     private bool isSelected;
 
+    // where shots leave the model: half its height, just clear of its body
+    private float muzzleY = 0.6f;
+    private float muzzleForward = 0.5f;
+
     public TowerTierStats Stats { get { return TowerCatalog.Get(Type).Stats(Tier); } }
     public string DisplayName { get { return TowerCatalog.Get(Type).displayName; } }
     public float TurretYaw { get { return turret != null ? turret.eulerAngles.y : 0f; } }
@@ -27,6 +31,19 @@ public class Tower : MonoBehaviour
     void BuildVisual()
     {
         turret = TowerVisual.Build(transform, Type, Tier);
+
+        // measure the model so shots leave from its middle, not the floor
+        if (turret != null)
+        {
+            Renderer[] rs = turret.GetComponentsInChildren<Renderer>();
+            if (rs.Length > 0)
+            {
+                Bounds b = rs[0].bounds;
+                for (int i = 1; i < rs.Length; i++) b.Encapsulate(rs[i].bounds);
+                muzzleY = Mathf.Max(0.25f, b.size.y * 0.5f);
+                muzzleForward = Mathf.Max(0.20f, Mathf.Max(b.extents.x, b.extents.z) + 0.10f);
+            }
+        }
 
         tierLabel = TowerVisual.BuildTierLabel(transform, Tier);
 
@@ -104,7 +121,7 @@ public class Tower : MonoBehaviour
         cooldown = s.fireInterval;
         if (TDAudio.Instance != null) TDAudio.Instance.Shot(Type);
 
-        Vector3 muzzle = turret != null ? turret.position + turret.forward * 0.5f : transform.position + Vector3.up * 0.8f;
+        Vector3 muzzle = Muzzle();
 
         switch (Type)
         {
@@ -240,9 +257,17 @@ public class Tower : MonoBehaviour
         cooldown = s.fireInterval;
         if (TDAudio.Instance != null) TDAudio.Instance.Shot(Type);
 
-        Vector3 muzzle = transform.position + Vector3.up * 0.75f;
+        Vector3 muzzle = Muzzle();
         for (int i = 0; i < shots; i++)
             SpawnGumball(muzzle, inRange[i], s, GumColours[i % GumColours.Length]);
+    }
+
+    /// <summary>Mid-height of the model, nudged forward along the aim direction.</summary>
+    Vector3 Muzzle()
+    {
+        Vector3 up = Vector3.up * muzzleY;
+        Vector3 fwd = turret != null ? turret.forward : transform.forward;
+        return transform.position + up + fwd * muzzleForward;
     }
 
     void SpawnGumball(Vector3 from, Mob target, TowerTierStats s, Color colour)
