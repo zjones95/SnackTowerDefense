@@ -40,6 +40,12 @@ public static class SnackModels
 
     public const string CrackerPath = "Snack/Mobs/Cracker";
 
+    /// <summary>Optional per-tower projectile model; falls back to a sphere if missing.</summary>
+    public static string ProjectilePath(TowerType t)
+    {
+        return "Snack/Projectiles/" + TowerName(t);
+    }
+
     // Recenters an instantiated model so it sits on the cell: the pedestal
     // (base) is aligned to the anchor in X/Z with its bottom at the anchor Y.
     public static void CenterOn(GameObject instance, Vector3 worldAnchor)

@@ -209,14 +209,27 @@ public class Tower : MonoBehaviour
 
     void SpawnProjectile(Vector3 from, Mob target, TowerTierStats s)
     {
-        GameObject go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        Collider c = go.GetComponent<Collider>();
-        if (c != null) Destroy(c);
-        go.name = "Projectile";
-        go.transform.position = from;
-        go.transform.localScale = Vector3.one * 0.22f;
-        TowerDef def = TowerCatalog.Get(Type);
-        go.GetComponent<Renderer>().sharedMaterial = TDVisuals.Mat(def.color, 0.1f, 0.6f);
+        GameObject go;
+
+        GameObject prefab = SnackModels.Load(SnackModels.ProjectilePath(Type));
+        if (prefab != null)
+        {
+            go = Instantiate(prefab);
+            go.name = "Projectile";
+            go.transform.position = from;
+            go.transform.localScale = Vector3.one;
+        }
+        else
+        {
+            go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            Collider c = go.GetComponent<Collider>();
+            if (c != null) Destroy(c);
+            go.name = "Projectile";
+            go.transform.position = from;
+            go.transform.localScale = Vector3.one * 0.22f;
+            TowerDef def = TowerCatalog.Get(Type);
+            go.GetComponent<Renderer>().sharedMaterial = TDVisuals.Mat(def.color, 0.1f, 0.6f);
+        }
 
         Transform parent = TDGameManager.Instance != null ? TDGameManager.Instance.ProjectilesRoot : null;
         if (parent != null) go.transform.SetParent(parent, true);

@@ -15,6 +15,9 @@ public class Projectile : MonoBehaviour
     {
         if (Target == null) { Destroy(gameObject); return; }
 
+        // tumble the model so it reads as a thrown snack
+        transform.Rotate(150f * Time.deltaTime, 210f * Time.deltaTime, 90f * Time.deltaTime);
+
         Vector3 tp = Target.transform.position + Vector3.up * 0.4f;
         Vector3 dir = tp - transform.position;
         float step = Speed * Time.deltaTime;
