@@ -33,7 +33,7 @@ public static class SnackModels
             case TowerType.Chain: return "SourBelt";
             case TowerType.Pierce: return "Skewer";
             case TowerType.Bounce: return "JellyBean";
-            case TowerType.Poison: return "Wasabi";
+            case TowerType.Poison: return "SpicyChips";
             default: return "Popcorn";
         }
     }
