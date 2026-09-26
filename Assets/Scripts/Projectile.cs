@@ -10,6 +10,8 @@ public class Projectile : MonoBehaviour
     public float BounceRange = 0f;
     public float PoisonDps = 0f;
     public float PoisonDuration = 0f;
+    public float SlowFactor = 0f;
+    public float SlowDuration = 0f;
 
     public Color Tint = new Color(0.4f, 0.7f, 1f);
     public bool Spin = true;   // false = liquid blob, wobbles instead
@@ -58,6 +60,7 @@ public class Projectile : MonoBehaviour
         }
         else if (Target != null)
         {
+            if (SlowFactor > 0f) Target.ApplySlow(SlowFactor, SlowDuration);
             if (PoisonDps > 0f) Target.ApplyPoison(PoisonDps, PoisonDuration);
             Target.TakeDamage(Damage);
         }

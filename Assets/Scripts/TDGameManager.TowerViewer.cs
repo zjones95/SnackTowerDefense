@@ -117,7 +117,7 @@ public partial class TDGameManager
                 switch (t)
                 {
                     case TowerType.Splash: return "splash " + s.splashRadius.ToString("0.#");
-                    case TowerType.Slow: return Mathf.RoundToInt(s.slowFactor * 100f) + "% / " + s.slowDuration.ToString("0.#") + "s";
+                    case TowerType.Slow: return "x" + s.multiShot + " - " + Mathf.RoundToInt(s.slowFactor * 100f) + "% / " + s.slowDuration.ToString("0.#") + "s";
                     case TowerType.Chain: return "jumps " + s.chainCount;
                     case TowerType.Pierce: return "pierces " + s.pierceCount;
                     case TowerType.Bounce: return "bounces " + s.bounceCount;

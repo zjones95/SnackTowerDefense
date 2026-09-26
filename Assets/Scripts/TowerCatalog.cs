@@ -14,6 +14,7 @@ public class TowerTierStats
     public float splashRadius = 0f;
     public float slowFactor = 0f;      // fraction of speed removed
     public float slowDuration = 0f;
+    public int multiShot = 0;          // Slow: gumballs fired per volley
 
     public int chainCount = 0;         // Chain: extra jumps after the first target
     public float chainRange = 0f;
@@ -82,9 +83,9 @@ public static class TowerCatalog
 
         d = new TowerDef();
         d.type = TowerType.Slow; d.displayName = "Gumball Machine"; d.color = new Color(0.55f, 1f, 0.60f);
-        d.tiers.Add(new TowerTierStats { damage = 0, range = 3.5f, fireInterval = 0.25f, slowFactor = 0.45f, slowDuration = 1.2f });
-        d.tiers.Add(new TowerTierStats { damage = 0, range = 4.2f, fireInterval = 0.25f, slowFactor = 0.55f, slowDuration = 1.4f });
-        d.tiers.Add(new TowerTierStats { damage = 0, range = 5.0f, fireInterval = 0.25f, slowFactor = 0.65f, slowDuration = 1.6f });
+        d.tiers.Add(new TowerTierStats { damage = 0, range = 3.5f, fireInterval = 0.25f, slowFactor = 0.45f, slowDuration = 1.2f, multiShot = 2 });
+        d.tiers.Add(new TowerTierStats { damage = 0, range = 4.2f, fireInterval = 0.25f, slowFactor = 0.55f, slowDuration = 1.4f, multiShot = 4 });
+        d.tiers.Add(new TowerTierStats { damage = 0, range = 5.0f, fireInterval = 0.25f, slowFactor = 0.65f, slowDuration = 1.6f, multiShot = 6 });
         defs[d.type] = d;
 
         d = new TowerDef();

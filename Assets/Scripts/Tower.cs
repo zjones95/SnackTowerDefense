@@ -96,25 +96,7 @@ public class Tower : MonoBehaviour
 
         if (Type == TowerType.Slow)
         {
-            bool any = false;
-            if (mobs != null)
-            {
-                for (int i = 0; i < mobs.Count; i++)
-                {
-                    Mob m = mobs[i];
-                    if (m == null) continue;
-                    if (Vector3.Distance(transform.position, m.transform.position) <= s.range)
-                    {
-                        m.ApplySlow(s.slowFactor, s.slowDuration);
-                        any = true;
-                    }
-                }
-            }
-            if (any)
-            {
-                cooldown = s.fireInterval;
-                if (TDAudio.Instance != null) TDAudio.Instance.Shot(Type);
-            }
+            FireGumballs(s);
             return;
         }
 
@@ -205,6 +187,76 @@ public class Tower : MonoBehaviour
         }
 
         for (int i = 0; i < pts.Count; i++) Tracer(i == 0 ? from : pts[i - 1], pts[i]);
+    }
+
+    // ---------------------------------------------------------- gumball slow
+    static readonly Color[] GumColours =
+    {
+        new Color(0.30f, 0.85f, 0.35f),   // green
+        new Color(0.90f, 0.18f, 0.20f),   // red
+        new Color(0.62f, 0.35f, 0.90f),   // purple
+        new Color(0.30f, 0.85f, 0.35f),
+        new Color(0.90f, 0.18f, 0.20f),
+        new Color(0.62f, 0.35f, 0.90f)
+    };
+
+    static readonly Dictionary<Color, Material> gumMats = new Dictionary<Color, Material>();
+
+    static Material GumMat(Color c)
+    {
+        Material m;
+        if (gumMats.TryGetValue(c, out m) && m != null) return m;
+        m = TDVisuals.Mat(c, 0.05f, 0.85f);
+        gumMats[c] = m;
+        return m;
+    }
+
+    void FireGumballs(TowerTierStats s)
+    {
+        var mobs = TDGameManager.Instance != null ? TDGameManager.Instance.Mobs : null;
+        if (mobs == null || mobs.Count == 0) return;
+
+        // gather everything in range, then favour whatever is furthest along
+        List<Mob> inRange = new List<Mob>();
+        for (int i = 0; i < mobs.Count; i++)
+        {
+            Mob m = mobs[i];
+            if (m == null) continue;
+            if (Vector3.Distance(transform.position, m.transform.position) <= s.range)
+                inRange.Add(m);
+        }
+        if (inRange.Count == 0) return;
+        inRange.Sort((a, b) => b.Progress.CompareTo(a.Progress));
+
+        int shots = Mathf.Min(s.multiShot > 0 ? s.multiShot : 1, inRange.Count);
+        cooldown = s.fireInterval;
+        if (TDAudio.Instance != null) TDAudio.Instance.Shot(Type);
+
+        Vector3 muzzle = transform.position + Vector3.up * 0.75f;
+        for (int i = 0; i < shots; i++)
+            SpawnGumball(muzzle, inRange[i], s, GumColours[i % GumColours.Length]);
+    }
+
+    void SpawnGumball(Vector3 from, Mob target, TowerTierStats s, Color colour)
+    {
+        GameObject go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        Collider c = go.GetComponent<Collider>();
+        if (c != null) Destroy(c);
+        go.name = "Gumball";
+        go.transform.position = from;
+        go.transform.localScale = Vector3.one * 0.17f;
+        go.GetComponent<Renderer>().sharedMaterial = GumMat(colour);
+
+        Transform parent = TDGameManager.Instance != null ? TDGameManager.Instance.ProjectilesRoot : null;
+        if (parent != null) go.transform.SetParent(parent, true);
+
+        Projectile p = go.AddComponent<Projectile>();
+        p.Target = target;
+        p.Speed = 14f;
+        p.Damage = 0f;
+        p.SlowFactor = s.slowFactor;
+        p.SlowDuration = s.slowDuration;
+        p.Tint = colour;
     }
 
     void SpawnProjectile(Vector3 from, Mob target, TowerTierStats s)
