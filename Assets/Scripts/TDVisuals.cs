@@ -30,6 +30,31 @@ public static class TDVisuals
         return m;
     }
 
+    // Opaque material that also emits its colour, so markers stay bright in the
+    // built player. (Transparent Standard materials rely on a shader variant
+    // that can be stripped from a build, so avoid them for anything gameplay-
+    // critical.)
+    public static Material EmissiveMat(Color c, float intensity = 1f)
+    {
+        string key = "emis_" + c.r + "_" + c.g + "_" + c.b + "_" + c.a + "_" + intensity;
+        Material cached;
+        if (cache.TryGetValue(key, out cached) && cached != null) return cached;
+
+        Material m = new Material(ShaderFor());
+        if (m.HasProperty("_Color")) m.SetColor("_Color", c);
+        if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", c);
+        if (m.HasProperty("_Metallic")) m.SetFloat("_Metallic", 0f);
+        if (m.HasProperty("_Glossiness")) m.SetFloat("_Glossiness", 0.85f);
+        if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", 0.85f);
+        if (m.HasProperty("_EmissionColor"))
+        {
+            m.EnableKeyword("_EMISSION");
+            m.SetColor("_EmissionColor", new Color(c.r, c.g, c.b) * Mathf.Max(0f, intensity));
+        }
+        cache[key] = m;
+        return m;
+    }
+
     // Translucent material (e.g. the tier-number plate). Configures the Standard
     // shader's blend mode, which a plain alpha value alone would not enable.
     public static Material TransparentMat(Color c, float alpha, float smooth = 0.3f)

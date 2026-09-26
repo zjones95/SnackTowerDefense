@@ -74,8 +74,10 @@ public static class TowerVisual
         return TierColours[Mathf.Clamp(tier, 1, TierColours.Length) - 1];
     }
 
-    /// <summary>Coloured glow marking the tower's tier: a bright pad on the mat
-    /// plus a soft aura hugging the model. Same palette for every tower type.</summary>
+    /// <summary>Coloured glow marking the tower's tier: a bright ring on the mat
+    /// plus a fainter outer ring. Flat, opaque geometry — it can never cover the
+    /// model and never depends on transparency (which the player build strips).
+    /// Same palette for every tower type.</summary>
     static void BuildTierGlow(Transform parent, int tier)
     {
         Renderer[] rs = parent.GetComponentsInChildren<Renderer>();
@@ -84,18 +86,30 @@ public static class TowerVisual
         Bounds b = rs[0].bounds;
         for (int i = 1; i < rs.Length; i++) b.Encapsulate(rs[i].bounds);
 
-        float top = Mathf.Max(0.5f, b.max.y - parent.position.y);
-        float half = Mathf.Max(b.extents.x, b.extents.z);
+        float half = Mathf.Max(0.22f, Mathf.Max(b.extents.x, b.extents.z));
 
         Color c = TierColour(tier);
-        Material pad = TDVisuals.TransparentMat(c, 0.80f, 0.9f);
-        Material halo = TDVisuals.TransparentMat(c, 0.20f, 0.9f);
-        Material aura = TDVisuals.TransparentMat(c, 0.09f, 0.9f);
+        Color dim = new Color(c.r * 0.5f, c.g * 0.5f, c.b * 0.5f);
+        Ring(parent, "TierRing", half + 0.12f, 0.055f, 0.11f, TDVisuals.EmissiveMat(c, 1.1f));
+        Ring(parent, "TierHalo", half + 0.34f, 0.035f, 0.07f, TDVisuals.EmissiveMat(dim, 0.5f));
+    }
 
-        // bright pad on the mat, a wider soft halo, and a gentle aura around the model
-        TDVisuals.Cyl(parent, "TierPad", new Vector3(0f, 0.02f, 0f), half + 0.12f, 0.035f, pad);
-        TDVisuals.Cyl(parent, "TierHalo", new Vector3(0f, 0.01f, 0f), half + 0.32f, 0.02f, halo);
-        TDVisuals.Cyl(parent, "TierAura", new Vector3(0f, top * 0.5f, 0f), half + 0.09f, top * 0.95f, aura);
+    /// <summary>A thin flat ring of small blocks laid on the mat at the given radius.</summary>
+    static void Ring(Transform parent, string name, float radius, float height, float thickness, Material m)
+    {
+        GameObject ring = new GameObject(name);
+        ring.transform.SetParent(parent, false);
+
+        int segs = Mathf.Clamp(Mathf.RoundToInt(radius * 44f), 16, 56);
+        float tang = (2f * Mathf.PI * radius / segs) * 1.25f;
+        for (int i = 0; i < segs; i++)
+        {
+            float a = i / (float)segs * Mathf.PI * 2f;
+            GameObject g = TDVisuals.Box(ring.transform, "s" + i,
+                new Vector3(Mathf.Cos(a) * radius, height * 0.5f + 0.006f, Mathf.Sin(a) * radius),
+                new Vector3(tang, height, thickness), m);
+            g.transform.localRotation = Quaternion.Euler(0f, 90f - a * Mathf.Rad2Deg, 0f);
+        }
     }
 }
 
