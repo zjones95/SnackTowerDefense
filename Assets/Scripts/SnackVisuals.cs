@@ -96,7 +96,7 @@ public static class TowerVisual
         tg.FaceNow();                                              // correct on frame one
     }
 
-    const float GlowIntensity = 0.45f;
+    const float GlowIntensity = 0.2f;
 
     static readonly Dictionary<Color, Material> glowMats = new Dictionary<Color, Material>();
     static Texture2D glowTex;
