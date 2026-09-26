@@ -160,7 +160,8 @@ public static class TDBalance
         B("GranolaMom"),                       // 35
     };
 
-    // Income: ~$360 over the whole run + $100 start (~18 towers total).
-    public static int KillReward(int wave) { return 3; }
-    public static int RoundBonus(int wave) { return 15 + 5 * wave; }
+    // Income. Rounds pay a FLAT $50 so cash is predictable; kills pay a token $1.
+    // Real scaling into tiers 5-6 is meant to come from Gold towers.
+    public static int KillReward(int wave) { return 1; }
+    public static int RoundBonus(int wave) { return 50; }
 }

@@ -5,8 +5,8 @@ using UnityEngine;
 /// A thrown skewer: travels in a straight line at a slow, steady pace and
 /// skewers every enemy it passes through, up to a hit cap. Unlike the homing
 /// projectiles it never changes course and doesn't die on the first hit.
-/// At Pierce T6 ("Boomerang Skewer") it turns around at max distance and
-/// skewers again at full damage, steering toward the nearest un-hit mob.
+/// At Pierce T6 ("Boomerang Skewer") it travels its full length, then returns
+/// straight to the tower that threw it, skewering again at full damage.
 /// </summary>
 public class PierceProjectile : MonoBehaviour
 {
@@ -56,23 +56,18 @@ public class PierceProjectile : MonoBehaviour
         }
         else
         {
-            // steer toward the nearest mob we haven't hit on the return leg,
-            // otherwise head back to where the rod was thrown
-            Vector3 dest = start;
-            Mob seek = NearestUnhit(mobs);
-            if (seek != null) dest = seek.transform.position + Vector3.up * 0.4f;
-
-            Vector3 to = dest - transform.position;
+            // boomerang straight back to the tower that threw it
+            Vector3 to = start - transform.position;
             to.y = 0f;
-            if (to.sqrMagnitude > 0.0001f)
-                Dir = Vector3.RotateTowards(Dir, to.normalized, 8f * Time.deltaTime, 0f).normalized;
+            if (to.sqrMagnitude > 0.0001f) Dir = to.normalized;
 
             transform.position += Dir * step;
             transform.rotation = Quaternion.FromToRotation(Vector3.up, Dir);
             returnTravelled += step;
 
-            // returned home or travelled the full length back: done
-            if (Vector3.Distance(start, transform.position) <= 0.35f || returnTravelled >= MaxDistance)
+            // back at the tower (or, as a safety, travelled its full length twice): done
+            if (Vector3.Distance(start, transform.position) <= Mathf.Max(0.35f, step)
+                || returnTravelled >= MaxDistance * 2f)
             {
                 Destroy(gameObject);
                 return;
@@ -94,20 +89,5 @@ public class PierceProjectile : MonoBehaviour
                 }
             }
         }
-    }
-
-    Mob NearestUnhit(List<Mob> mobs)
-    {
-        if (mobs == null) return null;
-        Mob best = null;
-        float bestDist = float.MaxValue;
-        for (int i = 0; i < mobs.Count; i++)
-        {
-            Mob m = mobs[i];
-            if (m == null || alreadyHit.Contains(m)) continue;
-            float d = Vector3.Distance(m.transform.position, transform.position);
-            if (d < bestDist) { bestDist = d; best = m; }
-        }
-        return best;
     }
 }
