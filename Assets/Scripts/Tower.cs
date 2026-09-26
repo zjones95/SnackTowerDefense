@@ -131,30 +131,38 @@ public class Tower : MonoBehaviour
         if (dir.sqrMagnitude < 0.0001f) return;
         dir.Normalize();
 
-        var mobs = TDGameManager.Instance != null ? TDGameManager.Instance.Mobs : null;
-        List<Mob> hits = new List<Mob>();
-        if (mobs != null)
+        GameObject go;
+
+        GameObject prefab = SnackModels.Load(SnackModels.ProjectilePath(Type));
+        if (prefab != null)
         {
-            for (int i = 0; i < mobs.Count; i++)
-            {
-                Mob m = mobs[i];
-                if (m == null) continue;
-                Vector3 to = m.transform.position - from;
-                to.y = 0f;
-                float along = Vector3.Dot(to, dir);
-                if (along < 0f || along > s.range) continue;
-                float perp = Vector3.Cross(dir, to).magnitude;
-                if (perp > s.pierceWidth) continue;
-                hits.Add(m);
-            }
+            go = Instantiate(prefab);
+            go.name = "SkewerRod";
+            go.transform.position = from;
+            go.transform.rotation = Quaternion.FromToRotation(Vector3.up, dir);  // modelled along +Z in Blender
         }
-        hits.Sort((a, b) => Vector3.Distance(from, a.transform.position).CompareTo(Vector3.Distance(from, b.transform.position)));
+        else
+        {
+            go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            Collider c = go.GetComponent<Collider>();
+            if (c != null) Destroy(c);
+            go.name = "SkewerRod";
+            go.transform.position = from;
+            go.transform.localScale = new Vector3(0.05f, 0.30f, 0.05f);
+            go.transform.rotation = Quaternion.FromToRotation(Vector3.up, dir);
+            go.GetComponent<Renderer>().sharedMaterial = TDVisuals.Mat(new Color(0.72f, 0.75f, 0.80f), 0.9f, 0.3f);
+        }
 
-        int n = Mathf.Min(hits.Count, Mathf.Max(1, s.pierceCount));
-        for (int i = 0; i < n; i++) hits[i].TakeDamage(s.damage);
+        Transform parent = TDGameManager.Instance != null ? TDGameManager.Instance.ProjectilesRoot : null;
+        if (parent != null) go.transform.SetParent(parent, true);
 
-        Vector3 end = n > 0 ? hits[n - 1].transform.position + Vector3.up * 0.4f : from + dir * s.range;
-        Tracer(from, end);
+        PierceProjectile p = go.AddComponent<PierceProjectile>();
+        p.Dir = dir;
+        p.Speed = 9f;                      // slow: it visibly walks to the enemy
+        p.Damage = s.damage;
+        p.Width = s.pierceWidth;
+        p.MaxHits = Mathf.Max(1, s.pierceCount);
+        p.MaxDistance = s.range;
     }
 
     void FireChain(Vector3 from, Mob target, TowerTierStats s)
