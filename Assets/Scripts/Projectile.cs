@@ -15,6 +15,13 @@ public class Projectile : MonoBehaviour
 
     public Color Tint = new Color(0.4f, 0.7f, 1f);
     public bool Spin = true;   // false = liquid blob, wobbles instead
+    public bool Arc = false;   // true = hops in a parabola (bouncing)
+
+    private bool arcInit;
+    private Vector3 arcStart;
+    private float arcT;
+    private float arcDur;
+    private float arcLift;
 
     void Update()
     {
@@ -31,11 +38,40 @@ public class Projectile : MonoBehaviour
             transform.localScale = new Vector3(wob, 2f - wob, wob);
         }
 
+        if (Arc) ArcStep(); else StraightStep();
+    }
+
+    void StraightStep()
+    {
         Vector3 tp = Target.transform.position + Vector3.up * 0.4f;
         Vector3 dir = tp - transform.position;
         float step = Speed * Time.deltaTime;
         if (dir.magnitude <= step) { Hit(); return; }
         transform.position += dir.normalized * step;
+    }
+
+    // a real hop: parabola from where we are to the next target
+    void ArcStep()
+    {
+        Vector3 end = Target.transform.position + Vector3.up * 0.4f;
+
+        if (!arcInit)
+        {
+            arcInit = true;
+            arcStart = transform.position;
+            arcT = 0f;
+            float d = Vector3.Distance(arcStart, end);
+            arcDur = Mathf.Max(0.10f, d / Mathf.Max(1f, Speed));
+            arcLift = Mathf.Min(1.6f, d * 0.30f);
+        }
+
+        arcT += Time.deltaTime / arcDur;
+        float k = Mathf.Clamp01(arcT);
+        Vector3 pos = Vector3.Lerp(arcStart, end, k);
+        pos.y += Mathf.Sin(k * Mathf.PI) * arcLift;
+        transform.position = pos;
+
+        if (k >= 1f) Hit();
     }
 
     void Hit()
@@ -81,6 +117,7 @@ public class Projectile : MonoBehaviour
             {
                 Bounces--;
                 Target = next;
+                arcInit = false;   // start a fresh hop
                 return; // keep flying
             }
         }

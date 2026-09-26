@@ -330,6 +330,7 @@ public class Tower : MonoBehaviour
         p.PoisonDuration = s.poisonDuration;
         p.Tint = TowerCatalog.Get(Type).color;
         p.Spin = Type != TowerType.Splash;   // the soda blob wobbles instead
+        p.Arc = Type == TowerType.Bounce;    // jelly beans hop between targets
     }
 
     // A fast "bolt" of sour energy: a wide, flat ribbon that always faces the
