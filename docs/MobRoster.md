@@ -46,7 +46,7 @@ This is a design draft for review; nothing here is implemented yet.
 | 32 | Lychee | Swarm | ✔ | Final swarm push |
 | 33 | Turnip | Tank | ✔ | Very tough |
 | 34 | Papaya | Tank | ✔ | Tough + faster |
-| 35 | **BOSS — Jackfruit** | Boss | ✔ | Final boss |
+| 35 | **BOSS — Granola Mom** | Boss | ✔ | Final boss |
 
 **Archetypes used:** Basic, Fast, Tank, Swarm, Boss.
 The game currently only has **Basic / Fast / Tank / Boss** — **Swarm** would be
@@ -64,10 +64,11 @@ new (fast, low HP, spawned in large numbers).
 | 20 | Durian | Foul and furious | **Enrages** — gets faster as its health drops |
 | 25 | Coconut | Hard shell | **Immune to slow**, extremely high HP, very slow |
 | 30 | Dragonfruit | Exotic | **Phases** — dashes forward periodically |
-| 35 | Jackfruit | The largest fruit | **Final boss** — colossal HP, enrages in its last third |
+| 35 | Granola Mom | Crunchy, organic, anti-snack | **Final boss.** **Confiscates** — every few seconds she disables your nearest tower ("we don't eat that"). **Immune to slow.** Speeds up in her last third on green-smoothie energy. |
 
 ### Stretch ideas (swap in if you want more variety)
 - **Artichoke** — layered armour: damage reduction drops in stages as you peel it.
+- **Jackfruit** — the largest fruit in the world; a colossal mid-run boss.
 - **Ghost Pepper** — leaves a burning trail that damages towers it passes.
 - **Pomegranate** — splits into seeds on death (breaks the "no supporting mobs"
   rule, so it'd need to be an exception).
