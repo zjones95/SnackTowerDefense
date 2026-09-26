@@ -457,7 +457,7 @@ public partial class TDGameManager
             GUI.Button(new Rect(cx - 70f, Screen.height * 0.355f, 140f, 28f), "Copy", PaperButton(15)))
         {
             Click();
-            GUIUtility.systemCopyBuffer = ns.Address;
+            CopyToClipboard(ns.Address);
         }
         if (!ns.AddressIsRelay && !string.IsNullOrEmpty(ns.Address))
             GUI.Label(new Rect(cx - 240f, Screen.height * 0.39f, 480f, 22f),
@@ -543,6 +543,23 @@ public partial class TDGameManager
     {
         var nm = Unity.Netcode.NetworkManager.Singleton;
         return nm != null ? nm.LocalClientId : ulong.MaxValue;
+    }
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+    [System.Runtime.InteropServices.DllImport("__Internal")]
+    static extern void TD_CopyToClipboard(string text);
+#endif
+
+    /// <summary>Copies text to the clipboard. WebGL needs a JS bridge
+    /// (GUIUtility.systemCopyBuffer does nothing in the browser).</summary>
+    static void CopyToClipboard(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return;
+#if UNITY_WEBGL && !UNITY_EDITOR
+        TD_CopyToClipboard(text);
+#else
+        GUIUtility.systemCopyBuffer = text;
+#endif
     }
 
     void Click()

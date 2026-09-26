@@ -162,8 +162,10 @@ public static class MobVisual
     public const float BarClearance = 0.40f;
 
     /// <summary>Returns the health-bar root; <paramref name="hpFill"/> is the green fill.
-    /// Bosses return null for both: they use the big on-screen HUD bar instead.</summary>
-    public static Transform Build(Transform parent, MobDef def, out Transform hpFill)
+    /// Bosses normally return null (they use the big on-screen HUD bar), unless
+    /// <paramref name="bossBar"/> is set — remote boards pass true so you can also
+    /// see other players' bosses.</summary>
+    public static Transform Build(Transform parent, MobDef def, out Transform hpFill, bool bossBar = false)
     {
         GameObject prefab = SnackModels.Load(MobCatalog.ModelPath(def));
 
@@ -182,8 +184,9 @@ public static class MobVisual
             model.Build(def.color, pants, new Color(0.95f, 0.78f, 0.62f), new Color(0.25f, 0.15f, 0.09f), def.scale, def.longHair);
         }
 
-        // Bosses use the on-screen HUD bar instead of a floating one.
-        if (def.archetype == MobArchetype.Boss)
+        // Bosses use the on-screen HUD bar instead of a floating one (unless a
+        // remote board explicitly wants a bar so their boss is visible too).
+        if (def.archetype == MobArchetype.Boss && !bossBar)
         {
             hpFill = null;
             return null;

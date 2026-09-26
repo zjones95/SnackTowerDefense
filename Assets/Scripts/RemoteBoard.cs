@@ -142,7 +142,7 @@ public class RemoteBoard : MonoBehaviour
 
                 MobDef def = MobCatalog.All[Mathf.Clamp(ms.Type, 0, MobCatalog.All.Length - 1)];
                 Transform fill;
-                Transform hpRoot = MobVisual.Build(go.transform, def, out fill);
+                Transform hpRoot = MobVisual.Build(go.transform, def, out fill, true);   // always bar remote mobs (incl. bosses)
                 Vector3 p = BoardOffset + new Vector3(BoardSnapshot.Dec(ms.X), 0f, BoardSnapshot.Dec(ms.Z));
                 go.transform.position = p;
 

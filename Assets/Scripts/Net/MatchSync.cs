@@ -141,8 +141,7 @@ public class MatchSync : MonoBehaviour
         if (Wave >= TDBalance.TotalWaves) { EndMatch(true); return; }
 
         Wave++;
-        Prep = true;
-        prepTimer = TDBalance.PrepDuration;
+        Prep = false;   // after the opening wave, start the moment every board is clear
         for (int i = 0; i < Boards.Count; i++)
         {
             Boards[i].Cleared = false;
@@ -150,7 +149,7 @@ public class MatchSync : MonoBehaviour
         }
         Broadcast();
         if (TDGameManager.Instance != null)
-            TDGameManager.Instance.MatchWaveStart(Wave, TDBalance.PrepDuration);
+            TDGameManager.Instance.BeginWaveFromMatch();
     }
 
     void EndMatch(bool victory)
@@ -317,7 +316,11 @@ public class MatchSync : MonoBehaviour
         if (wave != prevWave)
         {
             if (TDGameManager.Instance != null)
-                TDGameManager.Instance.MatchWaveStart(wave, TDBalance.PrepDuration);
+            {
+                // Opening wave: honour the prep timer. Later waves: begin at once.
+                TDGameManager.Instance.MatchWaveStart(wave, prep ? TDBalance.PrepDuration : 0f);
+                if (!prep) TDGameManager.Instance.BeginWaveFromMatch();
+            }
         }
         else if (prevPrep && !prep)
         {
