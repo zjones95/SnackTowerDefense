@@ -83,9 +83,9 @@ public static class TowerCatalog
 
         d = new TowerDef();
         d.type = TowerType.Slow; d.displayName = "Gumball Machine"; d.color = new Color(0.55f, 1f, 0.60f);
-        d.tiers.Add(new TowerTierStats { damage = 0, range = 3.5f, fireInterval = 0.25f, slowFactor = 0.45f, slowDuration = 1.2f, multiShot = 2 });
-        d.tiers.Add(new TowerTierStats { damage = 0, range = 4.2f, fireInterval = 0.25f, slowFactor = 0.55f, slowDuration = 1.4f, multiShot = 4 });
-        d.tiers.Add(new TowerTierStats { damage = 0, range = 5.0f, fireInterval = 0.25f, slowFactor = 0.65f, slowDuration = 1.6f, multiShot = 6 });
+        d.tiers.Add(new TowerTierStats { damage = 0, range = 3.5f, fireInterval = 0.50f, slowFactor = 0.45f, slowDuration = 2.0f, multiShot = 2 });
+        d.tiers.Add(new TowerTierStats { damage = 0, range = 4.2f, fireInterval = 0.50f, slowFactor = 0.55f, slowDuration = 2.2f, multiShot = 4 });
+        d.tiers.Add(new TowerTierStats { damage = 0, range = 5.0f, fireInterval = 0.50f, slowFactor = 0.65f, slowDuration = 2.4f, multiShot = 6 });
         defs[d.type] = d;
 
         d = new TowerDef();
