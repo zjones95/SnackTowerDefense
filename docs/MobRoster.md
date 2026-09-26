@@ -4,6 +4,9 @@ Mobs are now fruits and vegetables. **35 waves**, with a **boss on every 5th
 wave** (5, 10, 15, 20, 25, 30, 35). Boss waves contain **only the boss** — no
 supporting mobs.
 
+**One mob type per wave.** A wave never mixes mobs; it's a single fruit or
+vegetable, possibly spawned in several staggered bursts.
+
 This is a design draft for review; nothing here is implemented yet.
 
 ---
