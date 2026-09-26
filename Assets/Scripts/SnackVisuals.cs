@@ -91,7 +91,7 @@ public static class TowerVisual
         float size = Mathf.Max(1.0f, b.size.y * 1.5f);
         GameObject quad = TDVisuals.Quad(parent, "TierGlow", Vector3.zero, size, m);
         TierGlow tg = quad.AddComponent<TierGlow>();
-        tg.Center = parent.InverseTransformPoint(b.center);
+        tg.Center = parent.InverseTransformPoint(new Vector3(b.center.x, b.min.y, b.center.z));   // base of the model
         tg.Push = Mathf.Max(0.15f, b.extents.magnitude * 0.75f);   // clear of its own model
         tg.FaceNow();                                              // correct on frame one
     }
