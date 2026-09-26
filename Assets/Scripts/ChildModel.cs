@@ -14,7 +14,7 @@ public class ChildModel : MonoBehaviour
     private float speed;
     private float phase;
 
-    public void Build(Color shirt, Color pants, Color skin, Color hair, float scale)
+    public void Build(Color shirt, Color pants, Color skin, Color hair, float scale, bool longHair = false)
     {
         if (built) return;
 
@@ -33,6 +33,14 @@ public class ChildModel : MonoBehaviour
         torso = TDVisuals.Box(container, "Torso", new Vector3(0f, 0.92f, 0f), new Vector3(0.42f, 0.46f, 0.26f), mShirt).transform;
         head = TDVisuals.Sphere(container, "Head", new Vector3(0f, 1.32f, 0f), 0.42f, mSkin).transform;
         TDVisuals.Sphere(container, "Hair", new Vector3(0f, 1.37f, -0.02f), 0.45f, mHair);
+        if (longHair)
+        {
+            // long hair down the back plus side strands and a messy bun
+            TDVisuals.Box(container, "HairBack", new Vector3(0f, 1.00f, -0.17f), new Vector3(0.40f, 0.86f, 0.18f), mHair);
+            TDVisuals.Box(container, "HairSideL", new Vector3(-0.19f, 1.14f, -0.02f), new Vector3(0.10f, 0.62f, 0.24f), mHair);
+            TDVisuals.Box(container, "HairSideR", new Vector3(0.19f, 1.14f, -0.02f), new Vector3(0.10f, 0.62f, 0.24f), mHair);
+            TDVisuals.Sphere(container, "Bun", new Vector3(0.05f, 1.62f, -0.12f), 0.26f, mHair);
+        }
         TDVisuals.Sphere(container, "EyeL", new Vector3(-0.09f, 1.34f, 0.19f), 0.06f, TDVisuals.Mat(Color.white, 0f, 0.5f));
         TDVisuals.Sphere(container, "EyeR", new Vector3(0.09f, 1.34f, 0.19f), 0.06f, TDVisuals.Mat(Color.white, 0f, 0.5f));
 

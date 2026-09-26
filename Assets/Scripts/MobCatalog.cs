@@ -24,6 +24,7 @@ public class MobDef
     public bool slowImmune = false;
     public float enrage = 0f;        // extra speed fraction at zero health
     public float dashEvery = 0f;     // seconds between dashes (0 = never)
+    public bool longHair = false;    // procedural humanoid: long hair
 }
 
 // The 35-wave roster. Waves live in TDBalance; this only describes the mobs.
@@ -113,7 +114,7 @@ public static class MobCatalog
             case "Durian": d.health = 540f; d.enrage = 0.85f; break;
             case "Coconut": d.health = 700f; d.speed = 0.68f; d.slowImmune = true; break;
             case "Dragonfruit": d.health = 620f; d.dashEvery = 4.5f; break;
-            case "GranolaMom": d.health = 820f; d.slowImmune = true; d.enrage = 0.6f; d.dashEvery = 6f; break;
+            case "GranolaMom": d.health = 820f; d.slowImmune = true; d.enrage = 0.6f; d.dashEvery = 6f; d.longHair = true; break;
         }
         return d;
     }

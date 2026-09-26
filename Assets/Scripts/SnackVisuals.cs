@@ -114,7 +114,7 @@ public static class MobVisual
         {
             ChildModel model = parent.gameObject.AddComponent<ChildModel>();
             Color pants = new Color(def.color.r * 0.45f, def.color.g * 0.45f, def.color.b * 0.55f);
-            model.Build(def.color, pants, new Color(0.95f, 0.78f, 0.62f), new Color(0.25f, 0.15f, 0.09f), def.scale);
+            model.Build(def.color, pants, new Color(0.95f, 0.78f, 0.62f), new Color(0.25f, 0.15f, 0.09f), def.scale, def.longHair);
             barY = def.scale * 1.6f + 0.3f;
         }
 

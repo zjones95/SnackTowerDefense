@@ -36,7 +36,7 @@ public static class SnackPreview
             }
         }
 
-        string[] mobs = { "Apple", "Banana", "Potato", "Watermelon" };
+        string[] mobs = { "Apple", "GranolaMom", "Potato", "Watermelon" };
         for (int i = 0; i < mobs.Length; i++)
         {
             MobDef def = MobCatalog.Get(mobs[i]);
