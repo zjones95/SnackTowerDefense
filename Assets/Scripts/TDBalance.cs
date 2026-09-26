@@ -19,6 +19,21 @@ public static class TDBalance
     public const int BuildCost = 25; // flat, always
     public const int MergeCost = 10; // per merge (2 towers -> 1 of next tier)
 
+    // Cash ascension: a single tower is upgraded in place, no second tower
+    // consumed. 2:1 merging stops at T3+T3 -> T4, so these are the only way to
+    // reach tiers 5 and 6 (see docs/TierPlan.md).
+    public const int AscendCost4to5 = 150;   // Tier 4 -> 5
+    public const int AscendCost5to6 = 300;   // Tier 5 -> 6
+
+    /// <summary>Cash cost to ascend a tower <paramref name="fromTier"/> -> +1,
+    /// or 0 when that step isn't ascension (tiers 1-3 merge, and 6 is max).</summary>
+    public static int AscendCost(int fromTier)
+    {
+        if (fromTier == 4) return AscendCost4to5;
+        if (fromTier == 5) return AscendCost5to6;
+        return 0;
+    }
+
     /// <summary>Global mob-health knob, applied once in <see cref="Mob.Init"/>.
     /// Stacked on top of the per-wave and difficulty multipliers (never inside
     /// HealthMultiplier, so it is not double-applied).</summary>

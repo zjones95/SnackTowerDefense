@@ -19,7 +19,7 @@ Read this first, then `docs/ARCHITECTURE.md`, then `docs/MobRoster.md`.
 | Area | State |
 |---|---|
 | Single player | **35 waves**, one mob type per wave, boss every 5th |
-| Towers | 7 random-build types + Gold, × 3 tiers, all modelled (Gold is procedural); merge two same-tier → tier+1 |
+| Towers | 7 random-build types × **6 tiers** + Gold (×3, procedural); merge two same-tier while source ≤ T3 (top merge T3+T3 → T4), then cash-ascend **T4→T5 `$150` / T5→T6 `$300`** with **U**. Tier 4 is stats-only; tiers 5/6 carry modifier **fields** whose behaviours are a follow-up pass (`docs/TierPlan.md`) |
 | Mobs | 35 fruits/veg; **34 modelled**, Granola Mom is the procedural humanoid |
 | Projectiles | modelled popcorn / soda blob / skewer rod / jelly bean / chip |
 | Difficulty | Easy/Normal/Hard/Insane (−25% → +50% mob HP), single player + lobby |
@@ -43,24 +43,38 @@ with editor renders.
 3. **Difficulty selector** — implemented, untested.
 4. **Multiplayer with the new content.** Phases 1–3 worked with the old 5-wave
    roster; the mob/wave rework has not been re-tested online.
+5. **Tier 4-6 + cash ascension.** Costs (`$150` / `$300`), the capped merge
+   (source ≤ T3), the 6-tier scale/colours and the `U` panel are implemented and
+   compile, but the balance of the new stat rows has never been played. The
+   tier-5/6 **modifier behaviours** also do not exist yet — the fields are set in
+   `TowerCatalog` but nothing reads them.
+6. **Tier-4-6 modifier behaviours.** A follow-up pass implements crit + Deadeye,
+   Twin Lash branching, Sticky Sour, Candy Shell / Sticky Tar, poisoning stacks
+   + detonation, boomerang return, Kettle Burst, and Sticky Soda — see
+   [`docs/TierPlan.md`](TierPlan.md).
 
 ## Suggested next steps (roughly in order)
 
-1. **Play-test single player** and tune balance — most valuable thing right now.
+1. **Implement the tier-5/6 modifier behaviours** (the field data is already in
+   `TowerCatalog`; nothing reads it yet) — crit + Deadeye, Twin Lash / Sticky
+   Sour, Candy Shell / Sticky Tar, poisoning stacks + detonation, boomerang
+   return, Kettle Burst, Sticky Soda. Full brief: [`docs/TierPlan.md`](TierPlan.md).
+2. **Play-test single player** and tune balance — most valuable thing right now.
    - curve: `TDBalance.HealthMult`
-   - tower stats: `TowerCatalog`
+   - tower stats: `TowerCatalog` (now T1-6; ascension costs in `TDBalance`)
    - economy: `TDBalance.KillReward` / `RoundBonus`
-2. **Bump the Swarm scale.** `Swarm` is `0.42`, so Raspberry (0.32 tall) renders
+   - new: `TDBalance.AscendCost4to5` / `AscendCost5to6`
+3. **Bump the Swarm scale.** `Swarm` is `0.42`, so Raspberry (0.32 tall) renders
    ~0.2 units against a 2-unit tile — nearly invisible. ~`0.7` would fix it.
    (`MobCatalog.Make`, the `Swarm` case.)
-3. **Delete the unused `Cracker.glb`** (and its `Assets/Models` mirror) — the
+4. **Delete the unused `Cracker.glb`** (and its `Assets/Models` mirror) — the
    original cracker mob is gone.
-4. **Re-test multiplayer** now that waves/mobs changed (ParrelSync clone or two
+5. **Re-test multiplayer** now that waves/mobs changed (ParrelSync clone or two
    builds; host + join `127.0.0.1:7777`).
-5. **Unity Gaming Services / Relay.** Join codes fall back to a LAN address
+6. **Unity Gaming Services / Relay.** Join codes fall back to a LAN address
    today. Creating a UGS project, enabling Relay and setting the Project ID makes
    real 6-character codes work over the internet.
-6. **Fix CI** — add the `UNITY_LICENSE` secret (see README).
+7. **Fix CI** — add the `UNITY_LICENSE` secret (see README).
 
 ## Open design questions
 

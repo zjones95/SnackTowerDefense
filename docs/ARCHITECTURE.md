@@ -41,7 +41,7 @@ MainMenu ─┬─ DifficultySelect ── StartingRun ── Playing ─┬─ 
 | `TDGameManager.MobViewer.cs` | Mob gallery screen |
 | `TDGameManager.Settings.cs` | Pause menu + music/SFX settings overlay, time-scale handling |
 | `TDBalance.cs` | Money/lives/prep, difficulty, **35-wave table**, health & speed curves |
-| `TowerCatalog.cs` | 8 tower types × 3 tiers (7 random-build + Gold) |
+| `TowerCatalog.cs` | 8 tower types (7 random-build ×6 tiers + Gold ×3); tier stats, merge/ascend costs live in `TDBalance` |
 | `Tower.cs` | Targeting, firing, merging, muzzle, model composition |
 | `Projectile.cs` | Homing projectile (also arc/hop + splash + poison + slow on hit) |
 | `PierceProjectile.cs` | Straight-line travelling rod that skewers enemies |
@@ -79,6 +79,15 @@ their top face is exactly **y = 0** — that is the plane towers and mobs sit on
 then dispatches on type. Projectile towers spawn from `Muzzle()` (measured from
 the model's bounds: half its height, nudged forward). Instant towers draw a
 `Tracer` (a flat, camera-facing neon ribbon).
+
+Tiers: 2:1 **merging** (`E`) is capped at source tier ≤ `TowerCatalog.MaxMergeTier`
+(3), so **T3+T3 → T4** is the top merge. Tiers **4 → 5 → 6** advance by **cash
+ascension** (`U`, `TDBalance.AscendCost`) — a single tower rebuilt in place at
+tier + 1, same type, no second tower consumed. `MaxTier` is 6.
+`TowerTierStats` carries the tier-4-6 modifier schema (crit, deadeye, poison
+stacks/detonation, chain branches/full damage, tar, boomerang, impact splash,
+splash-slow). See [`docs/TierPlan.md`](TierPlan.md) — the **behaviour** pass for
+those fields is still to come; this pass is data/foundation only.
 
 **Mobs** — one mob type per wave. `MobCatalog` derives stats from the archetype
 (Basic/Fast/Tank/Swarm/Boss) and then applies per-boss traits: `regen`,

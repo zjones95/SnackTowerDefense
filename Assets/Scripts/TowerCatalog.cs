@@ -27,6 +27,40 @@ public class TowerTierStats
     public float poisonDps = 0f;       // Poison: damage per second
     public float poisonDuration = 0f;
     public int goldPerHit = 0;         // Gold: money awarded on each confirmed hit
+
+    // ---- tier 4-6 schema (data only; behaviours land in a follow-up pass) ----
+    // Defaults are neutral so tiers 1-3 are unaffected.
+
+    // Sniper
+    public float critChance = 0f;          // chance a hit crits (0-1)
+    public float critMult = 1f;            // crit damage multiplier
+    public bool critPierceArmour = false;  // crits ignore Mob.Def.armour
+    public float deadeyeRamp = 0f;         // damage bonus per consecutive hit on one target
+    public float deadeyeCap = 1f;          // cap on the deadeye bonus multiplier
+    public float deadeyeCrit = 0f;         // extra crit chance granted per deadeye stack
+
+    // Poison
+    public int poisonMaxStacks = 0;        // max concurrent poison stacks (0/1 = no stacking)
+    public float poisonDetonateRadius = 0f;    // on-death detonation radius
+    public float poisonDetonateFraction = 0f;  // fraction of current DPS dealt on detonation
+
+    // Chain
+    public int chainBranches = 0;          // extra neighbours each node arcs to
+    public bool chainFullDamage = false;   // jump damage ignores the 0.75^i falloff
+
+    // Slow / tar
+    public float tarDamageBonus = 0f;      // damage-taken bonus while slowed by this tower
+    public float tarLinger = 0f;           // extra seconds the tar debuff lingers
+
+    // Pierce
+    public bool boomerangReturn = false;   // rod returns and skewers again at full damage
+
+    // SingleShot
+    public float impactSplash = 0f;        // small splash radius on every impact
+
+    // Splash
+    public float splashSlowFactor = 0f;    // slow applied to everything caught in the splash
+    public float splashSlowDuration = 0f;
 }
 
 [System.Serializable]
@@ -53,7 +87,12 @@ public class TowerDef
 //    to make the run harder.
 public static class TowerCatalog
 {
-    public const int MaxTier = 3;
+    public const int MaxTier = 6;
+
+    /// <summary>Highest source tier a 2:1 merge may consume. T3+T3 -> T4 is the
+    /// top merge; T4+ and up advance by cash ascension instead. See TierPlan.md.</summary>
+    public const int MaxMergeTier = 3;
+
     public const int BuildCost = 25;
 
     /// <summary>How many Gold towers a board may hold at once.</summary>
@@ -100,6 +139,10 @@ public static class TowerCatalog
         d.tiers.Add(new TowerTierStats { damage = 3, range = 4.5f, fireInterval = 0.40f, projectileSpeed = 22f });
         d.tiers.Add(new TowerTierStats { damage = 6, range = 5.5f, fireInterval = 0.325f, projectileSpeed = 24f });
         d.tiers.Add(new TowerTierStats { damage = 12, range = 6.5f, fireInterval = 0.25f, projectileSpeed = 26f });
+        // T4 pure stats; T5 Ricochet Pop (bounce 2 / 2.5); T6 Kettle Burst (3 pellets + mini-splash).
+        d.tiers.Add(new TowerTierStats { damage = 16, range = 7.5f, fireInterval = 0.22f, projectileSpeed = 27f });
+        d.tiers.Add(new TowerTierStats { damage = 24, range = 8.5f, fireInterval = 0.20f, projectileSpeed = 28f, bounceCount = 2, bounceRange = 2.5f });
+        d.tiers.Add(new TowerTierStats { damage = 21, range = 9.5f, fireInterval = 0.20f, projectileSpeed = 29f, multiShot = 3, impactSplash = 1.3f });
         defs[d.type] = d;
 
         d = new TowerDef();
@@ -107,6 +150,10 @@ public static class TowerCatalog
         d.tiers.Add(new TowerTierStats { damage = 2, range = 4.0f, fireInterval = 0.60f, projectileSpeed = 16f, splashRadius = 1.6f });
         d.tiers.Add(new TowerTierStats { damage = 5, range = 4.8f, fireInterval = 0.525f, projectileSpeed = 18f, splashRadius = 2.1f });
         d.tiers.Add(new TowerTierStats { damage = 9, range = 5.6f, fireInterval = 0.45f, projectileSpeed = 20f, splashRadius = 2.7f });
+        // T4 pure stats; T5 Fizz Ricochet (bounce 1 / 3.0); T6 Sticky Soda (splash slow 0.45 / 2.0).
+        d.tiers.Add(new TowerTierStats { damage = 11, range = 6.4f, fireInterval = 0.40f, projectileSpeed = 22f, splashRadius = 3.3f });
+        d.tiers.Add(new TowerTierStats { damage = 17, range = 7.2f, fireInterval = 0.36f, projectileSpeed = 24f, splashRadius = 3.9f, bounceCount = 1, bounceRange = 3.0f });
+        d.tiers.Add(new TowerTierStats { damage = 24, range = 8.0f, fireInterval = 0.32f, projectileSpeed = 26f, splashRadius = 4.4f, splashSlowFactor = 0.45f, splashSlowDuration = 2.0f });
         defs[d.type] = d;
 
         d = new TowerDef();
@@ -114,6 +161,10 @@ public static class TowerCatalog
         d.tiers.Add(new TowerTierStats { damage = 0, range = 3.5f, fireInterval = 0.50f, slowFactor = 0.45f, slowDuration = 2.0f, multiShot = 2 });
         d.tiers.Add(new TowerTierStats { damage = 0, range = 4.2f, fireInterval = 0.50f, slowFactor = 0.55f, slowDuration = 2.2f, multiShot = 4 });
         d.tiers.Add(new TowerTierStats { damage = 0, range = 5.0f, fireInterval = 0.50f, slowFactor = 0.65f, slowDuration = 2.4f, multiShot = 6 });
+        // T4 pure stats; T5 Candy Shell (impact damage 3); T6 Sticky Tar (impact 6 + tar +30% / 1.5s).
+        d.tiers.Add(new TowerTierStats { damage = 0, range = 5.8f, fireInterval = 0.48f, slowFactor = 0.72f, slowDuration = 2.6f, multiShot = 7 });
+        d.tiers.Add(new TowerTierStats { damage = 3, range = 6.6f, fireInterval = 0.46f, slowFactor = 0.78f, slowDuration = 2.8f, multiShot = 8 });
+        d.tiers.Add(new TowerTierStats { damage = 6, range = 7.4f, fireInterval = 0.44f, slowFactor = 0.84f, slowDuration = 3.0f, multiShot = 10, tarDamageBonus = 0.30f, tarLinger = 1.5f });
         defs[d.type] = d;
 
         d = new TowerDef();
@@ -121,6 +172,11 @@ public static class TowerCatalog
         d.tiers.Add(new TowerTierStats { damage = 10, range = 9f, fireInterval = 0.90f });
         d.tiers.Add(new TowerTierStats { damage = 18, range = 11f, fireInterval = 0.80f });
         d.tiers.Add(new TowerTierStats { damage = 32, range = 13f, fireInterval = 0.70f });
+        // T4 pure stats; T5 Powdered Sour (30% crit x2.5, pierces armour);
+        // T6 Deadeye (+15%/stack cap x1.8, +5% crit/stack) on top of the crit.
+        d.tiers.Add(new TowerTierStats { damage = 38, range = 15f, fireInterval = 0.62f });
+        d.tiers.Add(new TowerTierStats { damage = 54, range = 17f, fireInterval = 0.56f, critChance = 0.30f, critMult = 2.5f, critPierceArmour = true });
+        d.tiers.Add(new TowerTierStats { damage = 77, range = 19f, fireInterval = 0.50f, critChance = 0.30f, critMult = 2.5f, critPierceArmour = true, deadeyeRamp = 0.15f, deadeyeCap = 1.8f, deadeyeCrit = 0.05f });
         defs[d.type] = d;
 
         // --- new types ---
@@ -129,6 +185,10 @@ public static class TowerCatalog
         d.tiers.Add(new TowerTierStats { damage = 2, range = 4.5f, fireInterval = 0.50f, chainCount = 2, chainRange = 3.5f });
         d.tiers.Add(new TowerTierStats { damage = 5, range = 5.2f, fireInterval = 0.45f, chainCount = 3, chainRange = 4.0f });
         d.tiers.Add(new TowerTierStats { damage = 7, range = 6.0f, fireInterval = 0.40f, chainCount = 4, chainRange = 4.5f });
+        // T4 pure stats; T5 Twin Lash (branches 2); T6 Sticky Sour (full damage, slow 0.40 / 2.0, +1 jump).
+        d.tiers.Add(new TowerTierStats { damage = 11, range = 6.8f, fireInterval = 0.36f, chainCount = 5, chainRange = 5.0f });
+        d.tiers.Add(new TowerTierStats { damage = 16, range = 7.6f, fireInterval = 0.34f, chainCount = 6, chainRange = 5.5f, chainBranches = 2 });
+        d.tiers.Add(new TowerTierStats { damage = 22, range = 8.4f, fireInterval = 0.32f, chainCount = 7, chainRange = 6.0f, chainFullDamage = true, slowFactor = 0.40f, slowDuration = 2.0f });
         defs[d.type] = d;
 
         d = new TowerDef();
@@ -136,6 +196,10 @@ public static class TowerCatalog
         d.tiers.Add(new TowerTierStats { damage = 5, range = 7f, fireInterval = 0.65f, pierceCount = 3, pierceWidth = 1.1f });
         d.tiers.Add(new TowerTierStats { damage = 9, range = 8.5f, fireInterval = 0.60f, pierceCount = 4, pierceWidth = 1.3f });
         d.tiers.Add(new TowerTierStats { damage = 15, range = 10f, fireInterval = 0.55f, pierceCount = 5, pierceWidth = 1.5f });
+        // T4 pure stats; T5 Wide Skewer (pc 8 / pw 2.0); T6 Boomerang Skewer (pc 9 / pw 2.2, returns).
+        d.tiers.Add(new TowerTierStats { damage = 22, range = 11.5f, fireInterval = 0.50f, pierceCount = 6, pierceWidth = 1.7f });
+        d.tiers.Add(new TowerTierStats { damage = 32, range = 13f, fireInterval = 0.46f, pierceCount = 8, pierceWidth = 2.0f });
+        d.tiers.Add(new TowerTierStats { damage = 45, range = 14.5f, fireInterval = 0.42f, pierceCount = 9, pierceWidth = 2.2f, boomerangReturn = true });
         defs[d.type] = d;
 
         d = new TowerDef();
@@ -143,15 +207,21 @@ public static class TowerCatalog
         d.tiers.Add(new TowerTierStats { damage = 1, range = 4.5f, fireInterval = 0.50f, projectileSpeed = 20f, poisonDps = 6f, poisonDuration = 3f });
         d.tiers.Add(new TowerTierStats { damage = 2, range = 5.2f, fireInterval = 0.45f, projectileSpeed = 21f, poisonDps = 11f, poisonDuration = 3.5f });
         d.tiers.Add(new TowerTierStats { damage = 2, range = 6.0f, fireInterval = 0.40f, projectileSpeed = 22f, poisonDps = 18f, poisonDuration = 4f });
+        // T4 pure stats; T5 Extra Hot (up to 3 poison stacks);
+        // T6 Ghost Pepper (death detonation: full DPS in 2.5 radius, re-applies poison).
+        d.tiers.Add(new TowerTierStats { damage = 3, range = 6.8f, fireInterval = 0.36f, projectileSpeed = 23f, poisonDps = 24f, poisonDuration = 4.5f });
+        d.tiers.Add(new TowerTierStats { damage = 4, range = 7.6f, fireInterval = 0.34f, projectileSpeed = 24f, poisonDps = 33f, poisonDuration = 5.0f, poisonMaxStacks = 3 });
+        d.tiers.Add(new TowerTierStats { damage = 6, range = 8.4f, fireInterval = 0.32f, projectileSpeed = 25f, poisonDps = 45f, poisonDuration = 5.5f, poisonDetonateRadius = 2.5f, poisonDetonateFraction = 1f });
         defs[d.type] = d;
 
         // Gold is economy-only: no damage, a modest range, and a slow fire rate
-        // that speeds up 25% per tier. Each confirmed hit pays goldPerHit.
+        // that speeds up ~25% per tier. The payout is a flat $1 per confirmed
+        // hit at every tier - the faster rate is the whole upgrade.
         d = new TowerDef();
         d.type = TowerType.Gold; d.displayName = "Gold Coin"; d.color = new Color(1f, 0.82f, 0.25f);
         d.tiers.Add(new TowerTierStats { damage = 0, range = 4.5f, fireInterval = 5.0f, projectileSpeed = 20f, goldPerHit = 1 });
-        d.tiers.Add(new TowerTierStats { damage = 0, range = 5.2f, fireInterval = 4.0f, projectileSpeed = 22f, goldPerHit = 2 });
-        d.tiers.Add(new TowerTierStats { damage = 0, range = 6.0f, fireInterval = 3.2f, projectileSpeed = 24f, goldPerHit = 3 });
+        d.tiers.Add(new TowerTierStats { damage = 0, range = 5.2f, fireInterval = 4.0f, projectileSpeed = 22f, goldPerHit = 1 });
+        d.tiers.Add(new TowerTierStats { damage = 0, range = 6.0f, fireInterval = 3.2f, projectileSpeed = 24f, goldPerHit = 1 });
         defs[d.type] = d;
     }
 }

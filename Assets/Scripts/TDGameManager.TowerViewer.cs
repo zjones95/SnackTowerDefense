@@ -80,25 +80,27 @@ public partial class TDGameManager
 
     void DrawTowerStats(TowerDef def, Rect area)
     {
+        int cols = def.tiers.Count;                 // 6 for the 7 random types, 3 for Gold
         float rowH = 26f;
-        float labelW = area.width * 0.30f;
-        float colW = (area.width - labelW) / 3f;
+        float labelW = area.width * 0.22f;
+        float colW = (area.width - labelW) / cols;
 
-        GUIStyle head = Style(15, TextAnchor.MiddleCenter, new Color(0.65f, 0.85f, 1f));
-        GUIStyle lab = Style(15, TextAnchor.MiddleLeft, new Color(0.78f, 0.80f, 0.84f));
-        GUIStyle val = Style(15, TextAnchor.MiddleCenter, Color.white);
+        int fs = cols > 4 ? 12 : 15;                // keep six columns legible
+        GUIStyle head = Style(fs, TextAnchor.MiddleCenter, new Color(0.65f, 0.85f, 1f));
+        GUIStyle lab = Style(fs, TextAnchor.MiddleLeft, new Color(0.78f, 0.80f, 0.84f));
+        GUIStyle val = Style(fs, TextAnchor.MiddleCenter, Color.white);
 
-        for (int t = 0; t < 3; t++)
-            GUI.Label(new Rect(area.x + labelW + t * colW, area.y, colW, rowH), "Tier " + (t + 1), head);
+        for (int t = 0; t < cols; t++)
+            GUI.Label(new Rect(area.x + labelW + t * colW, area.y, colW, rowH), "T" + (t + 1), head);
 
         string[] rows = { "Damage", "Range", "Rate", "Special" };
         for (int r = 0; r < rows.Length; r++)
         {
             float y = area.y + (r + 1) * rowH;
             GUI.Label(new Rect(area.x, y, labelW, rowH), rows[r], lab);
-            for (int t = 0; t < 3; t++)
+            for (int t = 0; t < cols; t++)
             {
-                TowerTierStats s = def.tiers[Mathf.Min(t, def.tiers.Count - 1)];
+                TowerTierStats s = def.tiers[t];
                 GUI.Label(new Rect(area.x + labelW + t * colW, y, colW, rowH), StatText(def.type, r, s), val);
             }
         }
@@ -117,15 +119,27 @@ public partial class TDGameManager
             default:
                 switch (t)
                 {
-                    case TowerType.Splash: return "splash " + s.splashRadius.ToString("0.#");
-                    case TowerType.Slow: return "x" + s.multiShot + " - " + Mathf.RoundToInt(s.slowFactor * 100f) + "% / " + s.slowDuration.ToString("0.#") + "s";
-                    case TowerType.Chain: return "jumps " + s.chainCount;
-                    case TowerType.Pierce: return "pierces " + s.pierceCount;
-                    case TowerType.Poison: return s.poisonDps.ToString("0.#") + "/s for " + s.poisonDuration.ToString("0.#") + "s";
-                    case TowerType.Gold: return "+$" + s.goldPerHit + " / hit";
+                    case TowerType.SingleShot:
+                        if (s.multiShot > 1) return "x" + s.multiShot + " pel";
+                        if (s.bounceCount > 0) return "bnc " + s.bounceCount;
+                        return "-";
+                    case TowerType.Splash: return "spl " + s.splashRadius.ToString("0.#");
+                    case TowerType.Slow: return "x" + s.multiShot + " " + Mathf.RoundToInt(s.slowFactor * 100f) + "%";
+                    case TowerType.Sniper: return SniperSpecial(s);
+                    case TowerType.Chain: return "jmp " + s.chainCount;
+                    case TowerType.Pierce: return "prc " + s.pierceCount;
+                    case TowerType.Poison: return s.poisonDps.ToString("0.#") + "dps";
+                    case TowerType.Gold: return "+$" + s.goldPerHit;
                     default: return "-";
                 }
         }
+    }
+
+    static string SniperSpecial(TowerTierStats s)
+    {
+        if (s.deadeyeRamp > 0f) return "deadeye";
+        if (s.critChance > 0f) return Mathf.RoundToInt(s.critChance * 100f) + "% cr";
+        return "-";
     }
 
     static string Blurb(TowerType t)

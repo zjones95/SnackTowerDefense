@@ -7,11 +7,14 @@ using UnityEngine;
 /// </summary>
 public static class TowerVisual
 {
-    /// <summary>Visual size for a tier: tier 1 is deliberately small, and each
-    /// merge step grows the tower so the tiers read at a glance.</summary>
+    /// <summary>Visual size per tier. Tier 1 starts deliberately small and each
+    /// step grows the tower, but the top tiers are damped so a ~1-unit model
+    /// doesn't clip its neighbours on a 2-unit tile (see docs/TierPlan.md).</summary>
+    static readonly float[] TierScales = { 0.78f, 1.00f, 1.22f, 1.34f, 1.44f, 1.54f };
+
     public static float TierScale(int tier)
     {
-        return 0.78f + 0.22f * (Mathf.Clamp(tier, 1, TowerCatalog.MaxTier) - 1);
+        return TierScales[Mathf.Clamp(tier, 1, TierScales.Length) - 1];
     }
 
     /// <summary>Creates the tower model and returns the rotating head pivot.</summary>
@@ -59,12 +62,16 @@ public static class TowerVisual
         return turret;
     }
 
-    /// <summary>Tier palette — the same three colours for every tower type.</summary>
+    /// <summary>Tier palette — the same colours for every tower type. Tiers 4-6
+    /// deliberately avoid gold, which is reserved for the Gold tower.</summary>
     public static readonly Color[] TierColours =
     {
         new Color(0.80f, 0.82f, 0.86f),  // 1 - grey
         new Color(0.30f, 0.60f, 1.00f),  // 2 - blue
-        new Color(0.30f, 0.92f, 0.42f)   // 3 - green
+        new Color(0.30f, 0.92f, 0.42f),  // 3 - green
+        new Color(0.85f, 0.45f, 0.25f),  // 4 - bronze
+        new Color(0.95f, 0.30f, 0.85f),  // 5 - magenta
+        new Color(0.25f, 0.95f, 1.00f)   // 6 - cyan
     };
 
     public static Color TierColour(int tier)

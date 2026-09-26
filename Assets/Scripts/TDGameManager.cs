@@ -664,6 +664,7 @@ public partial class TDGameManager : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.B)) ToggleBuildMode();
         if (Input.GetKeyDown(KeyCode.G)) ToggleGoldBuild();
         if (Input.GetKeyDown(KeyCode.E)) TryStartMerge();
+        if (Input.GetKeyDown(KeyCode.U)) TryStartAscend();
         if (Input.GetKeyDown(KeyCode.R)) TryStartReRoll();
     }
 
@@ -713,7 +714,15 @@ public partial class TDGameManager : MonoBehaviour
     {
         if (!ViewingOwnBoard) return;
         if (Selected == null) { message = "Select a tower first"; messageTimer = 1.5f; return; }
-        if (Selected.Tier >= TowerCatalog.MaxTier) { message = "Max tier reached"; messageTimer = 1.5f; return; }
+        if (Selected.Tier > TowerCatalog.MaxMergeTier)
+        {
+            int cost = TDBalance.AscendCost(Selected.Tier);
+            message = cost > 0
+                ? "Tier " + Selected.Tier + " ascends with U ($" + cost + ")"
+                : "Max tier reached";
+            messageTimer = 1.8f;
+            return;
+        }
         if (Money < TDBalance.MergeCost)
         {
             message = "Not enough money to merge ($" + TDBalance.MergeCost + ")";
@@ -727,6 +736,17 @@ public partial class TDGameManager : MonoBehaviour
         reRolling = false;
         message = "Select another Tier " + Selected.Tier + " tower";
         messageTimer = 2.5f;
+    }
+
+    /// <summary>Cash ascension (hotkey U): upgrades the selected tier 4/5 tower in
+    /// place for money, consuming no second tower. Tiers 1-3 use merging instead.</summary>
+    void TryStartAscend()
+    {
+        if (!ViewingOwnBoard) return;
+        if (Selected == null) { message = "Select a tower first"; messageTimer = 1.5f; return; }
+        merging = false;   // ascension targets no second tower: leave any pick mode
+        reRolling = false;
+        TryAscend(Selected);
     }
 
     void TryStartReRoll()
@@ -815,7 +835,9 @@ public partial class TDGameManager : MonoBehaviour
     bool TryMerge(Tower a, Tower b)
     {
         if (a == null || b == null || a == b) return false;
-        if (a.Tier != b.Tier || a.Tier >= TowerCatalog.MaxTier) return false;
+        // 2:1 merging only consumes tiers up to MaxMergeTier (T3+T3 -> T4 is the top);
+        // tiers 4+ advance by cash ascension, not by consuming another tower.
+        if (a.Tier != b.Tier || a.Tier > TowerCatalog.MaxMergeTier) return false;
 
         if (Money < TDBalance.MergeCost)
         {
@@ -837,6 +859,52 @@ public partial class TDGameManager : MonoBehaviour
         SetSelected(nt);
         if (TDAudio.Instance != null) TDAudio.Instance.Merge();
         message = "Merged into " + nt.DisplayName + " (Tier " + nt.Tier + ")  -$" + TDBalance.MergeCost;
+        messageTimer = 2f;
+        return true;
+    }
+
+    /// <summary>
+    /// Cash ascension: upgrades a tier 4 or 5 tower in place to tier + 1 for
+    /// money, keeping its type and cell and leaving the new tower selected.
+    /// No second tower is consumed (tiers 1-3 merge instead).
+    /// </summary>
+    bool TryAscend(Tower t)
+    {
+        if (t == null) return false;
+
+        int cost = TDBalance.AscendCost(t.Tier);
+        if (cost <= 0)
+        {
+            message = t.Tier >= TowerCatalog.MaxTier ? "Already max tier"
+                                                     : "Ascension starts at Tier 4";
+            messageTimer = 1.8f;
+            return false;
+        }
+        if (Money < cost)
+        {
+            message = "Not enough money to ascend ($" + cost + ")";
+            messageTimer = 1.8f;
+            return false;
+        }
+
+        Money -= cost;
+
+        int cx = t.CellX, cy = t.CellY;
+        TowerType type = t.Type;
+        int next = t.Tier + 1;
+
+        towers.Remove(map.Idx(cx, cy));
+        t.SetSelected(false);
+        Destroy(t.gameObject);
+
+        Tower nt = CreateTower(cx, cy, type, next);   // same cell, same type, +1 tier
+        SetSelected(nt);
+        if (TDAudio.Instance != null)
+        {
+            TDAudio.Instance.Merge();   // upgrade chime
+            TDAudio.Instance.Click();
+        }
+        message = "Ascended " + nt.DisplayName + " to Tier " + next + "  -$" + cost;
         messageTimer = 2f;
         return true;
     }
@@ -1078,7 +1146,9 @@ public partial class TDGameManager : MonoBehaviour
                 info += "Damage " + s.damage + "    Rate " + s.fireInterval.ToString("0.00") + "s";
             GUI.Label(new Rect(20, 122, 364, 56), info, Style(14, TextAnchor.UpperLeft, Color.white));
 
-            bool canMerge = Selected.Tier < TowerCatalog.MaxTier;
+            bool canMerge = Selected.Tier <= TowerCatalog.MaxMergeTier;
+            int ascendCost = TDBalance.AscendCost(Selected.Tier);   // 0 unless tier 4/5
+            bool canAscend = ascendCost > 0;
             bool canReRoll = Selected.Tier >= 2;   // a lower tier exists (max tier allowed)
 
             if (merging)
@@ -1113,6 +1183,14 @@ public partial class TDGameManager : MonoBehaviour
                         TryStartMerge();
                     GUI.enabled = true;
                 }
+                else if (canAscend)
+                {
+                    bool canAfford = Money >= ascendCost;
+                    GUI.enabled = canAfford;
+                    if (GUI.Button(new Rect(20, 178, 160, 30), "Ascend (U)  $" + ascendCost))
+                        TryStartAscend();
+                    GUI.enabled = true;
+                }
                 else
                 {
                     GUI.Label(new Rect(20, 182, 160, 22), "Max tier",
@@ -1125,7 +1203,7 @@ public partial class TDGameManager : MonoBehaviour
         }
 
         GUI.Label(new Rect(0, Screen.height - 30, Screen.width, 24),
-            "B: Build ($" + TDBalance.BuildCost + ")   |   G: Gold ($" + TDBalance.BuildCost + ", max " + TowerCatalog.MaxGoldTowers + ")   |   E: Merge ($" + TDBalance.MergeCost + ")   |   R: Re-roll   |   Left-click: place / select   |   Right-click: cancel   |   WASD: move   |   Middle-drag: rotate   |   Scroll: zoom   |   M: music   |   Esc: menu",
+            "B: Build ($" + TDBalance.BuildCost + ")   |   G: Gold ($" + TDBalance.BuildCost + ", max " + TowerCatalog.MaxGoldTowers + ")   |   E: Merge ($" + TDBalance.MergeCost + ")   |   U: Ascend ($" + TDBalance.AscendCost4to5 + "/$" + TDBalance.AscendCost5to6 + ")   |   R: Re-roll   |   Left-click: place / select   |   Right-click: cancel   |   WASD: move   |   Middle-drag: rotate   |   Scroll: zoom   |   M: music   |   Esc: menu",
             Style(13, TextAnchor.MiddleCenter, new Color(0.8f, 0.8f, 0.8f)));
 
         DrawBossBar();

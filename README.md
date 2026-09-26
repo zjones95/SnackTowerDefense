@@ -21,7 +21,9 @@ tower/mob characters are modelled in Blender and imported as glTF (`.glb`).
   |---|---|
   | Starting money | `$100` |
   | Build a tower | `$25` (flat, never rises) |
-  | Merge two towers | `$10` |
+  | Merge two towers | `$10` (tiers 1-4 only) |
+  | Ascend T4 → T5 | `$150` (single tower, no second consumed) |
+  | Ascend T5 → T6 | `$300` (single tower, no second consumed) |
   | Kill reward | `$3` |
   | Round bonus | `15 + 5 x wave` |
   | Starting lives | `20` |
@@ -39,15 +41,21 @@ tower/mob characters are modelled in Blender and imported as glTF (`.glb`).
   Gold-placement mode: the same green/red "?" ghost, but the placed tower is
   always **Gold Coin** (`$25`). A board may hold at most **4**; the button shows
   the count and is disabled at the cap, and placement past 4 is refused with a
-  message. Gold deals no damage — it pays `$1 / $2 / $3` per confirmed hit at
-  tiers 1 / 2 / 3.
+  message. Gold deals no damage — it pays a flat **`$1` per confirmed hit at
+  every tier**; the tower's fire rate is the upgrade (`5.0 → 4.0 → 3.2s`).
 - **Selection** — left-click a tower to select it: its tile is outlined in
   **yellow** (the same frame build mode uses for hover). Left-click it again
   (or right-click / click empty ground) to deselect. Selecting a tower and
   entering build mode are mutually exclusive.
 - **Merging** — select a tower, press **E** (or the **Merge (E)** button), then
   click another tower of the **same tier** (any type). You pay `$10` and get a
-  **tier + 1** tower of a random type. Tiers go **1 → 3**, designed to be extended.
+  **tier + 1** tower of a random type. Merging is allowed only while the source
+  tier is **≤ 3**, so **T3 + T3 → T4** is the top merge.
+- **Ascending** — select a **tier 4 or 5** tower, press **U** (or the
+  **Ascend (U)** button). You pay cash (`$150` for T4 → T5, `$300` for T5 → T6)
+  and the tower is rebuilt **in place at tier + 1, same type**, still selected.
+  **No second tower is consumed.** Tiers 5 and 6 each add a unique modifier; tier
+  4 is a stats-only step. See [`docs/TierPlan.md`](docs/TierPlan.md).
 - **Re-rolling** — select a tower of **tier 2+**, press **R** (or the
   **Re-roll (R)** button), then click a tower **exactly one tier below** it. The
   lower tower is consumed and the selected tower becomes a **different random
@@ -57,8 +65,10 @@ tower/mob characters are modelled in Blender and imported as glTF (`.glb`).
 
 ## Towers
 
-8 types (7 random-build + the economy-only Gold Coin), 3 tiers each. A merge
-picks the resulting type at random (never Gold).
+8 types (7 random-build + the economy-only Gold Coin). The 7 random types have
+**6 tiers each** — tiers 1-4 by merging, tiers 5-6 by cash ascension — while Gold
+has 3 (it is economy-only). A merge picks the resulting type at random (never
+Gold).
 
 | Type | Name | Attack |
 |---|---|---|
@@ -69,7 +79,7 @@ picks the resulting type at random (never Gold).
 | Chain | Sour Belt | Bolt arcs to 2/3/4 more enemies (25% falloff per hop) |
 | Pierce | Skewer | Throws a slow metal rod that skewers 3/4/5 enemies |
 | Poison | Spicy Chips | Fires a tortilla chip that applies damage over time |
-| Gold | Gold Coin | Economy: no damage, pays $1/$2/$3 per confirmed hit (max 4 per board) |
+| Gold | Gold Coin | Economy: no damage, pays a flat $1 per confirmed hit at every tier (max 4 per board) |
 
 Every tower fires twice as often for half the damage vs. the original numbers,
 so DPS is similar but the board is far busier. A further balance pass cut all
@@ -96,7 +106,8 @@ Defined in `Assets/Scripts/MobCatalog.cs`; models live in
 |---|---|
 | **B** / **Build (B)** button | Enter/leave build mode; the ghost shows where a random tower would go |
 | **G** / **Gold (G) n/4** button | Enter/leave Gold mode; the ghost places a Gold Coin (`$25`, max 4 per board) |
-| **E** / **Merge (E)** button | With a tower selected: pick another tower of the **same tier** to combine (`$10`) |
+| **E** / **Merge (E)** button | With a tier-1-3 tower selected: pick another tower of the **same tier** to combine into tier + 1 (`$10`; T3+T3 → T4 is the top merge) |
+| **U** / **Ascend (U)** button | With a **tier 4/5** tower selected: rebuild it in place at tier + 1, same type, for `$150` / `$300` — no second tower consumed |
 | **R** / **Re-roll (R)** button | With a tier-2+ tower selected: pick a tower **exactly one tier below** to consume and re-type the selected tower (no money) |
 | **Left-click** | In a build mode: place a tower (`$25`) on a green tile. Otherwise: select / deselect a tower (selected tile outlined in yellow) |
 | **Right-click** | Cancel build / Gold / merge / re-roll mode, or deselect |
@@ -188,6 +199,7 @@ Clones Manager** menu, create a clone, then host in one editor and join
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Codebase map, conventions, how to verify changes, Blender pipeline, gotchas |
 | [`docs/HANDOFF.md`](docs/HANDOFF.md) | Current state, what is verified, suggested next steps |
 | [`docs/MobRoster.md`](docs/MobRoster.md) | The 35-wave fruit & vegetable roster and boss concepts |
+| [`docs/TierPlan.md`](docs/TierPlan.md) | **Approved** tier 4-6 plan: cash ascension, per-tier stats, per-tower modifiers |
 
 ## Project layout
 
