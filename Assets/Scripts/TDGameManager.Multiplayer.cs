@@ -31,6 +31,17 @@ public partial class TDGameManager
     public bool Eliminated => eliminated;
     public bool ViewingOwnBoard => !mpActive || viewSlot == mySlot;
 
+    /// <summary>The remote board shown on a spectate slot, if one exists for it.</summary>
+    RemoteBoard BoardForSlot(int slot)
+    {
+        NetworkSession ns = NetworkSession.Instance;
+        if (ns == null || slot < 0 || slot >= ns.Players.Count) return null;
+        ulong id = ns.Players[slot].ClientId;
+        for (int i = 0; i < remoteBoards.Count; i++)
+            if (remoteBoards[i] != null && remoteBoards[i].ClientId == id) return remoteBoards[i];
+        return null;
+    }
+
     string SpectateName()
     {
         NetworkSession ns = NetworkSession.Instance;

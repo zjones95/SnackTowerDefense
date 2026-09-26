@@ -22,6 +22,8 @@ public class RemoteBoard : MonoBehaviour
         public GameObject Go;
         public Transform HpRoot;
         public Transform Fill;
+        public MobDef Def;
+        public float HpFraction;
         public Vector3 Target;
     }
 
@@ -106,6 +108,24 @@ public class RemoteBoard : MonoBehaviour
         SyncProjectiles(s);
     }
 
+    /// <summary>The boss currently on this board (if any), for the on-screen boss bar.</summary>
+    public bool TryGetBoss(out string name, out float fraction)
+    {
+        foreach (var kv in mobs)
+        {
+            RemoteMob rm = kv.Value;
+            if (rm.Def != null && rm.Def.archetype == MobArchetype.Boss)
+            {
+                name = rm.Def.displayName;
+                fraction = rm.HpFraction;
+                return true;
+            }
+        }
+        name = null;
+        fraction = 0f;
+        return false;
+    }
+
     void SyncMobs(BoardSnapshot s)
     {
         mobSeen.Clear();
@@ -126,12 +146,13 @@ public class RemoteBoard : MonoBehaviour
                 Vector3 p = BoardOffset + new Vector3(BoardSnapshot.Dec(ms.X), 0f, BoardSnapshot.Dec(ms.Z));
                 go.transform.position = p;
 
-                rm = new RemoteMob { Go = go, HpRoot = hpRoot, Fill = fill, Target = p };
+                rm = new RemoteMob { Go = go, HpRoot = hpRoot, Fill = fill, Def = def, Target = p };
                 mobs[ms.Id] = rm;
             }
 
             rm.Target = BoardOffset + new Vector3(BoardSnapshot.Dec(ms.X), 0f, BoardSnapshot.Dec(ms.Z));
-            MobVisual.SetFill(rm.Fill, ms.Hp / 255f);
+            rm.HpFraction = ms.Hp / 255f;
+            MobVisual.SetFill(rm.Fill, rm.HpFraction);
         }
 
         mobGone.Clear();

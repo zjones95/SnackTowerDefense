@@ -748,6 +748,54 @@ public partial class TDGameManager : MonoBehaviour
         GUI.Label(new Rect(0, Screen.height - 30, Screen.width, 24),
             "Left-click: build ($" + TDBalance.BuildCost + ") / select   |   Merge ($" + TDBalance.MergeCost + ") -> same-tier   |   WASD: move   |   Middle-drag: rotate   |   Scroll: zoom   |   M: music   |   Esc: menu",
             Style(13, TextAnchor.MiddleCenter, new Color(0.8f, 0.8f, 0.8f)));
+
+        DrawBossBar();
+    }
+
+    /// <summary>Big centred boss bar at the top of the screen while a boss is alive.
+    /// Bosses have no floating bar, so this is the only read on their health.</summary>
+    void DrawBossBar()
+    {
+        if (State != GameState.Playing) return;
+
+        string name;
+        float frac;
+        if (ViewingOwnBoard)
+        {
+            Mob boss = null;
+            for (int i = 0; i < Mobs.Count; i++)
+            {
+                Mob m = Mobs[i];
+                if (m != null && m.Def != null && m.Def.archetype == MobArchetype.Boss) { boss = m; break; }
+            }
+            if (boss == null) return;
+            name = boss.Def.displayName;
+            frac = boss.MaxHealth > 0f ? Mathf.Clamp01(boss.Health / boss.MaxHealth) : 0f;
+        }
+        else
+        {
+            RemoteBoard rb = BoardForSlot(viewSlot);
+            if (rb == null || !rb.TryGetBoss(out name, out frac)) return;
+        }
+
+        frac = Mathf.Clamp01(frac);
+        float w = Mathf.Min(Screen.width * 0.5f, 640f);
+        float h = 30f;
+        float x = (Screen.width - w) * 0.5f;
+        float y = 44f;
+
+        Color old = GUI.color;
+        GUI.color = new Color(0.05f, 0.05f, 0.07f, 0.94f);
+        GUI.DrawTexture(new Rect(x - 4f, y - 4f, w + 8f, h + 8f), Texture2D.whiteTexture);
+        GUI.color = new Color(0.16f, 0.16f, 0.20f, 1f);
+        GUI.DrawTexture(new Rect(x, y, w, h), Texture2D.whiteTexture);
+        GUI.color = new Color(0.86f, 0.16f, 0.14f, 1f);
+        GUI.DrawTexture(new Rect(x, y, w * frac, h), Texture2D.whiteTexture);
+        GUI.color = old;
+
+        GUI.Label(new Rect(x, y, w, h),
+            name.ToUpper() + "   " + Mathf.CeilToInt(frac * 100f) + "%",
+            Style(18, TextAnchor.MiddleCenter, Color.white));
     }
 
     void DrawEnd(bool won)
