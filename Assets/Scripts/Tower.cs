@@ -299,7 +299,8 @@ public class Tower : MonoBehaviour
         p.Spin = Type != TowerType.Splash;   // the soda blob wobbles instead
     }
 
-    // A fast, thick "bolt" of sour energy: neon-yellow sheath with a hot core.
+    // A fast "bolt" of sour energy: a wide, flat ribbon that always faces the
+    // camera, with a hot core down the middle.
     void Tracer(Vector3 a, Vector3 b)
     {
         Vector3 dir = b - a;
@@ -307,10 +308,18 @@ public class Tower : MonoBehaviour
         if (len < 0.01f) return;
 
         Vector3 mid = a + dir * 0.5f;
-        Quaternion rot = Quaternion.LookRotation(dir / len);
+        Vector3 fwd = dir / len;
 
-        BoltPart("BoltOuter", mid, rot, new Vector3(0.085f, 0.085f, len), new Color(0.95f, 1f, 0.10f));
-        BoltPart("BoltCore", mid, rot, new Vector3(0.034f, 0.034f, len * 1.01f), new Color(1f, 1f, 0.78f));
+        Vector3 toCam = Camera.main != null ? Camera.main.transform.position - mid : Vector3.up;
+        Vector3 right = Vector3.Cross(fwd, toCam);
+        if (right.sqrMagnitude < 0.0001f) right = Vector3.Cross(fwd, Vector3.up);
+        right.Normalize();
+        Vector3 up = Vector3.Cross(right, fwd).normalized;
+
+        Quaternion rot = Quaternion.LookRotation(fwd, up);
+
+        BoltPart("BoltGlow", mid, rot, new Vector3(0.190f, 0.050f, len), new Color(0.95f, 1f, 0.10f));
+        BoltPart("BoltCore", mid, rot, new Vector3(0.075f, 0.022f, len * 1.01f), new Color(1f, 1f, 0.80f));
     }
 
     void BoltPart(string name, Vector3 pos, Quaternion rot, Vector3 scale, Color col)
