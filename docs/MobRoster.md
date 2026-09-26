@@ -64,7 +64,7 @@ new (fast, low HP, spawned in large numbers).
 | 20 | Durian | Foul and furious | **Enrages** — gets faster as its health drops |
 | 25 | Coconut | Hard shell | **Immune to slow**, extremely high HP, very slow |
 | 30 | Dragonfruit | Exotic | **Phases** — dashes forward periodically |
-| 35 | Granola Mom | Crunchy, organic, anti-snack | **Final boss.** **Confiscates** — every few seconds she disables your nearest tower ("we don't eat that"). **Immune to slow.** Speeds up in her last third on green-smoothie energy. |
+| 35 | Granola Mom | Crunchy, organic, anti-snack | **Final boss.** **Immune to slow** — no processed sugar, no effect. **Enrages** — speeds up in her last third on green-smoothie energy. |
 
 ### Stretch ideas (swap in if you want more variety)
 - **Artichoke** — layered armour: damage reduction drops in stages as you peel it.
@@ -81,8 +81,8 @@ new (fast, low HP, spawned in large numbers).
 1. **Health scaling must change.** The current curve is `1.55^(wave-1)`; by
    wave 35 that's ~10^7 × base health. A 35-wave run needs a much gentler curve
    (e.g. `1.15^(wave-1)`, or a piecewise ramp with a step per boss).
-2. **New archetypes.** `Swarm` is new; Regen / Armour / Slow-immunity / Phases
-   are boss-only behaviours that need code.
+2. **New archetypes.** `Swarm` is new; Regen / Armour / Slow-immunity / Enrage /
+   Phases are boss-only behaviours that need code.
 3. **35 mob models.** One Blender model per entry (28 regular + 7 bosses).
    Cheaper alternative: let a few earlier mobs return in later waves.
 4. **Boss waves** are single-spawn waves — the wave table needs a flag, or the
