@@ -96,6 +96,8 @@ public static class TowerVisual
         tg.FaceNow();                                              // correct on frame one
     }
 
+    const float GlowIntensity = 0.7f;   // 1.0 - 30%
+
     static readonly Dictionary<Color, Material> glowMats = new Dictionary<Color, Material>();
     static Texture2D glowTex;
 
@@ -110,12 +112,12 @@ public static class TowerVisual
 
         m = new Material(sh);
         m.mainTexture = GlowTexture();
-        m.SetColor("_Color", new Color(c.r, c.g, c.b, 1f));
+        m.SetColor("_Color", new Color(c.r, c.g, c.b, GlowIntensity));
         glowMats[c] = m;
         return m;
     }
 
-    /// <summary>A soft radial flare with faint rays, generated once at runtime.</summary>
+    /// <summary>A soft ambient radial glow (no rays), generated once at runtime.</summary>
     static Texture2D GlowTexture()
     {
         if (glowTex != null) return glowTex;
@@ -134,14 +136,11 @@ public static class TowerVisual
             {
                 float dx = (x - c0) / c0;
                 float dy = (y - c0) / c0;
-                float r = Mathf.Sqrt(dx * dx + dy * dy);
-                float falloff = Mathf.Clamp01(1f - r);
+                float r2 = dx * dx + dy * dy;   // squared radius
 
-                float core = Mathf.Pow(falloff, 3.5f);
-                float a = Mathf.Atan2(dy, dx);
-                float rays = Mathf.Pow(Mathf.Max(0f, Mathf.Cos(a * 8f)), 14f) * falloff * 0.5f;
-
-                px[y * n + x] = new Color(1f, 1f, 1f, Mathf.Clamp01(core + rays));
+                // smooth full-glow falloff with a slightly hotter centre
+                float glow = Mathf.Exp(-r2 * 3.0f) + Mathf.Exp(-r2 * 16f) * 0.25f;
+                px[y * n + x] = new Color(1f, 1f, 1f, Mathf.Clamp01(glow));
             }
         }
         glowTex.SetPixels(px);
