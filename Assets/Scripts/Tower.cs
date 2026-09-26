@@ -1,15 +1,23 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>How a tower chooses which mob to shoot.</summary>
+public enum TowerTargeting { Default, Nearest, Farthest, Random, HighestHealth, LowestHealth }
+
 public class Tower : MonoBehaviour
 {
     public TowerType Type;
     public int Tier = 1;
     public int CellX, CellY;
+    public TowerTargeting Targeting = TowerTargeting.Default;
 
     private float cooldown;
     private Transform turret;
     private bool isSelected;
+
+    // Random targeting keeps one choice so the turret doesn't jitter; it is
+    // re-rolled after each shot.
+    private Mob randomTarget;
 
     // Sniper T6 "Deadeye": consecutive hits on one target build a damage/crit ramp.
     private Mob deadeyeTarget;
@@ -59,26 +67,84 @@ public class Tower : MonoBehaviour
         isSelected = on;
     }
 
+    /// <summary>Changes the targeting mode (random re-rolls on the next shot).</summary>
+    public void SetTargeting(TowerTargeting t)
+    {
+        Targeting = t;
+        randomTarget = null;
+    }
+
+    /// <summary>Best in-range target for the current mode, or null.</summary>
+    Mob PickTarget(List<Mob> mobs, float range)
+    {
+        if (mobs == null) return null;
+        if (Targeting == TowerTargeting.Random) return PickRandom(mobs, range);
+
+        Mob best = null;
+        float bestScore = float.MinValue;
+        float bestProgress = float.MinValue;
+        for (int i = 0; i < mobs.Count; i++)
+        {
+            Mob m = mobs[i];
+            if (m == null) continue;
+            float d = Vector3.Distance(transform.position, m.transform.position);
+            if (d > range) continue;
+
+            float score = Score(m, d);
+            // ties fall back to whichever is furthest along (closest to finishing)
+            if (best == null || score > bestScore || (score == bestScore && m.Progress > bestProgress))
+            {
+                best = m; bestScore = score; bestProgress = m.Progress;
+            }
+        }
+        return best;
+    }
+
+    float Score(Mob m, float dist)
+    {
+        switch (Targeting)
+        {
+            case TowerTargeting.Nearest: return -dist;
+            case TowerTargeting.Farthest: return dist;
+            case TowerTargeting.HighestHealth: return m.Health;
+            case TowerTargeting.LowestHealth: return -m.Health;
+            default: return m.Progress;
+        }
+    }
+
+    Mob PickRandom(List<Mob> mobs, float range)
+    {
+        if (randomTarget != null && mobs.Contains(randomTarget) &&
+            Vector3.Distance(transform.position, randomTarget.transform.position) <= range)
+            return randomTarget;
+
+        int count = 0;
+        for (int i = 0; i < mobs.Count; i++)
+        {
+            Mob m = mobs[i];
+            if (m != null && Vector3.Distance(transform.position, m.transform.position) <= range) count++;
+        }
+        if (count == 0) { randomTarget = null; return null; }
+
+        int pick = Random.Range(0, count);
+        int seen = 0;
+        for (int i = 0; i < mobs.Count; i++)
+        {
+            Mob m = mobs[i];
+            if (m == null) continue;
+            if (Vector3.Distance(transform.position, m.transform.position) > range) continue;
+            if (seen == pick) { randomTarget = m; return m; }
+            seen++;
+        }
+        return null;
+    }
+
     void Update()
     {
         TowerTierStats s = Stats;
         var mobs = TDGameManager.Instance != null ? TDGameManager.Instance.Mobs : null;
 
-        Mob target = null;
-        float best = float.MinValue;
-        if (mobs != null)
-        {
-            for (int i = 0; i < mobs.Count; i++)
-            {
-                Mob m = mobs[i];
-                if (m == null) continue;
-                if (Vector3.Distance(transform.position, m.transform.position) <= s.range && m.Progress > best)
-                {
-                    best = m.Progress;
-                    target = m;
-                }
-            }
-        }
+        Mob target = PickTarget(mobs, s.range);
 
         if (turret != null && target != null)
         {
@@ -127,6 +193,31 @@ public class Tower : MonoBehaviour
                 else SpawnProjectile(muzzle, target, s);
                 break;
         }
+
+        if (Targeting == TowerTargeting.Random) randomTarget = null;   // re-roll next shot
+    }
+
+    /// <summary>Orders in-range mobs best-first for the current mode (random = shuffled).</summary>
+    void RankInRange(List<Mob> list)
+    {
+        if (Targeting == TowerTargeting.Random)
+        {
+            for (int i = list.Count - 1; i > 0; i--)
+            {
+                int j = Random.Range(0, i + 1);
+                Mob tmp = list[i]; list[i] = list[j]; list[j] = tmp;
+            }
+            return;
+        }
+
+        list.Sort((a, b) =>
+        {
+            float da = Vector3.Distance(transform.position, a.transform.position);
+            float db = Vector3.Distance(transform.position, b.transform.position);
+            float sa = Score(a, da), sb = Score(b, db);
+            if (sa != sb) return sb.CompareTo(sa);
+            return b.Progress.CompareTo(a.Progress);   // tie: furthest along
+        });
     }
 
     /// <summary>Sniper T5/T6: roll a crit (which can bypass armour) and apply
@@ -304,7 +395,7 @@ public class Tower : MonoBehaviour
                 inRange.Add(m);
         }
         if (inRange.Count == 0) return;
-        inRange.Sort((a, b) => b.Progress.CompareTo(a.Progress));
+        RankInRange(inRange);
 
         int shots = Mathf.Min(s.multiShot > 0 ? s.multiShot : 1, inRange.Count);
         cooldown = s.fireInterval;
@@ -313,6 +404,8 @@ public class Tower : MonoBehaviour
         Vector3 muzzle = Muzzle();
         for (int i = 0; i < shots; i++)
             SpawnGumball(muzzle, inRange[i], s, GumColours[i % GumColours.Length]);
+
+        if (Targeting == TowerTargeting.Random) randomTarget = null;   // re-roll next volley
     }
 
     /// <summary>Mid-height of the model, nudged forward along the aim direction.</summary>

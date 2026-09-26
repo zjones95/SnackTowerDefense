@@ -583,7 +583,7 @@ public partial class TDGameManager : MonoBehaviour
         float my = Screen.height - Input.mousePosition.y;
         if (my < 116f) return true;                                   // top stats + Build button
         if (my > Screen.height - 40f) return true;                    // bottom legend
-        if (Selected != null && mx < 400f && my < 300f) return true;  // selected-tower panel
+        if (Selected != null && mx < 400f && my < 350f) return true;  // selected-tower panel
         return false;
     }
 
@@ -1157,7 +1157,7 @@ public partial class TDGameManager : MonoBehaviour
         if (Selected != null)
         {
             TowerTierStats s = Selected.Stats;
-            GUI.Box(new Rect(12, 118, 380, 176), GUIContent.none);
+            GUI.Box(new Rect(12, 118, 380, 224), GUIContent.none);
             string info = Selected.DisplayName + "  -  Tier " + Selected.Tier + "\n";
             if (Selected.Type == TowerType.Gold)
                 info += "Gold +" + s.goldPerHit + " per hit    Rate " + s.fireInterval.ToString("0.00") + "s";
@@ -1178,6 +1178,27 @@ public partial class TDGameManager : MonoBehaviour
                 GUI.Label(new Rect(20, 180, 364, 18), "No tier 5/6 modifiers (max tier 3)",
                     Style(12, TextAnchor.MiddleLeft, new Color(0.75f, 0.75f, 0.78f)));
 
+            // targeting mode
+            GUI.Label(new Rect(20, 220, 56, 20), "Target:",
+                Style(12, TextAnchor.MiddleLeft, new Color(0.80f, 0.85f, 0.92f)));
+            TowerTargeting[] tmodes = { TowerTargeting.Default, TowerTargeting.Nearest, TowerTargeting.Farthest,
+                                        TowerTargeting.Random, TowerTargeting.HighestHealth, TowerTargeting.LowestHealth };
+            string[] tnames = { "Def", "Near", "Far", "Rnd", "High", "Low" };
+            for (int i = 0; i < tmodes.Length; i++)
+            {
+                bool on = Selected.Targeting == tmodes[i];
+                Color oldBg = GUI.backgroundColor;
+                if (on) GUI.backgroundColor = new Color(1f, 0.9f, 0.45f);
+                if (GUI.Button(new Rect(78 + i * 51, 216, 48, 24), tnames[i]))
+                {
+                    if (TDAudio.Instance != null) TDAudio.Instance.Click();
+                    Selected.SetTargeting(tmodes[i]);
+                }
+                GUI.backgroundColor = oldBg;
+            }
+            GUI.Label(new Rect(20, 242, 364, 16), TargetingName(Selected.Targeting),
+                Style(12, TextAnchor.MiddleLeft, new Color(0.85f, 0.85f, 0.88f)));
+
             bool canMerge = Selected.Type != TowerType.Gold && Selected.Tier <= TowerCatalog.MaxMergeTier;
             int ascendCost = UpgradeCost(Selected);   // Gold 1->2->3; others ascend 4->5->6
             bool canAscend = ascendCost > 0;
@@ -1185,10 +1206,10 @@ public partial class TDGameManager : MonoBehaviour
 
             if (merging)
             {
-                GUI.Label(new Rect(20, 222, 364, 20),
+                GUI.Label(new Rect(20, 262, 364, 20),
                     "Select a Tier " + Selected.Tier + " tower to merge with",
                     Style(13, TextAnchor.UpperLeft, new Color(1f, 0.9f, 0.4f)));
-                if (GUI.Button(new Rect(20, 246, 110, 26), "Cancel"))
+                if (GUI.Button(new Rect(20, 286, 110, 26), "Cancel"))
                 {
                     if (TDAudio.Instance != null) TDAudio.Instance.Click();
                     CancelMode();
@@ -1196,10 +1217,10 @@ public partial class TDGameManager : MonoBehaviour
             }
             else if (reRolling)
             {
-                GUI.Label(new Rect(20, 222, 364, 20),
+                GUI.Label(new Rect(20, 262, 364, 20),
                     "Select a Tier " + (Selected.Tier - 1) + " tower to re-roll with",
                     Style(13, TextAnchor.UpperLeft, new Color(1f, 0.9f, 0.4f)));
-                if (GUI.Button(new Rect(20, 246, 110, 26), "Cancel"))
+                if (GUI.Button(new Rect(20, 286, 110, 26), "Cancel"))
                 {
                     if (TDAudio.Instance != null) TDAudio.Instance.Click();
                     CancelMode();
@@ -1211,7 +1232,7 @@ public partial class TDGameManager : MonoBehaviour
                 {
                     bool canAfford = Money >= TDBalance.MergeCost;
                     GUI.enabled = canAfford;
-                    if (GUI.Button(new Rect(20, 224, 160, 30), "Merge (E)  $" + TDBalance.MergeCost))
+                    if (GUI.Button(new Rect(20, 264, 160, 30), "Merge (E)  $" + TDBalance.MergeCost))
                         TryStartMerge();
                     GUI.enabled = true;
                 }
@@ -1220,17 +1241,17 @@ public partial class TDGameManager : MonoBehaviour
                     bool canAfford = Money >= ascendCost;
                     GUI.enabled = canAfford;
                     string upLabel = (Selected.Type == TowerType.Gold ? "Upgrade (U)  $" : "Ascend (U)  $") + ascendCost;
-                    if (GUI.Button(new Rect(20, 224, 160, 30), upLabel))
+                    if (GUI.Button(new Rect(20, 264, 160, 30), upLabel))
                         TryStartAscend();
                     GUI.enabled = true;
                 }
                 else
                 {
-                    GUI.Label(new Rect(20, 228, 160, 22), "Max tier",
+                    GUI.Label(new Rect(20, 268, 160, 22), "Max tier",
                         Style(13, TextAnchor.MiddleLeft, new Color(0.8f, 0.8f, 0.8f)));
                 }
 
-                if (canReRoll && GUI.Button(new Rect(190, 224, 170, 30), "Re-roll (R)"))
+                if (canReRoll && GUI.Button(new Rect(190, 264, 170, 30), "Re-roll (R)"))
                     TryStartReRoll();
             }
         }
@@ -1285,6 +1306,20 @@ public partial class TDGameManager : MonoBehaviour
             }
         }
         return string.Join("  -  ", tags.ToArray());
+    }
+
+    /// <summary>Human-readable description of a targeting mode.</summary>
+    static string TargetingName(TowerTargeting t)
+    {
+        switch (t)
+        {
+            case TowerTargeting.Nearest: return "Nearest to tower";
+            case TowerTargeting.Farthest: return "Farthest from tower";
+            case TowerTargeting.Random: return "Random target each shot";
+            case TowerTargeting.HighestHealth: return "Highest health (tie: closest to finishing)";
+            case TowerTargeting.LowestHealth: return "Lowest health (tie: closest to finishing)";
+            default: return "Default: closest to finishing (furthest along the path)";
+        }
     }
 
     /// <summary>Big centred boss bar at the top of the screen while a boss is alive.
