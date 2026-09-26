@@ -13,6 +13,7 @@ public class Mob : MonoBehaviour
     private int pathIndex;
     private float slowTimer;
     private float speedMul = 1f;
+    private float stunTimer;   // Chain T5 "Twin Lash"
     private float waveSpeed = 1f;
     private TDGameManager game;
 
@@ -98,26 +99,31 @@ public class Mob : MonoBehaviour
                 if ((poisonStacks[i].timer -= Time.deltaTime) <= 0f) poisonStacks.RemoveAt(i);
         }
 
-        float speed = Def.speed * waveSpeed * speedMul * enrage * dash;
-        Vector3 target = path[pathIndex];
-        Vector3 pos = transform.position;
-        Vector3 flat = new Vector3(target.x - pos.x, 0f, target.z - pos.z);
-        float dist = flat.magnitude;
-        float step = speed * Time.deltaTime;
+        if (stunTimer > 0f) stunTimer -= Time.deltaTime;   // Chain T5 stun: stand still
 
-        if (dist <= step)
+        if (stunTimer <= 0f)
         {
-            transform.position = new Vector3(target.x, 0f, target.z);
-            Progress += dist;
-            pathIndex++;
-            if (pathIndex >= path.Count) { ReachEnd(); return; }
-        }
-        else
-        {
-            Vector3 dir = flat / dist;
-            transform.position = pos + dir * step;
-            Progress += step;
-            transform.rotation = Quaternion.LookRotation(dir);
+            float speed = Def.speed * waveSpeed * speedMul * enrage * dash;
+            Vector3 target = path[pathIndex];
+            Vector3 pos = transform.position;
+            Vector3 flat = new Vector3(target.x - pos.x, 0f, target.z - pos.z);
+            float dist = flat.magnitude;
+            float step = speed * Time.deltaTime;
+
+            if (dist <= step)
+            {
+                transform.position = new Vector3(target.x, 0f, target.z);
+                Progress += dist;
+                pathIndex++;
+                if (pathIndex >= path.Count) { ReachEnd(); return; }
+            }
+            else
+            {
+                Vector3 dir = flat / dist;
+                transform.position = pos + dir * step;
+                Progress += step;
+                transform.rotation = Quaternion.LookRotation(dir);
+            }
         }
 
         // billboard the health bar toward the camera (also keeps fill/bg from z-fighting)
@@ -134,6 +140,13 @@ public class Mob : MonoBehaviour
         float mul = 1f - Mathf.Clamp01(removedFraction);
         if (mul < speedMul) speedMul = mul;
         slowTimer = Mathf.Max(slowTimer, duration);
+    }
+
+    /// <summary>Chain T5 "Twin Lash": briefly stops the mob. Slow-immune bosses resist.</summary>
+    public void ApplyStun(float duration)
+    {
+        if (duration <= 0f || Def.slowImmune) return;
+        stunTimer = Mathf.Max(stunTimer, duration);
     }
 
     /// <summary>Slow T6 "Sticky Tar": while slowed the mob takes

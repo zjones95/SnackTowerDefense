@@ -3,6 +3,7 @@ using UnityEngine;
 public class Projectile : MonoBehaviour
 {
     public Mob Target;
+    public Tower Source;   // tower credited with the damage (for its Damage Done metric)
     public float Speed = 22f;
     public float Damage = 10f;
     public float SplashRadius = 0f;
@@ -102,6 +103,7 @@ public class Projectile : MonoBehaviour
                         // Splash T6 "Sticky Soda": the splash also slows everything caught.
                         if (SplashSlowFactor > 0f) m.ApplySlow(SplashSlowFactor, SplashSlowDuration);
                         m.TakeDamage(Damage);
+                        if (Source != null) Source.AddDamage(Damage);
                     }
                 }
             }
@@ -113,6 +115,7 @@ public class Projectile : MonoBehaviour
                 Target.ApplyPoison(PoisonDps, PoisonDuration, PoisonMaxStacks,
                                    PoisonDetonateRadius, PoisonDetonateFraction);
             Target.TakeDamage(Damage);
+            if (Source != null) Source.AddDamage(Damage);
             // tar is applied after this impact so the same gumball doesn't buff itself
             if (TarDamageBonus > 0f && Target != null) Target.ApplyTar(TarDamageBonus, TarLinger);
             // economy towers pay out only on a confirmed hit (the target still exists)

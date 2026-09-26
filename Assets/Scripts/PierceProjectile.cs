@@ -13,6 +13,7 @@ public class PierceProjectile : MonoBehaviour
     public Vector3 Dir = Vector3.forward;
     public float Speed = 9f;
     public float Damage = 10f;
+    public Tower Source;   // tower credited with the damage
     public float Width = 1.2f;
     public int MaxHits = 3;
     public float MaxDistance = 7f;
@@ -85,6 +86,7 @@ public class PierceProjectile : MonoBehaviour
                 {
                     alreadyHit.Add(m);
                     m.TakeDamage(Damage);
+                    if (Source != null) Source.AddDamage(Damage);
                     hits++;
                 }
             }

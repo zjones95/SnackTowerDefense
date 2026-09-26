@@ -200,13 +200,24 @@ public static class MobVisual
         hp.transform.SetParent(parent, false);
         hp.transform.localPosition = new Vector3(0f, barY, 0f);
 
-        TDVisuals.Box(hp.transform, "Bg", Vector3.zero, new Vector3(BarWidth, 0.16f, 0.06f),
+        GameObject bg = TDVisuals.Box(hp.transform, "Bg", Vector3.zero, new Vector3(BarWidth, 0.16f, 0.06f),
             TDVisuals.Mat(new Color(0.08f, 0.08f, 0.09f), 0f, 0.2f));
         GameObject fill = TDVisuals.Box(hp.transform, "Fill", new Vector3(0f, 0f, 0.035f),
             new Vector3(BarWidth, 0.115f, 0.06f), TDVisuals.Mat(new Color(0.28f, 0.90f, 0.30f), 0f, 0.3f));
+        NoShadow(bg);
+        NoShadow(fill);
 
         hpFill = fill.transform;
         return hp.transform;
+    }
+
+    /// <summary>Health bars shouldn't cast or receive shadows.</summary>
+    static void NoShadow(GameObject g)
+    {
+        Renderer r = g.GetComponent<Renderer>();
+        if (r == null) return;
+        r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        r.receiveShadows = false;
     }
 
     /// <summary>Highest point of the mob's model, measured from the mob's root.</summary>

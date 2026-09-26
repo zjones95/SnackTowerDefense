@@ -11,6 +11,7 @@ public partial class TDGameManager : MonoBehaviour
     public GameState State { get; private set; }
     public RoundState Round { get; private set; }
     public int Money { get; private set; }
+    public int GoldGenerated { get; private set; }   // total gold paid by Gold towers
     public int Lives { get; private set; }
     public int Wave { get; private set; }
     public Difficulty CurrentDifficulty { get; private set; } = Difficulty.Normal;
@@ -156,7 +157,10 @@ public partial class TDGameManager : MonoBehaviour
         sun.color = new Color(1f, 0.86f, 0.66f);
         sun.intensity = 0.95f;
         sun.shadows = LightShadows.Soft;
-        sun.transform.rotation = Quaternion.Euler(50f, 35f, 0f);
+        sun.shadowStrength = 0.40f;                                // much lighter, softer shadows
+        sun.shadowBias = 0.05f;
+        sun.shadowNormalBias = 0.4f;
+        sun.transform.rotation = Quaternion.Euler(33f, 35f, 0f);   // lower sun: longer, gentler shadows
 
         // tiny cool fill so shadows aren't pitch black
         GameObject fillGO = new GameObject("Fill");
@@ -272,6 +276,7 @@ public partial class TDGameManager : MonoBehaviour
         if (worldRoot != null) Destroy(worldRoot.gameObject);
 
         Money = TDBalance.StartMoney;
+        GoldGenerated = 0;
         Lives = TDBalance.StartLives;
         Wave = 1;
         spawnQueue.Clear();
@@ -439,7 +444,9 @@ public partial class TDGameManager : MonoBehaviour
     /// Money is per-peer, so this is safe in multiplayer.</summary>
     public void AwardMoney(int amount)
     {
-        if (amount > 0) Money += amount;
+        if (amount <= 0) return;
+        Money += amount;
+        GoldGenerated += amount;
     }
 
     // -------------------------------------------------------------- update
@@ -1122,8 +1129,9 @@ public partial class TDGameManager : MonoBehaviour
         GUI.Label(new Rect(12, 58, 300, 24), "Tower: $" + TDBalance.BuildCost, Style(15, TextAnchor.MiddleLeft, new Color(0.8f, 0.9f, 1f)));
         GUI.Label(new Rect(Screen.width - 240, 10, 228, 24), "Wave: " + Mathf.Min(Wave, TDBalance.TotalWaves) + " / " + TDBalance.TotalWaves, Style(18, TextAnchor.MiddleRight, Color.white));
         GUI.Label(new Rect(Screen.width - 240, 34, 228, 24), "Enemies: " + Mobs.Count, Style(18, TextAnchor.MiddleRight, new Color(0.85f, 0.85f, 0.9f)));
+        GUI.Label(new Rect(Screen.width - 290, 58, 278, 24), "Gold Generated: $" + GoldGenerated, Style(16, TextAnchor.MiddleRight, new Color(1f, 0.85f, 0.35f)));
         if (mpActive)
-            GUI.Label(new Rect(Screen.width - 240, 58, 228, 24), "Multiplayer: " + mpPlayerCount, Style(16, TextAnchor.MiddleRight, new Color(0.65f, 0.85f, 1f)));
+            GUI.Label(new Rect(Screen.width - 240, 82, 228, 24), "Multiplayer: " + mpPlayerCount, Style(16, TextAnchor.MiddleRight, new Color(0.65f, 0.85f, 1f)));
         if (mpActive && !ViewingOwnBoard)
             GUI.Label(new Rect(0, 84, Screen.width, 26), "SPECTATING " + SpectateName() + "   -   press 0 for your board",
                 Style(18, TextAnchor.MiddleCenter, new Color(1f, 0.85f, 0.5f)));
@@ -1169,7 +1177,8 @@ public partial class TDGameManager : MonoBehaviour
                 info += "Gold +" + s.goldPerHit + " per hit    Rate " + s.fireInterval.ToString("0.00") + "s";
             else
                 info += "Damage " + s.damage + "    Rate " + s.fireInterval.ToString("0.00") + "s";
-            GUI.Label(new Rect(20, 122, 364, 56), info, Style(14, TextAnchor.UpperLeft, Color.white));
+            info += "\nDamage done: " + Mathf.RoundToInt(Selected.DamageDone);
+            GUI.Label(new Rect(20, 122, 364, 58), info, Style(14, TextAnchor.UpperLeft, Color.white));
 
             // unique tier 5 / 6 modifiers for this tower type
             string mod5 = TowerCatalog.ModifierText(Selected.Type, 5);

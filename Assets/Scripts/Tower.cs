@@ -10,6 +10,7 @@ public class Tower : MonoBehaviour
     public int Tier = 1;
     public int CellX, CellY;
     public TowerTargeting Targeting = TowerTargeting.Default;
+    public float DamageDone;   // total damage this tower has dealt (selection panel)
 
     private float cooldown;
     private Transform turret;
@@ -72,6 +73,12 @@ public class Tower : MonoBehaviour
     {
         Targeting = t;
         randomTarget = null;
+    }
+
+    /// <summary>Records damage this tower dealt (shown on the selection panel).</summary>
+    public void AddDamage(float amount)
+    {
+        if (amount > 0f) DamageDone += amount;
     }
 
     /// <summary>Best in-range target for the current mode, or null.</summary>
@@ -237,6 +244,7 @@ public class Tower : MonoBehaviour
         Vector3 hitPoint = target.transform.position + Vector3.up * 0.4f;
         if (crit && s.critPierceArmour) target.TakeDamageIgnoringArmour(dmg);
         else target.TakeDamage(dmg);
+        AddDamage(dmg);
 
         if (s.deadeyeRamp > 0f)
             deadeyeStacks = Mathf.Min(deadeyeStacks + 1, DeadeyeMaxStacks(s));
@@ -283,6 +291,7 @@ public class Tower : MonoBehaviour
         if (parent != null) go.transform.SetParent(parent, true);
 
         PierceProjectile p = go.AddComponent<PierceProjectile>();
+        p.Source = this;
         p.Dir = dir;
         p.Speed = 9f;                      // slow: it visibly walks to the enemy
         p.Damage = s.damage;
@@ -326,7 +335,9 @@ public class Tower : MonoBehaviour
             // Sticky Sour (T6) ignores the 0.75^i falloff; T5 keeps it by depth.
             float dmg = s.chainFullDamage ? s.damage : s.damage * Mathf.Pow(0.75f, depth);
             cur.TakeDamage(dmg);
+            AddDamage(dmg);
             if (s.slowFactor > 0f) cur.ApplySlow(s.slowFactor, s.slowDuration);
+            if (s.stunChance > 0f && Random.value < s.stunChance) cur.ApplyStun(s.stunDuration);
 
             int found = 0;
             while (found < fanout && hit.Count + q.Count < maxTargets)
@@ -430,6 +441,7 @@ public class Tower : MonoBehaviour
         if (parent != null) go.transform.SetParent(parent, true);
 
         Projectile p = go.AddComponent<Projectile>();
+        p.Source = this;
         p.Target = target;
         p.Speed = 14f;
         p.Damage = s.damage;               // Candy Shell (T5/T6): gumballs hit for real
@@ -468,6 +480,7 @@ public class Tower : MonoBehaviour
         if (parent != null) go.transform.SetParent(parent, true);
 
         Projectile p = go.AddComponent<Projectile>();
+        p.Source = this;
         p.Target = target;
         p.Speed = s.projectileSpeed;
         p.Damage = s.damage;

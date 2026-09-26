@@ -47,6 +47,8 @@ public class TowerTierStats
     // Chain
     public int chainBranches = 0;          // extra neighbours each node arcs to
     public bool chainFullDamage = false;   // jump damage ignores the 0.75^i falloff
+    public float stunChance = 0f;          // Chain T5: chance to stun each enemy hit
+    public float stunDuration = 0f;
 
     // Slow / tar
     public float tarDamageBonus = 0f;      // damage-taken bonus while slowed by this tower
@@ -143,7 +145,7 @@ public static class TowerCatalog
                 case TowerType.Splash: return "Fizz Ricochet - bursts bounce once and detonate again";
                 case TowerType.Slow: return "Candy Shell - gumballs deal impact damage";
                 case TowerType.Sniper: return "Powdered Sour - 30% crit for x2.5 that ignores armour";
-                case TowerType.Chain: return "Twin Lash - each arc branches to 2 more enemies";
+                case TowerType.Chain: return "Twin Lash - arcs branch to 2 more enemies, 5% chance to stun 1.5s";
                 case TowerType.Pierce: return "Wide Skewer - a wider line that skewers more enemies";
                 case TowerType.Poison: return "Extra Hot - poison stacks up to 3 times";
             }
@@ -222,7 +224,7 @@ public static class TowerCatalog
         d.tiers.Add(new TowerTierStats { damage = 7, range = 6.0f, fireInterval = 0.40f, chainCount = 4, chainRange = 4.5f });
         // T4 pure stats; T5 Twin Lash (branches 2); T6 Sticky Sour (full damage, slow 0.40 / 2.0, +1 jump).
         d.tiers.Add(new TowerTierStats { damage = 11, range = 6.8f, fireInterval = 0.36f, chainCount = 5, chainRange = 5.0f });
-        d.tiers.Add(new TowerTierStats { damage = 16, range = 7.6f, fireInterval = 0.34f, chainCount = 6, chainRange = 5.5f, chainBranches = 2 });
+        d.tiers.Add(new TowerTierStats { damage = 16, range = 7.6f, fireInterval = 0.34f, chainCount = 6, chainRange = 5.5f, chainBranches = 2, stunChance = 0.05f, stunDuration = 1.5f });
         d.tiers.Add(new TowerTierStats { damage = 22, range = 8.4f, fireInterval = 0.32f, chainCount = 7, chainRange = 6.0f, chainFullDamage = true, slowFactor = 0.40f, slowDuration = 2.0f });
         defs[d.type] = d;
 
