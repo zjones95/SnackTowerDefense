@@ -465,7 +465,7 @@ public partial class TDGameManager : MonoBehaviour
         bool valid = map.IsBuildable(x, y) && !towers.ContainsKey(map.Idx(x, y));
         Material m = valid ? hoverValid : hoverInvalid;
         for (int i = 0; i < hoverRends.Length; i++) hoverRends[i].sharedMaterial = m;
-        hover.position = map.CellCenter(x, y) + Vector3.up * 0.12f;
+        hover.position = map.CellCenter(x, y) + Vector3.up * 0.05f;
         hover.gameObject.SetActive(true);
     }
 

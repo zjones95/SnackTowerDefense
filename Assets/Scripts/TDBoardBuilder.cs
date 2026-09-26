@@ -50,7 +50,7 @@ public static class TDBoardBuilder
             for (int x = 0; x < gw; x++)
             {
                 char c = layout[ly][x];
-                Vector3 pos = map.CellCenter(x, ly) + Vector3.up * 0.05f;
+                Vector3 pos = map.CellCenter(x, ly) - Vector3.up * 0.05f;   // top face flush with y = 0
                 Vector3 scale = new Vector3(cell * 0.97f, 0.10f, cell * 0.97f);
                 if (c == 'm')
                 {
