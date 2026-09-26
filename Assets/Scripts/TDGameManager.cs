@@ -105,6 +105,9 @@ public partial class TDGameManager : MonoBehaviour
         // Keep simulating when the window/tab loses focus, so a multiplayer host
         // that alt-tabs away doesn't freeze its board or stall the wave clock.
         Application.runInBackground = true;
+        // Let a throttled (background) frame advance closer to real time, so a
+        // WebGL host in a hidden tab doesn't slow the wave clock to a crawl.
+        Time.maximumDeltaTime = 1f;
         QualitySettings.antiAliasing = 8; // MSAA (also smooths the HUD's 3D elements)
         TDAudio.Ensure();
         SetupCameraAndLight();

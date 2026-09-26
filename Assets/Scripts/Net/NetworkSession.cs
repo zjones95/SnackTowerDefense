@@ -276,7 +276,9 @@ public class NetworkSession : MonoBehaviour
 
             RelayServerEndpoint ep = PickEndpoint(allocation.ServerEndpoints, RelayConnectionType());
             if (ep == null) { Debug.Log("[net] Relay returned no usable endpoint."); return false; }
-            ApplyRelayData(ep, allocation.AllocationIdBytes, allocation.ConnectionData, null, allocation.Key);
+            // Hosts pass their own connection data as the host connection data
+            // (passing null crashes RelayConnectionData.FromByteArray).
+            ApplyRelayData(ep, allocation.AllocationIdBytes, allocation.ConnectionData, allocation.ConnectionData, allocation.Key);
 
             if (!Manager.StartHost()) return false;
             Address = code;
