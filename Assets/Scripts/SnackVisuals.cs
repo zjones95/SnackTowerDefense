@@ -88,7 +88,7 @@ public static class TowerVisual
         Bounds b = rs[0].bounds;
         for (int i = 1; i < rs.Length; i++) b.Encapsulate(rs[i].bounds);
 
-        float size = Mathf.Max(1.2f, b.size.y * 1.8f);
+        float size = Mathf.Max(1.0f, b.size.y * 1.5f);
         GameObject quad = TDVisuals.Quad(parent, "TierGlow", Vector3.zero, size, m);
         TierGlow tg = quad.AddComponent<TierGlow>();
         tg.Center = parent.InverseTransformPoint(b.center);
@@ -96,7 +96,7 @@ public static class TowerVisual
         tg.FaceNow();                                              // correct on frame one
     }
 
-    const float GlowIntensity = 0.7f;   // 1.0 - 30%
+    const float GlowIntensity = 0.45f;
 
     static readonly Dictionary<Color, Material> glowMats = new Dictionary<Color, Material>();
     static Texture2D glowTex;
@@ -138,8 +138,9 @@ public static class TowerVisual
                 float dy = (y - c0) / c0;
                 float r2 = dx * dx + dy * dy;   // squared radius
 
-                // smooth full-glow falloff with a slightly hotter centre
-                float glow = Mathf.Exp(-r2 * 3.0f) + Mathf.Exp(-r2 * 16f) * 0.25f;
+                // tight falloff that dies out well before the quad edge, so there
+                // is no hard cut-off where the texture ends
+                float glow = Mathf.Exp(-r2 * 5.5f) + Mathf.Exp(-r2 * 20f) * 0.15f;
                 px[y * n + x] = new Color(1f, 1f, 1f, Mathf.Clamp01(glow));
             }
         }
