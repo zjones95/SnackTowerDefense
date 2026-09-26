@@ -299,20 +299,30 @@ public class Tower : MonoBehaviour
         p.Spin = Type != TowerType.Splash;   // the soda blob wobbles instead
     }
 
+    // A fast, thick "bolt" of sour energy: neon-yellow sheath with a hot core.
     void Tracer(Vector3 a, Vector3 b)
     {
         Vector3 dir = b - a;
         float len = dir.magnitude;
         if (len < 0.01f) return;
 
+        Vector3 mid = a + dir * 0.5f;
+        Quaternion rot = Quaternion.LookRotation(dir / len);
+
+        BoltPart("BoltOuter", mid, rot, new Vector3(0.085f, 0.085f, len), new Color(0.95f, 1f, 0.10f));
+        BoltPart("BoltCore", mid, rot, new Vector3(0.034f, 0.034f, len * 1.01f), new Color(1f, 1f, 0.78f));
+    }
+
+    void BoltPart(string name, Vector3 pos, Quaternion rot, Vector3 scale, Color col)
+    {
         GameObject g = GameObject.CreatePrimitive(PrimitiveType.Cube);
         Collider c = g.GetComponent<Collider>();
         if (c != null) Destroy(c);
-        g.name = "Tracer";
-        g.transform.position = a + dir * 0.5f;
-        g.transform.rotation = Quaternion.LookRotation(dir / len);
-        g.transform.localScale = new Vector3(0.04f, 0.04f, len);
-        g.GetComponent<Renderer>().sharedMaterial = TDVisuals.Mat(new Color(1f, 0.9f, 0.6f), 0f, 0.7f);
-        Destroy(g, 0.06f);
+        g.name = name;
+        g.transform.position = pos;
+        g.transform.rotation = rot;
+        g.transform.localScale = scale;
+        g.GetComponent<Renderer>().sharedMaterial = TDVisuals.Mat(col, 0f, 0.85f);
+        Destroy(g, 0.09f);
     }
 }
