@@ -79,6 +79,16 @@ public static class SnackArt
                 TDVisuals.Sphere(turret, "Blob2", new Vector3(0.12f, 0.18f, 0.04f), 0.28f, accent);
                 TDVisuals.Box(turret, "Leaf", new Vector3(0.15f, 0.28f, 0f), new Vector3(0.24f, 0.03f, 0.12f), TDVisuals.Mat(new Color(0.30f, 0.60f, 0.25f), 0f, 0.4f));
                 break;
+
+            case TowerType.Gold: // stack of coins on a post
+                TDVisuals.Cyl(root, "Base", new Vector3(0f, 0.10f, 0f), 0.42f, 0.20f, dark);
+                TDVisuals.Box(root, "Post", new Vector3(0f, 0.45f, 0f), new Vector3(0.16f, 0.5f, 0.16f), dark);
+                TDVisuals.Cyl(turret, "Coin0", new Vector3(0f, -0.02f, 0f), 0.34f, 0.08f, accent);
+                TDVisuals.Cyl(turret, "Coin1", new Vector3(0.03f, 0.06f, 0.02f), 0.32f, 0.08f, accent);
+                TDVisuals.Cyl(turret, "Coin2", new Vector3(-0.02f, 0.14f, -0.03f), 0.30f, 0.08f, accent);
+                TDVisuals.Cyl(turret, "Coin3", new Vector3(0.02f, 0.22f, 0.02f), 0.28f, 0.08f, accent);
+                TDVisuals.Sphere(turret, "Gem", new Vector3(0f, 0.31f, 0f), 0.16f, TDVisuals.Mat(new Color(1f, 0.95f, 0.55f), 0.3f, 0.85f));
+                break;
         }
 
         for (int i = 0; i < tier; i++)
@@ -187,10 +197,12 @@ public static class SnackArt
 
     // --------------------------------------------------------- build ghost
     /// <summary>
-    /// Translucent "?" placement preview shown while build mode is active. The
-    /// built tower type is random, so no specific tower is previewed — just a
-    /// camera-facing question mark over a soft base that the manager tints
-    /// green/red for valid/invalid placement.
+    /// Placement preview shown while a build mode is active. Prefers the real 3D
+    /// question-mark model at <see cref="SnackModels.GhostPath"/>, falling back to
+    /// a procedural base + column + "?" text. The built tower type is random (or
+    /// Gold), so no specific tower is previewed. The manager tints every renderer
+    /// green/red — with OPAQUE materials, because the player build strips the
+    /// alpha-transparent Standard variant.
     /// </summary>
     public static TowerGhost BuildGhost(Transform parent)
     {
@@ -198,45 +210,74 @@ public static class SnackArt
         root.transform.SetParent(parent, false);
 
         TowerGhost ghost = new TowerGhost();
-        ghost.validMat = TDVisuals.TransparentMat(new Color(0.35f, 1f, 0.45f), 0.45f, 0.6f);
-        ghost.invalidMat = TDVisuals.TransparentMat(new Color(1f, 0.35f, 0.30f), 0.45f, 0.6f);
+        ghost.validMat = TDVisuals.Mat(new Color(0.35f, 1f, 0.45f), 0f, 0.5f);
+        ghost.invalidMat = TDVisuals.Mat(new Color(1f, 0.35f, 0.30f), 0f, 0.5f);
 
         List<Renderer> parts = new List<Renderer>();
-        parts.Add(TDVisuals.Cyl(root.transform, "Base", new Vector3(0f, 0.05f, 0f), 0.55f, 0.10f, ghost.validMat).GetComponent<Renderer>());
-        parts.Add(TDVisuals.Cyl(root.transform, "Column", new Vector3(0f, 0.42f, 0f), 0.30f, 0.64f, ghost.validMat).GetComponent<Renderer>());
-        ghost.parts = parts.ToArray();
 
-        GameObject markGO = new GameObject("Mark");
-        markGO.transform.SetParent(root.transform, false);
-        markGO.transform.localPosition = new Vector3(0f, 0.98f, 0f);
-        markGO.AddComponent<BillboardLabel>();   // TextMesh reads from -Z
-        TextMesh tm = markGO.AddComponent<TextMesh>();
-        tm.text = "?";
-        tm.characterSize = 0.12f;
-        tm.fontSize = 120;
-        tm.anchor = TextAnchor.MiddleCenter;
-        tm.alignment = TextAlignment.Center;
-        Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        if (font == null) font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-        if (font != null)
+        GameObject prefab = SnackModels.Load(SnackModels.GhostPath);
+        if (prefab != null)
         {
-            tm.font = font;
-            MeshRenderer tr = markGO.GetComponent<MeshRenderer>();
-            if (tr != null)
-            {
-                tr.sharedMaterial = font.material;
-                tr.sortingOrder = 2;
-            }
-        }
-        ghost.mark = tm;
+            GameObject model = Object.Instantiate(prefab, root.transform);
+            model.name = "Model";
+            model.transform.localPosition = Vector3.zero;
+            model.transform.localScale = Vector3.one;
 
+            // normalise to ~1 unit tall, then seat its base on the cell centre
+            float h = HeightOf(model);
+            if (h > 0.01f) model.transform.localScale *= 1f / h;
+            SnackModels.CenterOn(model, root.transform.position);
+
+            parts.AddRange(model.GetComponentsInChildren<Renderer>());
+        }
+        else
+        {
+            parts.Add(TDVisuals.Cyl(root.transform, "Base", new Vector3(0f, 0.05f, 0f), 0.55f, 0.10f, ghost.validMat).GetComponent<Renderer>());
+            parts.Add(TDVisuals.Cyl(root.transform, "Column", new Vector3(0f, 0.42f, 0f), 0.30f, 0.64f, ghost.validMat).GetComponent<Renderer>());
+
+            GameObject markGO = new GameObject("Mark");
+            markGO.transform.SetParent(root.transform, false);
+            markGO.transform.localPosition = new Vector3(0f, 0.98f, 0f);
+            markGO.AddComponent<BillboardLabel>();   // TextMesh reads from -Z
+            TextMesh tm = markGO.AddComponent<TextMesh>();
+            tm.text = "?";
+            tm.characterSize = 0.12f;
+            tm.fontSize = 120;
+            tm.anchor = TextAnchor.MiddleCenter;
+            tm.alignment = TextAlignment.Center;
+            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            if (font == null) font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            if (font != null)
+            {
+                tm.font = font;
+                MeshRenderer tr = markGO.GetComponent<MeshRenderer>();
+                if (tr != null)
+                {
+                    tr.sharedMaterial = font.material;
+                    tr.sortingOrder = 2;
+                }
+            }
+            ghost.mark = tm;
+        }
+
+        ghost.parts = parts.ToArray();
         ghost.root = root.transform;
         ghost.SetValid(true);
         return ghost;
     }
+
+    /// <summary>Height (Y extent) of a model's combined renderer bounds.</summary>
+    static float HeightOf(GameObject go)
+    {
+        Renderer[] rs = go.GetComponentsInChildren<Renderer>();
+        if (rs == null || rs.Length == 0) return 0f;
+        Bounds b = rs[0].bounds;
+        for (int i = 1; i < rs.Length; i++) b.Encapsulate(rs[i].bounds);
+        return b.size.y;
+    }
 }
 
-/// <summary>Root + materials for the translucent "?" build preview.</summary>
+/// <summary>Root + materials for the opaque "?" build preview.</summary>
 public class TowerGhost
 {
     public Transform root;

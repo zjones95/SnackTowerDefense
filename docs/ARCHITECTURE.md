@@ -41,7 +41,7 @@ MainMenu ─┬─ DifficultySelect ── StartingRun ── Playing ─┬─ 
 | `TDGameManager.MobViewer.cs` | Mob gallery screen |
 | `TDGameManager.Settings.cs` | Pause menu + music/SFX settings overlay, time-scale handling |
 | `TDBalance.cs` | Money/lives/prep, difficulty, **35-wave table**, health & speed curves |
-| `TowerCatalog.cs` | 7 tower types × 3 tiers |
+| `TowerCatalog.cs` | 8 tower types × 3 tiers (7 random-build + Gold) |
 | `Tower.cs` | Targeting, firing, merging, muzzle, model composition |
 | `Projectile.cs` | Homing projectile (also arc/hop + splash + poison + slow on hit) |
 | `PierceProjectile.cs` | Straight-line travelling rod that skewers enemies |

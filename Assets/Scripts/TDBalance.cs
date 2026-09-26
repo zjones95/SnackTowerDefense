@@ -19,6 +19,11 @@ public static class TDBalance
     public const int BuildCost = 25; // flat, always
     public const int MergeCost = 10; // per merge (2 towers -> 1 of next tier)
 
+    /// <summary>Global mob-health knob, applied once in <see cref="Mob.Init"/>.
+    /// Stacked on top of the per-wave and difficulty multipliers (never inside
+    /// HealthMultiplier, so it is not double-applied).</summary>
+    public const float MobHealthScale = 1.25f;
+
     /// <summary>Mob health multiplier for the chosen difficulty.</summary>
     public static float HealthMultiplier(Difficulty d)
     {

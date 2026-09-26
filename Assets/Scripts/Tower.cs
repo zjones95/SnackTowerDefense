@@ -9,7 +9,6 @@ public class Tower : MonoBehaviour
 
     private float cooldown;
     private Transform turret;
-    private GameObject selectHighlight;
     private bool isSelected;
 
     // where shots leave the model: half its height, just clear of its body
@@ -19,6 +18,8 @@ public class Tower : MonoBehaviour
     public TowerTierStats Stats { get { return TowerCatalog.Get(Type).Stats(Tier); } }
     public string DisplayName { get { return TowerCatalog.Get(Type).displayName; } }
     public float TurretYaw { get { return turret != null ? turret.eulerAngles.y : 0f; } }
+    /// <summary>Selection state (the yellow tile outline is drawn by the manager).</summary>
+    public bool IsSelected { get { return isSelected; } }
 
     public void Setup(TowerType type, int tier, int cx, int cy)
     {
@@ -45,38 +46,17 @@ public class Tower : MonoBehaviour
         }
 
         TowerVisual.BuildTierLabel(transform, Tier);
-
-        // pronounced selection highlight: pulsing ring + beam
-        selectHighlight = new GameObject("SelectHighlight");
-        selectHighlight.transform.SetParent(transform, false);
-        Material hi = TDVisuals.Mat(new Color(1f, 0.88f, 0.15f), 0.1f, 0.8f);
-        int seg = 28;
-        for (int i = 0; i < seg; i++)
-        {
-            float a = i / (float)seg * Mathf.PI * 2f;
-            TDVisuals.Box(selectHighlight.transform, "R" + i,
-                new Vector3(Mathf.Cos(a) * 0.62f, 0.06f, Mathf.Sin(a) * 0.62f),
-                new Vector3(0.18f, 0.08f, 0.18f), hi);
-        }
-        TDVisuals.Cyl(selectHighlight.transform, "Beam", new Vector3(0f, 1.4f, 0f), 0.06f, 2.8f, hi);
-        selectHighlight.SetActive(false);
     }
 
+    /// <summary>Selection is only state now — the visual is the yellow tile
+    /// outline drawn by TDGameManager over the selected tower's cell.</summary>
     public void SetSelected(bool on)
     {
         isSelected = on;
-        if (selectHighlight != null) selectHighlight.SetActive(on);
     }
 
     void Update()
     {
-        if (isSelected && selectHighlight != null)
-        {
-            float pulse = 1f + Mathf.Sin(Time.time * 6f) * 0.10f;
-            selectHighlight.transform.localScale = new Vector3(pulse, 1f, pulse);
-            selectHighlight.transform.localRotation = Quaternion.Euler(0f, Time.time * 45f, 0f);
-        }
-
         TowerTierStats s = Stats;
         var mobs = TDGameManager.Instance != null ? TDGameManager.Instance.Mobs : null;
 
@@ -324,6 +304,7 @@ public class Tower : MonoBehaviour
         p.BounceRange = s.bounceRange;
         p.PoisonDps = s.poisonDps;
         p.PoisonDuration = s.poisonDuration;
+        p.GoldPerHit = s.goldPerHit;
         p.Tint = TowerCatalog.Get(Type).color;
         p.Spin = Type != TowerType.Splash;   // the soda blob wobbles instead
     }

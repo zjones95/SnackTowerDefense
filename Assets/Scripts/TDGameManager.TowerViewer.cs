@@ -122,6 +122,7 @@ public partial class TDGameManager
                     case TowerType.Chain: return "jumps " + s.chainCount;
                     case TowerType.Pierce: return "pierces " + s.pierceCount;
                     case TowerType.Poison: return s.poisonDps.ToString("0.#") + "/s for " + s.poisonDuration.ToString("0.#") + "s";
+                    case TowerType.Gold: return "+$" + s.goldPerHit + " / hit";
                     default: return "-";
                 }
         }
@@ -138,6 +139,7 @@ public partial class TDGameManager
             case TowerType.Chain: return "Damage arcs on to nearby enemies after the first hit.";
             case TowerType.Pierce: return "Fires a line that skewers every enemy it passes through.";
             case TowerType.Poison: return "Applies damage over time that keeps ticking.";
+            case TowerType.Gold: return "Deals no damage - pays out gold on every confirmed hit (max 4 per board).";
             default: return "";
         }
     }

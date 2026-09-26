@@ -76,11 +76,12 @@ public partial class TDGameManager : MonoBehaviour
     private float messageTimer;
     private bool merging;
     private bool building;      // build mode: click a cell to place a random tower
+    private bool goldBuilding;  // Gold mode: click a cell to place a Gold tower
     private bool reRolling;     // re-roll mode: click a tower one tier below
     private TowerGhost ghost;   // "?" placement preview shown in build mode
     private Transform hover;
     private Renderer[] hoverRends;
-    private Material hoverValid, hoverInvalid;
+    private Material hoverValid, hoverInvalid, hoverSelected;
 
     // wave spawning — the wave table itself lives in TDBalance
     private struct SpawnEntry { public string mob; public float time; }
@@ -257,6 +258,7 @@ public partial class TDGameManager : MonoBehaviour
         Selected = null;
         merging = false;
         building = false;
+        goldBuilding = false;
         reRolling = false;
         cleared = false;
         eliminated = false;
@@ -311,6 +313,7 @@ public partial class TDGameManager : MonoBehaviour
 
         hoverValid = TDVisuals.Mat(new Color(0.40f, 1f, 0.50f), 0f, 0.7f);
         hoverInvalid = TDVisuals.Mat(new Color(1f, 0.35f, 0.30f), 0f, 0.7f);
+        hoverSelected = TDVisuals.Mat(new Color(1f, 0.85f, 0.15f), 0f, 0.7f);   // yellow
 
         float c = map.Cell;
         float t = 0.16f;
@@ -425,6 +428,13 @@ public partial class TDGameManager : MonoBehaviour
         }
     }
 
+    /// <summary>Adds money to the local board (Gold towers award this on a hit).
+    /// Money is per-peer, so this is safe in multiplayer.</summary>
+    public void AwardMoney(int amount)
+    {
+        if (amount > 0) Money += amount;
+    }
+
     // -------------------------------------------------------------- update
     void Update()
     {
@@ -456,7 +466,7 @@ public partial class TDGameManager : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             // Esc first cancels an active build/merge/re-roll mode, then pauses.
-            if (building || merging || reRolling) CancelMode();
+            if (building || goldBuilding || merging || reRolling) CancelMode();
             else OpenPause();
             return;
         }
@@ -491,12 +501,29 @@ public partial class TDGameManager : MonoBehaviour
         if (mpActive) { UpdateRemoteBoards(); UpdateSpectate(); }
     }
 
+    /// <summary>
+    /// Single shared tile frame. Priority: a selected tower shows the frame in
+    /// YELLOW pinned to its cell; otherwise, while a build mode is active
+    /// (random or Gold), it follows the mouse green/red and drives the ghost.
+    /// Hidden the rest of the time.
+    /// </summary>
     void UpdateHover()
     {
-        if (!ViewingOwnBoard) { HideHover(); return; }
+        if (!ViewingOwnBoard || hover == null) { HideHover(); return; }
 
-        if (hover == null) return;
-        if (MouseOverUI()) { HideHover(); return; }
+        // 1) Selection wins: yellow frame on the selected tower's cell.
+        if (Selected != null)
+        {
+            SetHoverMat(hoverSelected);
+            hover.position = map.CellCenter(Selected.CellX, Selected.CellY) + Vector3.up * 0.05f;
+            hover.gameObject.SetActive(true);
+            if (ghost != null) ghost.root.gameObject.SetActive(false);
+            return;
+        }
+
+        // 2) Build modes only (random build or Gold).
+        bool buildMode = building || goldBuilding;
+        if (!buildMode || MouseOverUI()) { HideHover(); return; }
 
         Ray ray = cam.ScreenPointToRay(Input.mousePosition);
         Plane plane = new Plane(Vector3.up, Vector3.zero);
@@ -509,19 +536,22 @@ public partial class TDGameManager : MonoBehaviour
         if (!map.InBounds(x, y)) { HideHover(); return; }
 
         bool placeable = map.IsBuildable(x, y) && !towers.ContainsKey(map.Idx(x, y));
-        Material m = placeable ? hoverValid : hoverInvalid;
-        for (int i = 0; i < hoverRends.Length; i++) hoverRends[i].sharedMaterial = m;
+        SetHoverMat(placeable ? hoverValid : hoverInvalid);
         hover.position = map.CellCenter(x, y) + Vector3.up * 0.05f;
         hover.gameObject.SetActive(true);
 
-        // The "?" ghost follows the mouse, but only while build mode is active.
+        // The "?" ghost follows the mouse while any build mode is active.
         if (ghost == null) return;
-        if (!building) { ghost.root.gameObject.SetActive(false); return; }
-
         bool affordable = Money >= TDBalance.BuildCost;
+        bool goldOk = !goldBuilding || GoldTowerCount() < TowerCatalog.MaxGoldTowers;
         ghost.root.position = map.CellCenter(x, y) + Vector3.up * 0.02f;
-        ghost.SetValid(placeable && affordable);
+        ghost.SetValid(placeable && affordable && goldOk);
         ghost.root.gameObject.SetActive(true);
+    }
+
+    void SetHoverMat(Material m)
+    {
+        for (int i = 0; i < hoverRends.Length; i++) hoverRends[i].sharedMaterial = m;
     }
 
     void HideHover()
@@ -537,6 +567,7 @@ public partial class TDGameManager : MonoBehaviour
         Selected = null;
         merging = false;
         building = false;
+        goldBuilding = false;
         reRolling = false;
         hover = null;
         ghost = null;
@@ -559,7 +590,7 @@ public partial class TDGameManager : MonoBehaviour
 
         if (Input.GetMouseButtonDown(1))
         {
-            if (building || merging || reRolling) CancelMode();
+            if (building || goldBuilding || merging || reRolling) CancelMode();
             else SetSelected(null);
             return;
         }
@@ -576,7 +607,7 @@ public partial class TDGameManager : MonoBehaviour
         map.WorldToCell(p, out x, out y);
         if (!map.InBounds(x, y))
         {
-            if (!building && !merging && !reRolling) SetSelected(null);
+            if (!building && !goldBuilding && !merging && !reRolling) SetSelected(null);
             return;
         }
 
@@ -586,6 +617,12 @@ public partial class TDGameManager : MonoBehaviour
         if (building)
         {
             TryBuild(x, y);   // stays in build mode for repeated placement
+            return;
+        }
+
+        if (goldBuilding)
+        {
+            TryBuildGold(x, y);   // stays in Gold mode for repeated placement
             return;
         }
 
@@ -625,6 +662,7 @@ public partial class TDGameManager : MonoBehaviour
     void HandleHotkeys()
     {
         if (Input.GetKeyDown(KeyCode.B)) ToggleBuildMode();
+        if (Input.GetKeyDown(KeyCode.G)) ToggleGoldBuild();
         if (Input.GetKeyDown(KeyCode.E)) TryStartMerge();
         if (Input.GetKeyDown(KeyCode.R)) TryStartReRoll();
     }
@@ -632,6 +670,7 @@ public partial class TDGameManager : MonoBehaviour
     void CancelMode()
     {
         if (building) { building = false; message = "Build cancelled"; }
+        else if (goldBuilding) { goldBuilding = false; message = "Gold build cancelled"; }
         else if (merging) { merging = false; message = "Merge cancelled"; }
         else if (reRolling) { reRolling = false; message = "Re-roll cancelled"; }
         messageTimer = 1.5f;
@@ -643,8 +682,30 @@ public partial class TDGameManager : MonoBehaviour
         if (building) { CancelMode(); return; }
         if (TDAudio.Instance != null) TDAudio.Instance.Click();
         building = true;
+        goldBuilding = false;
         SetSelected(null);   // clears the panel, and any merge/re-roll mode
         message = "Build mode: click a tile to place ($" + TDBalance.BuildCost + ").  Right-click / Esc cancels.";
+        messageTimer = 3f;
+    }
+
+    /// <summary>Gold placement mode (hotkey G): same ghost UX as build mode,
+    /// but the placed tower is always Gold. Capped at TowerCatalog.MaxGoldTowers.</summary>
+    void ToggleGoldBuild()
+    {
+        if (!ViewingOwnBoard) return;   // spectating is read-only
+        if (goldBuilding) { CancelMode(); return; }
+        if (GoldTowerCount() >= TowerCatalog.MaxGoldTowers)
+        {
+            message = "Gold tower limit reached (" + TowerCatalog.MaxGoldTowers + ")";
+            messageTimer = 2f;
+            return;
+        }
+        if (TDAudio.Instance != null) TDAudio.Instance.Click();
+        goldBuilding = true;
+        building = false;
+        SetSelected(null);   // clears the panel, and any merge/re-roll mode
+        message = "Gold mode: click a tile to place a Gold Coin ($" + TDBalance.BuildCost + ").  "
+                + GoldTowerCount() + "/" + TowerCatalog.MaxGoldTowers + " built.  Right-click / Esc cancels.";
         messageTimer = 3f;
     }
 
@@ -661,6 +722,7 @@ public partial class TDGameManager : MonoBehaviour
         }
         if (TDAudio.Instance != null) TDAudio.Instance.Click();
         building = false;
+        goldBuilding = false;
         merging = true;
         reRolling = false;
         message = "Select another Tier " + Selected.Tier + " tower";
@@ -674,6 +736,7 @@ public partial class TDGameManager : MonoBehaviour
         if (Selected.Tier < 2) { message = "A Tier 1 tower can't re-roll"; messageTimer = 1.8f; return; }
         if (TDAudio.Instance != null) TDAudio.Instance.Click();
         building = false;
+        goldBuilding = false;
         merging = false;
         reRolling = true;
         message = "Select a Tier " + (Selected.Tier - 1) + " tower to re-roll with";
@@ -703,6 +766,39 @@ public partial class TDGameManager : MonoBehaviour
         Money -= TDBalance.BuildCost;
         CreateTower(x, y, TowerCatalog.RandomType(), 1);
         if (TDAudio.Instance != null) TDAudio.Instance.Build();
+    }
+
+    /// <summary>Places a Gold tower (Gold mode only). Same cost as any build,
+    /// but refused once the board holds <see cref="TowerCatalog.MaxGoldTowers"/>.</summary>
+    void TryBuildGold(int x, int y)
+    {
+        if (!map.IsBuildable(x, y)) { message = "Can't build there"; messageTimer = 1.2f; return; }
+        int idx = map.Idx(x, y);
+        if (towers.ContainsKey(idx)) { message = "That tile is taken"; messageTimer = 1.2f; return; }
+
+        if (GoldTowerCount() >= TowerCatalog.MaxGoldTowers)
+        {
+            message = "Gold tower limit reached (" + TowerCatalog.MaxGoldTowers + ")";
+            messageTimer = 2f;
+            return;
+        }
+        if (Money < TDBalance.BuildCost)
+        {
+            message = "Not enough money ($" + TDBalance.BuildCost + ")";
+            messageTimer = 1.5f;
+            return;
+        }
+        Money -= TDBalance.BuildCost;
+        CreateTower(x, y, TowerType.Gold, 1);
+        if (TDAudio.Instance != null) TDAudio.Instance.Build();
+    }
+
+    int GoldTowerCount()
+    {
+        int n = 0;
+        foreach (Tower t in towers.Values)
+            if (t != null && t.Type == TowerType.Gold) n++;
+        return n;
     }
 
     Tower CreateTower(int x, int y, TowerType type, int tier)
@@ -950,7 +1046,7 @@ public partial class TDGameManager : MonoBehaviour
         if (!string.IsNullOrEmpty(message))
             GUI.Label(new Rect(0, 40, Screen.width, 26), message, Style(16, TextAnchor.MiddleCenter, new Color(0.6f, 1f, 0.6f)));
 
-        // ---- build mode toggle (highlighted while active; hidden while spectating) ----
+        // ---- build mode toggles (highlighted while active; hidden while spectating) ----
         if (ViewingOwnBoard)
         {
             Color prevBg = GUI.backgroundColor;
@@ -958,16 +1054,29 @@ public partial class TDGameManager : MonoBehaviour
             if (GUI.Button(new Rect(12, 82, 170, 30), "Build (B)"))
                 ToggleBuildMode();
             GUI.backgroundColor = prevBg;
+
+            int goldCount = GoldTowerCount();
+            bool goldCapped = goldCount >= TowerCatalog.MaxGoldTowers;
+            prevBg = GUI.backgroundColor;
+            if (goldBuilding) GUI.backgroundColor = new Color(1f, 0.85f, 0.3f);
+            GUI.enabled = goldBuilding || !goldCapped;   // always allow toggling off
+            if (GUI.Button(new Rect(190, 82, 180, 30),
+                "Gold (G) " + goldCount + "/" + TowerCatalog.MaxGoldTowers))
+                ToggleGoldBuild();
+            GUI.enabled = true;
+            GUI.backgroundColor = prevBg;
         }
 
         if (Selected != null)
         {
             TowerTierStats s = Selected.Stats;
             GUI.Box(new Rect(12, 118, 380, 124), GUIContent.none);
-            GUI.Label(new Rect(20, 122, 364, 56),
-                Selected.DisplayName + "  -  Tier " + Selected.Tier + "\n" +
-                "Damage " + s.damage + "    Rate " + s.fireInterval.ToString("0.00") + "s",
-                Style(14, TextAnchor.UpperLeft, Color.white));
+            string info = Selected.DisplayName + "  -  Tier " + Selected.Tier + "\n";
+            if (Selected.Type == TowerType.Gold)
+                info += "Gold +" + s.goldPerHit + " per hit    Rate " + s.fireInterval.ToString("0.00") + "s";
+            else
+                info += "Damage " + s.damage + "    Rate " + s.fireInterval.ToString("0.00") + "s";
+            GUI.Label(new Rect(20, 122, 364, 56), info, Style(14, TextAnchor.UpperLeft, Color.white));
 
             bool canMerge = Selected.Tier < TowerCatalog.MaxTier;
             bool canReRoll = Selected.Tier >= 2;   // a lower tier exists (max tier allowed)
@@ -1016,7 +1125,7 @@ public partial class TDGameManager : MonoBehaviour
         }
 
         GUI.Label(new Rect(0, Screen.height - 30, Screen.width, 24),
-            "B: Build ($" + TDBalance.BuildCost + ")   |   E: Merge ($" + TDBalance.MergeCost + ")   |   R: Re-roll   |   Left-click: place / select   |   Right-click: cancel   |   WASD: move   |   Middle-drag: rotate   |   Scroll: zoom   |   M: music   |   Esc: menu",
+            "B: Build ($" + TDBalance.BuildCost + ")   |   G: Gold ($" + TDBalance.BuildCost + ", max " + TowerCatalog.MaxGoldTowers + ")   |   E: Merge ($" + TDBalance.MergeCost + ")   |   R: Re-roll   |   Left-click: place / select   |   Right-click: cancel   |   WASD: move   |   Middle-drag: rotate   |   Scroll: zoom   |   M: music   |   Esc: menu",
             Style(13, TextAnchor.MiddleCenter, new Color(0.8f, 0.8f, 0.8f)));
 
         DrawBossBar();

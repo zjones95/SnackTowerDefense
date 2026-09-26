@@ -19,7 +19,7 @@ Read this first, then `docs/ARCHITECTURE.md`, then `docs/MobRoster.md`.
 | Area | State |
 |---|---|
 | Single player | **35 waves**, one mob type per wave, boss every 5th |
-| Towers | 7 types × 3 tiers, all modelled; merge two same-tier → tier+1 |
+| Towers | 7 random-build types + Gold, × 3 tiers, all modelled (Gold is procedural); merge two same-tier → tier+1 |
 | Mobs | 35 fruits/veg; **34 modelled**, Granola Mom is the procedural humanoid |
 | Projectiles | modelled popcorn / soda blob / skewer rod / jelly bean / chip |
 | Difficulty | Easy/Normal/Hard/Insane (−25% → +50% mob HP), single player + lobby |

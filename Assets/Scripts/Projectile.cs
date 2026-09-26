@@ -12,6 +12,7 @@ public class Projectile : MonoBehaviour
     public float PoisonDuration = 0f;
     public float SlowFactor = 0f;
     public float SlowDuration = 0f;
+    public int GoldPerHit = 0;   // Gold tower: money awarded on a confirmed hit
 
     public Color Tint = new Color(0.4f, 0.7f, 1f);
     public bool Spin = true;   // false = liquid blob, wobbles instead
@@ -99,6 +100,8 @@ public class Projectile : MonoBehaviour
             if (SlowFactor > 0f) Target.ApplySlow(SlowFactor, SlowDuration);
             if (PoisonDps > 0f) Target.ApplyPoison(PoisonDps, PoisonDuration);
             Target.TakeDamage(Damage);
+            // economy towers pay out only on a confirmed hit (the target still exists)
+            if (GoldPerHit > 0 && gm != null) gm.AwardMoney(GoldPerHit);
         }
 
         // ricochet to the nearest other enemy

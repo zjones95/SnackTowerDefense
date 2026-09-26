@@ -30,7 +30,7 @@ public class Mob : MonoBehaviour
         path = waypoints;
         game = g;
         waveSpeed = speedMult;
-        MaxHealth = def.health * healthMult;
+        MaxHealth = def.health * healthMult * TDBalance.MobHealthScale;
         Health = MaxHealth;
         pathIndex = 1;
         transform.position = path[0];

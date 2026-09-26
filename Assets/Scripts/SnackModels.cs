@@ -33,11 +33,15 @@ public static class SnackModels
             case TowerType.Chain: return "SourBelt";
             case TowerType.Pierce: return "Skewer";
             case TowerType.Poison: return "SpicyChips";
+            case TowerType.Gold: return "Gold";
             default: return "Popcorn";
         }
     }
 
     public const string CrackerPath = "Snack/Mobs/Cracker";
+
+    /// <summary>Optional 3D question-mark model for the build ghost.</summary>
+    public const string GhostPath = "Snack/Ghost/QuestionMark";
 
     /// <summary>Optional per-tower projectile model; falls back to a sphere if missing.</summary>
     public static string ProjectilePath(TowerType t)

@@ -14,7 +14,8 @@ tower/mob characters are modelled in Blender and imported as glTF (`.glb`).
 - **Grid map** — a 9x10 ASCII layout (`Layout` in `TDGameManager`). Mobs follow a
   fixed ordered waypoint `Route` from the start tile to the end tile.
 - **35 waves**, one mob type per wave, with a **boss every 5th wave**. Health
-  scales `1.13^(wave-1)` per wave and speed `+2%` per wave.
+  scales `1.13^(wave-1)` per wave (plus a flat `×1.25` global health scale) and
+  speed `+2%` per wave.
 - **Economy**
   | | |
   |---|---|
@@ -28,10 +29,22 @@ tower/mob characters are modelled in Blender and imported as glTF (`.glb`).
   multiplayer lobby: **Easy** (-25% mob health), **Normal**, **Hard** (+25%),
   **Insane** (+50%).
 - **Building** — press **B** (or the **Build (B)** HUD button) to enter build
-  mode. A translucent **"?" ghost** follows the mouse over the board and turns
-  **green** when the tile is free and the `$25` is affordable, **red** otherwise.
+  mode. A **"?" ghost** follows the mouse over the board and turns **green** when
+  the tile is free and the `$25` is affordable, **red** otherwise. It uses a real
+  3D question-mark model (`Snack/Ghost/QuestionMark`) when one is present, and
+  otherwise the procedural fallback; both are tinted with opaque materials.
   Left-click to place a **random tier-1** tower; stay in the mode for repeated
   placement, and cancel with right-click or **Esc**.
+- **Gold tower** — press **G** (or the **Gold (G) n/4** HUD button) to enter
+  Gold-placement mode: the same green/red "?" ghost, but the placed tower is
+  always **Gold Coin** (`$25`). A board may hold at most **4**; the button shows
+  the count and is disabled at the cap, and placement past 4 is refused with a
+  message. Gold deals no damage — it pays `$1 / $2 / $3` per confirmed hit at
+  tiers 1 / 2 / 3.
+- **Selection** — left-click a tower to select it: its tile is outlined in
+  **yellow** (the same frame build mode uses for hover). Left-click it again
+  (or right-click / click empty ground) to deselect. Selecting a tower and
+  entering build mode are mutually exclusive.
 - **Merging** — select a tower, press **E** (or the **Merge (E)** button), then
   click another tower of the **same tier** (any type). You pay `$10` and get a
   **tier + 1** tower of a random type. Tiers go **1 → 3**, designed to be extended.
@@ -44,7 +57,8 @@ tower/mob characters are modelled in Blender and imported as glTF (`.glb`).
 
 ## Towers
 
-7 types, 3 tiers each. A merge picks the resulting type at random.
+8 types (7 random-build + the economy-only Gold Coin), 3 tiers each. A merge
+picks the resulting type at random (never Gold).
 
 | Type | Name | Attack |
 |---|---|---|
@@ -55,9 +69,11 @@ tower/mob characters are modelled in Blender and imported as glTF (`.glb`).
 | Chain | Sour Belt | Bolt arcs to 2/3/4 more enemies (25% falloff per hop) |
 | Pierce | Skewer | Throws a slow metal rod that skewers 3/4/5 enemies |
 | Poison | Spicy Chips | Fires a tortilla chip that applies damage over time |
+| Gold | Gold Coin | Economy: no damage, pays $1/$2/$3 per confirmed hit (max 4 per board) |
 
 Every tower fires twice as often for half the damage vs. the original numbers,
-so DPS is similar but the board is far busier.
+so DPS is similar but the board is far busier. A further balance pass cut all
+tower damage by **20%** (exact multiplier **0.80**) across every tier.
 
 Stats live in `Assets/Scripts/TowerCatalog.cs`.
 
@@ -78,17 +94,18 @@ Defined in `Assets/Scripts/MobCatalog.cs`; models live in
 
 | Input | Action |
 |---|---|
-| **B** / **Build (B)** button | Enter/leave build mode; the ghost shows where a tower would go |
+| **B** / **Build (B)** button | Enter/leave build mode; the ghost shows where a random tower would go |
+| **G** / **Gold (G) n/4** button | Enter/leave Gold mode; the ghost places a Gold Coin (`$25`, max 4 per board) |
 | **E** / **Merge (E)** button | With a tower selected: pick another tower of the **same tier** to combine (`$10`) |
 | **R** / **Re-roll (R)** button | With a tier-2+ tower selected: pick a tower **exactly one tier below** to consume and re-type the selected tower (no money) |
-| **Left-click** | In build mode: place a random tier-1 tower (`$25`) on a green tile. Otherwise: select / deselect a tower |
-| **Right-click** | Cancel build / merge / re-roll mode, or deselect |
+| **Left-click** | In a build mode: place a tower (`$25`) on a green tile. Otherwise: select / deselect a tower (selected tile outlined in yellow) |
+| **Right-click** | Cancel build / Gold / merge / re-roll mode, or deselect |
 | **W / A / S / D** (or arrows) | Pan the camera |
 | **Middle-mouse drag** | Orbit / rotate |
 | **Scroll wheel** | Zoom |
 | **1–8** / **0** or **H** | In a match: jump to another player's board / back to yours |
 | **M** | Mute / unmute the music |
-| **Esc** | Cancel the active build/merge/re-roll mode; otherwise open the pause menu (Settings / Quit to Main Menu / Quit Game) |
+| **Esc** | Cancel the active build/Gold/merge/re-roll mode; otherwise open the pause menu (Settings / Quit to Main Menu / Quit Game) |
 
 ## Menus & settings
 
@@ -183,9 +200,10 @@ Assets/
     TDMultiBoardPreview.cs / TDSpectatePreview.cs / TDPlacementPreview.cs
     TDMusicCheck.cs       Prints music clip stats
   Resources/Snack/        Models loaded at runtime by path
-    Towers/*.glb          7 tower models
+    Towers/*.glb          7 tower models (Gold uses the procedural coin stack)
     Mobs/*.glb            34 fruit & veg models (Granola Mom is procedural)
     Projectiles/*.glb     5 projectile models
+    Ghost/QuestionMark.glb  optional build "?" ghost (procedural fallback)
   Scenes/Boot.unity       Empty scene; the game bootstraps itself
   Scripts/
     TDGameManager*.cs     State machine, world, waves, HUD + the two viewers
