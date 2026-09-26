@@ -102,6 +102,9 @@ public partial class TDGameManager : MonoBehaviour
     void Awake()
     {
         Instance = this;
+        // Keep simulating when the window/tab loses focus, so a multiplayer host
+        // that alt-tabs away doesn't freeze its board or stall the wave clock.
+        Application.runInBackground = true;
         QualitySettings.antiAliasing = 8; // MSAA (also smooths the HUD's 3D elements)
         TDAudio.Ensure();
         SetupCameraAndLight();
