@@ -248,7 +248,7 @@ public static class TowerCatalog
         // T6 Ghost Pepper (death detonation: full DPS in 2.5 radius, re-applies poison).
         d.tiers.Add(new TowerTierStats { damage = 3, range = 6.8f, fireInterval = 0.36f, projectileSpeed = 23f, poisonDps = 24f, poisonDuration = 4.5f });
         d.tiers.Add(new TowerTierStats { damage = 4, range = 7.6f, fireInterval = 0.34f, projectileSpeed = 24f, poisonDps = 33f, poisonDuration = 5.0f, poisonMaxStacks = 3 });
-        d.tiers.Add(new TowerTierStats { damage = 6, range = 8.4f, fireInterval = 0.32f, projectileSpeed = 25f, poisonDps = 45f, poisonDuration = 5.5f, poisonDetonateRadius = 2.5f, poisonDetonateFraction = 1f });
+        d.tiers.Add(new TowerTierStats { damage = 6, range = 8.4f, fireInterval = 0.32f, projectileSpeed = 25f, poisonDps = 45f, poisonDuration = 5.5f, poisonDetonateRadius = 3.0f, poisonDetonateFraction = 2f });
         defs[d.type] = d;
 
         // Gold is economy-only: no damage, a modest range, and a slow fire rate

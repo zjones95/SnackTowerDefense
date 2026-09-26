@@ -96,8 +96,20 @@ public static class TDBalance
         }
     }
 
-    // Mob health: 1.00, 1.13, 1.28, ...  (~68x by wave 35)
-    public static float HealthMult(int wave) { return Mathf.Pow(1.13f, wave - 1); }
+    // Mob health: growth starts at 13%/wave and eases toward 10% by the final
+    // wave, so the late game ramps less steeply than a straight exponential
+    // (1.00, 1.13, 1.28, ... ~41x by wave 35 instead of ~64x).
+    public static float HealthMult(int wave)
+    {
+        int n = Mathf.Max(0, wave - 1);
+        float log = 0f;
+        for (int i = 0; i < n; i++)
+        {
+            float g = Mathf.Lerp(1.13f, 1.10f, i / (float)(TotalWaves - 1));
+            log += Mathf.Log(g);
+        }
+        return Mathf.Exp(log);
+    }
     public static float SpeedMult(int wave) { return 1f + 0.02f * (wave - 1); }
 
     // ------------------------------------------------------------------ waves

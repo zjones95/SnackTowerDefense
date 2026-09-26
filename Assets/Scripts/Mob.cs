@@ -256,7 +256,7 @@ public class Mob : MonoBehaviour
         var mobs = game != null ? game.Mobs : null;
         if (mobs == null) return;
 
-        SplashFX.Spawn(transform.position, poisonDetonateRadius, new Color(0.55f, 0.95f, 0.25f));
+        SplashFX.Spawn(transform.position + Vector3.up * 0.4f, poisonDetonateRadius, new Color(0.55f, 0.95f, 0.25f));
 
         // Snapshot the catch first: TakeDamage/ApplyPoison can kill and mutate
         // the live mob list while we iterate.
