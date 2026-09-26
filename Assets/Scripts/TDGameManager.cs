@@ -602,6 +602,7 @@ public partial class TDGameManager : MonoBehaviour
     void OnGUI()
     {
         if (State == GameState.MainMenu) { DrawMenu(); return; }
+        if (State == GameState.TowerViewer) { DrawTowerViewer(); return; }
         if (State == GameState.MultiplayerMenu || State == GameState.Lobby) { DrawMultiplayer(); return; }
         DrawHud();
         if (State == GameState.GameOver) DrawEnd(false);
@@ -628,18 +629,23 @@ public partial class TDGameManager : MonoBehaviour
 
         float bw = 260f, bh = 56f;
         float bx = (Screen.width - bw) * 0.5f;
-        float by = Screen.height * 0.46f;
+        float by = Screen.height * 0.40f;
         if (GUI.Button(new Rect(bx, by, bw, bh), "Single Player"))
         {
             if (TDAudio.Instance != null) TDAudio.Instance.Click();
             StartRun();
         }
-        if (GUI.Button(new Rect(bx, by + bh + 16f, bw, bh), "Multiplayer"))
+        if (GUI.Button(new Rect(bx, by + bh + 14f, bw, bh), "Multiplayer"))
         {
             if (TDAudio.Instance != null) TDAudio.Instance.Click();
             EnterMultiplayer();
         }
-        if (GUI.Button(new Rect(bx, by + 2f * (bh + 16f), bw, bh), "Quit")) Application.Quit();
+        if (GUI.Button(new Rect(bx, by + 2f * (bh + 14f), bw, bh), "Tower Viewer"))
+        {
+            if (TDAudio.Instance != null) TDAudio.Instance.Click();
+            OpenTowerViewer();
+        }
+        if (GUI.Button(new Rect(bx, by + 3f * (bh + 14f), bw, bh), "Quit")) Application.Quit();
     }
 
     void DrawHud()

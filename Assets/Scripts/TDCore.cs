@@ -2,6 +2,7 @@
 public enum GameState
 {
     MainMenu,
+    TowerViewer,
     MultiplayerMenu,
     Lobby,
     Playing,
