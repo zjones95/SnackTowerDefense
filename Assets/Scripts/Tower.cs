@@ -243,6 +243,8 @@ public class Tower : MonoBehaviour
         p.BounceRange = s.bounceRange;
         p.PoisonDps = s.poisonDps;
         p.PoisonDuration = s.poisonDuration;
+        p.Tint = TowerCatalog.Get(Type).color;
+        p.Spin = Type != TowerType.Splash;   // the soda blob wobbles instead
     }
 
     void Tracer(Vector3 a, Vector3 b)

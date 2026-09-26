@@ -11,12 +11,23 @@ public class Projectile : MonoBehaviour
     public float PoisonDps = 0f;
     public float PoisonDuration = 0f;
 
+    public Color Tint = new Color(0.4f, 0.7f, 1f);
+    public bool Spin = true;   // false = liquid blob, wobbles instead
+
     void Update()
     {
         if (Target == null) { Destroy(gameObject); return; }
 
-        // tumble the model so it reads as a thrown snack
-        transform.Rotate(150f * Time.deltaTime, 210f * Time.deltaTime, 90f * Time.deltaTime);
+        if (Spin)
+        {
+            // tumble the model so it reads as a thrown snack
+            transform.Rotate(150f * Time.deltaTime, 210f * Time.deltaTime, 90f * Time.deltaTime);
+        }
+        else
+        {
+            float wob = 1f + Mathf.Sin(Time.time * 22f) * 0.07f;
+            transform.localScale = new Vector3(wob, 2f - wob, wob);
+        }
 
         Vector3 tp = Target.transform.position + Vector3.up * 0.4f;
         Vector3 dir = tp - transform.position;
@@ -30,14 +41,19 @@ public class Projectile : MonoBehaviour
         TDGameManager gm = TDGameManager.Instance;
         var mobs = gm != null ? gm.Mobs : null;
 
-        if (SplashRadius > 0f && mobs != null)
+        if (SplashRadius > 0f)
         {
-            for (int i = mobs.Count - 1; i >= 0; i--)
+            SplashFX.Spawn(transform.position, SplashRadius, Tint);
+
+            if (mobs != null)
             {
-                Mob m = mobs[i];
-                if (m == null) continue;
-                if (Vector3.Distance(m.transform.position, transform.position) <= SplashRadius)
-                    m.TakeDamage(Damage);
+                for (int i = mobs.Count - 1; i >= 0; i--)
+                {
+                    Mob m = mobs[i];
+                    if (m == null) continue;
+                    if (Vector3.Distance(m.transform.position, transform.position) <= SplashRadius)
+                        m.TakeDamage(Damage);
+                }
             }
         }
         else if (Target != null)
