@@ -52,6 +52,8 @@ sysinfo.txt
 # ---------------------------------------------------------------
 # Builds / packages
 # ---------------------------------------------------------------
+# Stray WebGL build artifact Unity drops at the project root
+/Data/
 *.apk
 *.aab
 *.unitypackage

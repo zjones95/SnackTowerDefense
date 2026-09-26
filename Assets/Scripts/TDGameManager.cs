@@ -132,7 +132,7 @@ public partial class TDGameManager : MonoBehaviour
         camFocus = Vector3.zero;
         ApplyCamera();
         cam.clearFlags = CameraClearFlags.SolidColor;
-        cam.backgroundColor = new Color(0.09f, 0.11f, 0.14f);
+        cam.backgroundColor = new Color(0.12f, 0.14f, 0.17f);
 
         // warm, dimmer sunlight (override any default scene light)
         Light sun = null;
@@ -148,7 +148,7 @@ public partial class TDGameManager : MonoBehaviour
             sun.type = LightType.Directional;
         }
         sun.color = new Color(1f, 0.86f, 0.66f);
-        sun.intensity = 0.72f;
+        sun.intensity = 0.95f;
         sun.shadows = LightShadows.Soft;
         sun.transform.rotation = Quaternion.Euler(50f, 35f, 0f);
 
@@ -157,12 +157,12 @@ public partial class TDGameManager : MonoBehaviour
         Light fill = fillGO.AddComponent<Light>();
         fill.type = LightType.Directional;
         fill.color = new Color(0.55f, 0.62f, 0.78f);
-        fill.intensity = 0.10f;
+        fill.intensity = 0.16f;
         fill.shadows = LightShadows.None;
         fillGO.transform.rotation = Quaternion.Euler(28f, -140f, 0f);
 
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-        RenderSettings.ambientLight = new Color(0.12f, 0.11f, 0.10f);
+        RenderSettings.ambientLight = new Color(0.19f, 0.18f, 0.17f);
         RenderSettings.ambientIntensity = 1f;
     }
 
