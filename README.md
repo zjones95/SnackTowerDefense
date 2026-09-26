@@ -13,7 +13,8 @@ tower/mob characters are modelled in Blender and imported as glTF (`.glb`).
 
 - **Grid map** — a 9x10 ASCII layout (`Layout` in `TDGameManager`). Mobs follow a
   fixed ordered waypoint `Route` from the start tile to the end tile.
-- **5 waves**, health scaling `x1.55` per wave and speed `+4%` per wave.
+- **35 waves**, one mob type per wave, with a **boss every 5th wave**. Health
+  scales `1.13^(wave-1)` per wave and speed `+2%` per wave.
 - **Economy**
   | | |
   |---|---|
@@ -53,14 +54,16 @@ Stats live in `Assets/Scripts/TowerCatalog.cs`.
 
 ## Mobs
 
-| Mob | Health | Speed | Leak damage |
-|---|---|---|---|
-| Cracker (Basic) | 30 | 1.7 | 1 |
-| Gummy (Fast) | 20 | 3.1 | 1 |
-| Donut (Tank) | 95 | 1.15 | 2 |
-| Cake Boss (Boss) | 340 | 0.95 | 5 |
+**35 waves of fruit & vegetables** — one type per wave (never mixed), with a
+standalone **boss every 5th wave**: Watermelon, Pumpkin, Pineapple, Durian,
+Coconut, Dragonfruit and the **Granola Mom** finale.
 
-Defined in `Assets/Scripts/MobCatalog.cs`.
+Archetypes are `Basic` · `Fast` · `Tank` · `Swarm` · `Boss`, and bosses carry
+traits (regeneration, armour, slow-immunity, enrage, dashes).
+
+Defined in `Assets/Scripts/MobCatalog.cs`; models live in
+`Assets/Resources/Snack/Mobs/`. The full wave-by-wave table is in
+[`docs/MobRoster.md`](docs/MobRoster.md).
 
 ## Controls
 
@@ -72,7 +75,8 @@ Defined in `Assets/Scripts/MobCatalog.cs`.
 | **W / A / S / D** (or arrows) | Pan the camera |
 | **Middle-mouse drag** | Orbit / rotate |
 | **Scroll wheel** | Zoom |
-| **Space** | Start the next wave immediately |
+| **1–8** / **0** or **H** | In a match: jump to another player's board / back to yours |
+| **M** | Mute / unmute the music |
 | **Esc** | Back to the main menu |
 
 ## Music & sound
@@ -108,8 +112,8 @@ The main menu now splits into **Single Player** and **Multiplayer**.
 - The **host owns the wave clock**: every board gets a 10s prep, then the wave goes
   live; the next wave begins once the **last** non-eliminated board clears.
 - Money and lives are **per-player**. At 0 lives you're **out** — your board stops
-  and the match continues; victory is shared when the survivors clear wave 5, and
-  defeat when every board is out.
+  and the match continues; victory is shared when the survivors clear all 35
+  waves, and defeat when every board is out.
 - The skip-wave key was removed.
 
 **Phase 3 (done): live synchronised boards.**
@@ -134,29 +138,40 @@ Built on **Netcode for GameObjects**, host-authoritative with owner-simulated bo
 Clones Manager** menu, create a clone, then host in one editor and join
 `127.0.0.1:7777` from the other.
 
+## Documentation
+
+| Doc | Contents |
+|---|---|
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Codebase map, conventions, how to verify changes, Blender pipeline, gotchas |
+| [`docs/HANDOFF.md`](docs/HANDOFF.md) | Current state, what is verified, suggested next steps |
+| [`docs/MobRoster.md`](docs/MobRoster.md) | The 35-wave fruit & vegetable roster and boss concepts |
+
 ## Project layout
 
 ```
 Assets/
-  Editor/
+  Editor/                 Editor-only tooling (never shipped)
     CICompileCheck.cs     Build entry point used by CI
-    SnackPreview.cs       Renders tower/mob preview PNGs (editor only)
-    TDArenaPreview.cs     Renders the map + room preview PNG (editor only)
-  Resources/Snack/
-    Towers/*.glb          Blender-authored tower models
-    Mobs/Cracker.glb      Basic mob model
+    SnackPreview.cs       Renders towers + mobs
+    TDArenaPreview.cs     Renders the map + room
+    TDMultiBoardPreview.cs / TDSpectatePreview.cs / TDPlacementPreview.cs
+    TDMusicCheck.cs       Prints music clip stats
+  Resources/Snack/        Models loaded at runtime by path
+    Towers/*.glb          7 tower models
+    Mobs/*.glb            34 fruit & veg models (Granola Mom is procedural)
+    Projectiles/*.glb     5 projectile models
   Scenes/Boot.unity       Empty scene; the game bootstraps itself
   Scripts/
-    TDGameManager.cs      Game state machine, waves, economy, input, HUD, lighting
-    Tower.cs              Tower behaviour + model/turret composition
-    TowerCatalog.cs       Tower types and per-tier stats
-    Mob.cs / MobCatalog.cs
-    TDMap.cs              Layout -> grid, waypoint route, BFS helpers
-    TDRoom.cs             Kid's-room environment
-    TDTextures.cs         Procedural play-mat / toy-track textures
-    TDVisuals.cs          Primitive + material helpers
-    SnackModels.cs        glTF loading + centering
-    TDAudio.cs / TDSynth.cs   Procedural audio
+    TDGameManager*.cs     State machine, world, waves, HUD + the two viewers
+    TDBalance.cs          Economy, difficulty, the 35-wave table, curves
+    TowerCatalog.cs / Tower.cs / Projectile.cs / PierceProjectile.cs / SplashFX.cs
+    MobCatalog.cs / Mob.cs / ChildModel.cs / SnackArt.cs
+    TDMap.cs / TDBoardBuilder.cs / TDRoom.cs / TDTextures.cs
+    TDVisuals.cs / SnackModels.cs / SnackVisuals.cs
+    TDAudio.cs / TDSynth.cs
+    TowerViewer.cs / MobViewer.cs
+    Net/                  Multiplayer (NetworkSession, MatchSync, SpectateSync, …)
+    RemoteBoard.cs
   Models/                 Original glTF sources (mirrored into Resources)
 ```
 

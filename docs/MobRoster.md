@@ -7,7 +7,8 @@ supporting mobs.
 **One mob type per wave.** A wave never mixes mobs; it's a single fruit or
 vegetable, possibly spawned in several staggered bursts.
 
-This is a design draft for review; nothing here is implemented yet.
+> **Status:** implemented. See *Implementation status* at the bottom for the
+> handful of caveats (chiefly balance, which is untuned).
 
 ---
 
@@ -79,16 +80,17 @@ new (fast, low HP, spawned in large numbers).
 
 ---
 
-## Things this implies (not yet done)
+## Implementation status
 
-1. **Health scaling must change.** The current curve is `1.55^(wave-1)`; by
-   wave 35 that's ~10^7 × base health. A 35-wave run needs a much gentler curve
-   (e.g. `1.15^(wave-1)`, or a piecewise ramp with a step per boss).
-2. **New archetypes.** `Swarm` is new; Regen / Armour / Slow-immunity / Enrage /
-   Phases are boss-only behaviours that need code.
-3. **35 mob models.** One Blender model per entry (28 regular + 7 bosses).
-   Cheaper alternative: let a few earlier mobs return in later waves.
-4. **Boss waves** are single-spawn waves — the wave table needs a flag, or the
-   boss wave is expressed as a one-entry spawn group.
-5. **`TDBalance.TotalWaves`** is currently `5`; it should move to `35` once the
-   health curve is reworked.
+- ✅ **`MobCatalog`** holds all 35 defs with archetype stats and boss traits.
+- ✅ **`TDBalance.Waves`** — 35 waves, one mob each, boss every 5th; health curve
+  is now `1.13^(wave-1)` and each wave is a single spawn group.
+- ✅ **`Swarm` archetype** plus boss behaviours (regen / armour / slow-immunity /
+  enrage / dash) are wired into `Mob`.
+- ✅ **Models** — 34 of 35 built in Blender. **Granola Mom deliberately uses the
+  procedural humanoid** (`ChildModel`) with long hair, so she gets the walk cycle.
+- ⚠️ **Balance is untuned.** The curve, tower DPS and the economy have never been
+  play-tested across a full 35-wave run.
+- ⚠️ **Swarm scale is `0.42`**, rendering Raspberry (0.32 tall) at ~0.2 units —
+  nearly invisible next to a 2-unit tile. Bumping to ~`0.7` would fix it.
+- ℹ️ `Cracker.glb` (the original cracker mob) is now unused and can be deleted.
