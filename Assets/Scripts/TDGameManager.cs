@@ -60,11 +60,14 @@ public partial class TDGameManager : MonoBehaviour
     private Vector3 boardOffset;
     private Camera cam;
     private Vector3 camFocus;
-    private float camYaw = 45f, camPitch = 42f;
-    private float camDist = 32f;
+    // in-game camera state (reset to these when a run starts)
+    private const float GameYaw = 45f, GamePitch = 42f, GameDist = 32f;
+    private float camYaw = GameYaw, camPitch = GamePitch;
+    private float camDist = GameDist;
     private readonly float camDistMin = 12f, camDistMax = 90f;
-    private float menuYaw = 35f;                       // slow orbit for the menu backdrop
-    private const float MenuOrbitDegPerSec = 3f;
+    // menu backdrop has its OWN camera state so it never leaks into a run
+    private float menuYaw = 35f;
+    private const float MenuPitch = 38f, MenuDist = 31f, MenuOrbitDegPerSec = 3f;
     private Transform worldRoot, towersRoot, mobsRoot;
     private readonly Dictionary<int, Tower> towers = new Dictionary<int, Tower>();
 
@@ -159,11 +162,13 @@ public partial class TDGameManager : MonoBehaviour
     }
 
     // ----------------------------------------------------------- camera move
-    void ApplyCamera()
+    void ApplyCamera() { ApplyCamera(camYaw, camPitch, camDist); }
+
+    void ApplyCamera(float yaw, float pitch, float dist)
     {
         if (cam == null) return;
-        cam.transform.rotation = Quaternion.Euler(camPitch, camYaw, 0f);
-        cam.transform.position = camFocus - cam.transform.forward * camDist;
+        cam.transform.rotation = Quaternion.Euler(pitch, yaw, 0f);
+        cam.transform.position = camFocus - cam.transform.forward * dist;
     }
 
     void UpdateCamera(float dt)
@@ -231,10 +236,7 @@ public partial class TDGameManager : MonoBehaviour
         if (menuYaw > 360f) menuYaw -= 360f;
 
         camFocus = Vector3.zero;
-        camYaw = menuYaw;
-        camPitch = 38f;
-        camDist = 31f;
-        ApplyCamera();
+        ApplyCamera(menuYaw, MenuPitch, MenuDist);   // menu-only camera, game state untouched
     }
 
     // ------------------------------------------------------------ game flow
@@ -264,6 +266,9 @@ public partial class TDGameManager : MonoBehaviour
         Round = RoundState.Preparing;
         prepTimer = TDBalance.PrepDuration;
         camFocus = offset;
+        camYaw = GameYaw;
+        camPitch = GamePitch;
+        camDist = GameDist;
         message = "";
 
         BuildWorld();
