@@ -107,6 +107,20 @@ public partial class TDGameManager
 
         GUI.Label(new Rect(area.x - 40f, area.y + 5f * rowH + 6f, area.width + 80f, 46f), Blurb(def.type),
             Style(14, TextAnchor.UpperCenter, new Color(0.85f, 0.88f, 0.92f)));
+
+        // unique tier 5 / 6 modifiers
+        string mod5 = TowerCatalog.ModifierText(def.type, 5);
+        string mod6 = TowerCatalog.ModifierText(def.type, 6);
+        float my0 = area.y + 5f * rowH + 54f;
+        if (mod5 != null)
+            GUI.Label(new Rect(area.x - 40f, my0, area.width + 80f, 22f), "T5   " + mod5,
+                Style(14, TextAnchor.UpperCenter, new Color(0.72f, 0.86f, 1f)));
+        if (mod6 != null)
+            GUI.Label(new Rect(area.x - 40f, my0 + 24f, area.width + 80f, 22f), "T6   " + mod6,
+                Style(14, TextAnchor.UpperCenter, new Color(1f, 0.82f, 0.45f)));
+        if (mod5 == null)
+            GUI.Label(new Rect(area.x - 40f, my0, area.width + 80f, 22f), "No tier 5/6 modifiers (max tier 3)",
+                Style(14, TextAnchor.UpperCenter, new Color(0.75f, 0.75f, 0.78f)));
     }
 
     static string StatText(TowerType t, int row, TowerTierStats s)

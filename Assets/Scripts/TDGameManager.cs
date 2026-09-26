@@ -72,6 +72,7 @@ public partial class TDGameManager : MonoBehaviour
     private readonly Dictionary<int, Tower> towers = new Dictionary<int, Tower>();
 
     private float prepTimer;
+    private float waveIntroTimer;   // shows the wave title + modifiers at wave start
     private string message = "";
     private float messageTimer;
     private bool merging;
@@ -339,6 +340,7 @@ public partial class TDGameManager : MonoBehaviour
         spawnIndex = 0;
         waveTime = 0f;
         Round = RoundState.WaveActive;
+        waveIntroTimer = 3.5f;
     }
 
     List<SpawnEntry> BuildWave(int wave)
@@ -442,6 +444,8 @@ public partial class TDGameManager : MonoBehaviour
             messageTimer -= Time.deltaTime;
             if (messageTimer <= 0f) message = "";
         }
+
+        if (waveIntroTimer > 0f) waveIntroTimer -= Time.deltaTime;
 
         if (State != GameState.Playing)
         {
@@ -579,7 +583,7 @@ public partial class TDGameManager : MonoBehaviour
         float my = Screen.height - Input.mousePosition.y;
         if (my < 116f) return true;                                   // top stats + Build button
         if (my > Screen.height - 40f) return true;                    // bottom legend
-        if (Selected != null && mx < 400f && my < 250f) return true;  // selected-tower panel
+        if (Selected != null && mx < 400f && my < 300f) return true;  // selected-tower panel
         return false;
     }
 
@@ -1153,13 +1157,26 @@ public partial class TDGameManager : MonoBehaviour
         if (Selected != null)
         {
             TowerTierStats s = Selected.Stats;
-            GUI.Box(new Rect(12, 118, 380, 124), GUIContent.none);
+            GUI.Box(new Rect(12, 118, 380, 176), GUIContent.none);
             string info = Selected.DisplayName + "  -  Tier " + Selected.Tier + "\n";
             if (Selected.Type == TowerType.Gold)
                 info += "Gold +" + s.goldPerHit + " per hit    Rate " + s.fireInterval.ToString("0.00") + "s";
             else
                 info += "Damage " + s.damage + "    Rate " + s.fireInterval.ToString("0.00") + "s";
             GUI.Label(new Rect(20, 122, 364, 56), info, Style(14, TextAnchor.UpperLeft, Color.white));
+
+            // unique tier 5 / 6 modifiers for this tower type
+            string mod5 = TowerCatalog.ModifierText(Selected.Type, 5);
+            string mod6 = TowerCatalog.ModifierText(Selected.Type, 6);
+            if (mod5 != null)
+                GUI.Label(new Rect(20, 180, 364, 18), "T5: " + mod5,
+                    Style(12, TextAnchor.MiddleLeft, new Color(0.72f, 0.86f, 1f)));
+            if (mod6 != null)
+                GUI.Label(new Rect(20, 198, 364, 18), "T6: " + mod6,
+                    Style(12, TextAnchor.MiddleLeft, new Color(1f, 0.82f, 0.45f)));
+            if (mod5 == null)
+                GUI.Label(new Rect(20, 180, 364, 18), "No tier 5/6 modifiers (max tier 3)",
+                    Style(12, TextAnchor.MiddleLeft, new Color(0.75f, 0.75f, 0.78f)));
 
             bool canMerge = Selected.Type != TowerType.Gold && Selected.Tier <= TowerCatalog.MaxMergeTier;
             int ascendCost = UpgradeCost(Selected);   // Gold 1->2->3; others ascend 4->5->6
@@ -1168,10 +1185,10 @@ public partial class TDGameManager : MonoBehaviour
 
             if (merging)
             {
-                GUI.Label(new Rect(20, 176, 364, 20),
+                GUI.Label(new Rect(20, 222, 364, 20),
                     "Select a Tier " + Selected.Tier + " tower to merge with",
                     Style(13, TextAnchor.UpperLeft, new Color(1f, 0.9f, 0.4f)));
-                if (GUI.Button(new Rect(20, 200, 110, 26), "Cancel"))
+                if (GUI.Button(new Rect(20, 246, 110, 26), "Cancel"))
                 {
                     if (TDAudio.Instance != null) TDAudio.Instance.Click();
                     CancelMode();
@@ -1179,10 +1196,10 @@ public partial class TDGameManager : MonoBehaviour
             }
             else if (reRolling)
             {
-                GUI.Label(new Rect(20, 176, 364, 20),
+                GUI.Label(new Rect(20, 222, 364, 20),
                     "Select a Tier " + (Selected.Tier - 1) + " tower to re-roll with",
                     Style(13, TextAnchor.UpperLeft, new Color(1f, 0.9f, 0.4f)));
-                if (GUI.Button(new Rect(20, 200, 110, 26), "Cancel"))
+                if (GUI.Button(new Rect(20, 246, 110, 26), "Cancel"))
                 {
                     if (TDAudio.Instance != null) TDAudio.Instance.Click();
                     CancelMode();
@@ -1194,7 +1211,7 @@ public partial class TDGameManager : MonoBehaviour
                 {
                     bool canAfford = Money >= TDBalance.MergeCost;
                     GUI.enabled = canAfford;
-                    if (GUI.Button(new Rect(20, 178, 160, 30), "Merge (E)  $" + TDBalance.MergeCost))
+                    if (GUI.Button(new Rect(20, 224, 160, 30), "Merge (E)  $" + TDBalance.MergeCost))
                         TryStartMerge();
                     GUI.enabled = true;
                 }
@@ -1203,17 +1220,17 @@ public partial class TDGameManager : MonoBehaviour
                     bool canAfford = Money >= ascendCost;
                     GUI.enabled = canAfford;
                     string upLabel = (Selected.Type == TowerType.Gold ? "Upgrade (U)  $" : "Ascend (U)  $") + ascendCost;
-                    if (GUI.Button(new Rect(20, 178, 160, 30), upLabel))
+                    if (GUI.Button(new Rect(20, 224, 160, 30), upLabel))
                         TryStartAscend();
                     GUI.enabled = true;
                 }
                 else
                 {
-                    GUI.Label(new Rect(20, 182, 160, 22), "Max tier",
+                    GUI.Label(new Rect(20, 228, 160, 22), "Max tier",
                         Style(13, TextAnchor.MiddleLeft, new Color(0.8f, 0.8f, 0.8f)));
                 }
 
-                if (canReRoll && GUI.Button(new Rect(190, 178, 170, 30), "Re-roll (R)"))
+                if (canReRoll && GUI.Button(new Rect(190, 224, 170, 30), "Re-roll (R)"))
                     TryStartReRoll();
             }
         }
@@ -1222,7 +1239,52 @@ public partial class TDGameManager : MonoBehaviour
             "B: Build ($" + TDBalance.BuildCost + ")   |   G: Gold ($" + TDBalance.BuildCost + ", max " + TowerCatalog.MaxGoldTowers + ")   |   E: Merge ($" + TDBalance.MergeCost + ")   |   U: Ascend ($" + TDBalance.AscendCost4to5 + "/$" + TDBalance.AscendCost5to6 + "), Gold ($" + TDBalance.GoldUpgrade1to2 + "/$" + TDBalance.GoldUpgrade2to3 + ")   |   R: Re-roll   |   Left-click: place / select   |   Right-click: cancel   |   WASD: move   |   Middle-drag: rotate   |   Scroll: zoom   |   M: music   |   Esc: menu",
             Style(13, TextAnchor.MiddleCenter, new Color(0.8f, 0.8f, 0.8f)));
 
+        DrawWaveIntro();
         DrawBossBar();
+    }
+
+    /// <summary>Wave title + any unique modifiers, shown for a few seconds at wave start.</summary>
+    void DrawWaveIntro()
+    {
+        if (State != GameState.Playing || waveIntroTimer <= 0f) return;
+        if (Wave < 1 || Wave > TDBalance.TotalWaves) return;
+
+        MobDef md = MobCatalog.Get(TDBalance.Waves[Wave - 1].mob);
+        string traits = MobTraits(md);
+        float a = Mathf.Clamp01(waveIntroTimer / 1.2f);   // fade over the last moment
+        float y = 78f;
+
+        Color old = GUI.color;
+        GUI.color = new Color(1f, 1f, 1f, a);
+        GUI.Label(new Rect(0f, y, Screen.width, 30f), "WAVE " + Wave,
+            Style(26, TextAnchor.MiddleCenter, new Color(1f, 0.88f, 0.45f)));
+        string line = md.displayName.ToUpper();
+        if (!string.IsNullOrEmpty(traits)) line += "   -   " + traits;
+        GUI.Label(new Rect(0f, y + 30f, Screen.width, 24f), line,
+            Style(16, TextAnchor.MiddleCenter, Color.white));
+        GUI.color = old;
+    }
+
+    /// <summary>Boss-style gimmick tags for a mob, or its archetype when it has none.</summary>
+    static string MobTraits(MobDef d)
+    {
+        List<string> tags = new List<string>();
+        if (d.regen > 0f) tags.Add("Regenerates");
+        if (d.armour > 0f) tags.Add("Armoured");
+        if (d.slowImmune) tags.Add("Immune to slow");
+        if (d.enrage > 0f) tags.Add("Enrages");
+        if (d.dashEvery > 0f) tags.Add("Dashes");
+        if (tags.Count == 0)
+        {
+            switch (d.archetype)
+            {
+                case MobArchetype.Fast: return "Fast";
+                case MobArchetype.Tank: return "Tank";
+                case MobArchetype.Swarm: return "Swarm";
+                default: return "";
+            }
+        }
+        return string.Join("  -  ", tags.ToArray());
     }
 
     /// <summary>Big centred boss bar at the top of the screen while a boss is alive.

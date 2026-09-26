@@ -129,6 +129,41 @@ public static class TowerCatalog
 
     public static TowerDef Get(TowerType t) { EnsureInit(); return defs[t]; }
 
+    /// <summary>One-line description of a tower's unique tier-5 or tier-6
+    /// modifier, or null when that tier has none (tiers 1-4, and all of Gold).</summary>
+    public static string ModifierText(TowerType t, int tier)
+    {
+        if (t == TowerType.Gold) return null;
+
+        if (tier == 5)
+        {
+            switch (t)
+            {
+                case TowerType.SingleShot: return "Ricochet Pop - shots bounce to 2 more enemies";
+                case TowerType.Splash: return "Fizz Ricochet - bursts bounce once and detonate again";
+                case TowerType.Slow: return "Candy Shell - gumballs deal impact damage";
+                case TowerType.Sniper: return "Powdered Sour - 30% crit for x2.5 that ignores armour";
+                case TowerType.Chain: return "Twin Lash - each arc branches to 2 more enemies";
+                case TowerType.Pierce: return "Wide Skewer - a wider line that skewers more enemies";
+                case TowerType.Poison: return "Extra Hot - poison stacks up to 3 times";
+            }
+        }
+        else if (tier == 6)
+        {
+            switch (t)
+            {
+                case TowerType.SingleShot: return "Kettle Burst - 3-pellet volley, each impact mini-splashes";
+                case TowerType.Splash: return "Sticky Soda - the splash also slows everything caught";
+                case TowerType.Slow: return "Sticky Tar - slowed enemies take +30% damage from all towers";
+                case TowerType.Sniper: return "Deadeye - damage ramps the longer it holds one target";
+                case TowerType.Chain: return "Sticky Sour - jumps deal full damage and slow";
+                case TowerType.Pierce: return "Boomerang Skewer - the rod returns and skewers again";
+                case TowerType.Poison: return "Ghost Pepper - poisoned enemies explode on death";
+            }
+        }
+        return null;
+    }
+
     static void EnsureInit()
     {
         if (defs != null) return;
