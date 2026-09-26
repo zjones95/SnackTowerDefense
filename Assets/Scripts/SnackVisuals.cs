@@ -74,42 +74,102 @@ public static class TowerVisual
         return TierColours[Mathf.Clamp(tier, 1, TierColours.Length) - 1];
     }
 
-    /// <summary>Coloured glow marking the tower's tier: a bright ring on the mat
-    /// plus a fainter outer ring. Flat, opaque geometry — it can never cover the
-    /// model and never depends on transparency (which the player build strips).
-    /// Same palette for every tower type.</summary>
+    /// <summary>Additive billboard flare tinted by tier — soft, bright and
+    /// see-through, so it reads as light rather than a solid shape. Same palette
+    /// for every tower type.</summary>
     static void BuildTierGlow(Transform parent, int tier)
     {
         Renderer[] rs = parent.GetComponentsInChildren<Renderer>();
         if (rs == null || rs.Length == 0) return;
 
+        Material m = GlowMat(TierColour(tier));
+        if (m == null) return;
+
         Bounds b = rs[0].bounds;
         for (int i = 1; i < rs.Length; i++) b.Encapsulate(rs[i].bounds);
 
-        float half = Mathf.Max(0.22f, Mathf.Max(b.extents.x, b.extents.z));
-
-        Color c = TierColour(tier);
-        Color dim = new Color(c.r * 0.5f, c.g * 0.5f, c.b * 0.5f);
-        Ring(parent, "TierRing", half + 0.12f, 0.055f, 0.11f, TDVisuals.EmissiveMat(c, 1.1f));
-        Ring(parent, "TierHalo", half + 0.34f, 0.035f, 0.07f, TDVisuals.EmissiveMat(dim, 0.5f));
+        float size = Mathf.Max(1.2f, b.size.y * 1.8f);
+        GameObject quad = TDVisuals.Quad(parent, "TierGlow", Vector3.zero, size, m);
+        TierGlow tg = quad.AddComponent<TierGlow>();
+        tg.Center = parent.InverseTransformPoint(b.center);
+        tg.Push = Mathf.Max(0.15f, b.extents.magnitude * 0.75f);   // clear of its own model
+        tg.FaceNow();                                              // correct on frame one
     }
 
-    /// <summary>A thin flat ring of small blocks laid on the mat at the given radius.</summary>
-    static void Ring(Transform parent, string name, float radius, float height, float thickness, Material m)
-    {
-        GameObject ring = new GameObject(name);
-        ring.transform.SetParent(parent, false);
+    static readonly Dictionary<Color, Material> glowMats = new Dictionary<Color, Material>();
+    static Texture2D glowTex;
 
-        int segs = Mathf.Clamp(Mathf.RoundToInt(radius * 44f), 16, 56);
-        float tang = (2f * Mathf.PI * radius / segs) * 1.25f;
-        for (int i = 0; i < segs; i++)
+    static Material GlowMat(Color c)
+    {
+        Material m;
+        if (glowMats.TryGetValue(c, out m) && m != null) return m;
+
+        Shader sh = Resources.Load<Shader>("Snack/Glow");
+        if (sh == null) sh = Shader.Find("Snack/Glow");
+        if (sh == null) return null;
+
+        m = new Material(sh);
+        m.mainTexture = GlowTexture();
+        m.SetColor("_Color", new Color(c.r, c.g, c.b, 1f));
+        glowMats[c] = m;
+        return m;
+    }
+
+    /// <summary>A soft radial flare with faint rays, generated once at runtime.</summary>
+    static Texture2D GlowTexture()
+    {
+        if (glowTex != null) return glowTex;
+
+        const int n = 256;
+        glowTex = new Texture2D(n, n, TextureFormat.RGBA32, false);
+        glowTex.name = "TierGlowTex";
+        glowTex.wrapMode = TextureWrapMode.Clamp;
+        glowTex.filterMode = FilterMode.Bilinear;
+
+        float c0 = (n - 1) * 0.5f;
+        Color[] px = new Color[n * n];
+        for (int y = 0; y < n; y++)
         {
-            float a = i / (float)segs * Mathf.PI * 2f;
-            GameObject g = TDVisuals.Box(ring.transform, "s" + i,
-                new Vector3(Mathf.Cos(a) * radius, height * 0.5f + 0.006f, Mathf.Sin(a) * radius),
-                new Vector3(tang, height, thickness), m);
-            g.transform.localRotation = Quaternion.Euler(0f, 90f - a * Mathf.Rad2Deg, 0f);
+            for (int x = 0; x < n; x++)
+            {
+                float dx = (x - c0) / c0;
+                float dy = (y - c0) / c0;
+                float r = Mathf.Sqrt(dx * dx + dy * dy);
+                float falloff = Mathf.Clamp01(1f - r);
+
+                float core = Mathf.Pow(falloff, 3.5f);
+                float a = Mathf.Atan2(dy, dx);
+                float rays = Mathf.Pow(Mathf.Max(0f, Mathf.Cos(a * 8f)), 14f) * falloff * 0.5f;
+
+                px[y * n + x] = new Color(1f, 1f, 1f, Mathf.Clamp01(core + rays));
+            }
         }
+        glowTex.SetPixels(px);
+        glowTex.Apply();
+        return glowTex;
+    }
+}
+
+/// <summary>Billboards an additive glow quad toward the camera each frame,
+/// pushed just in front of the model it belongs to.</summary>
+public class TierGlow : MonoBehaviour
+{
+    public Vector3 Center;   // local offset of the model centre
+    public float Push;       // distance toward the camera, so the flare sits in front of its model
+
+    void LateUpdate() { FaceNow(); }
+
+    // Also runs during manual Camera.Render(), so the editor previews match.
+    void OnWillRenderObject() { FaceNow(); }
+
+    public void FaceNow()
+    {
+        Camera cam = Camera.main;
+        if (cam == null) return;
+
+        transform.rotation = cam.transform.rotation;
+        Vector3 center = transform.parent != null ? transform.parent.TransformPoint(Center) : transform.position;
+        transform.position = center - cam.transform.forward * Push;
     }
 }
 
