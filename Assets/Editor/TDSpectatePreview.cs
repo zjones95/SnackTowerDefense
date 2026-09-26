@@ -46,7 +46,7 @@ public static class TDSpectatePreview
             snap.Mobs.Add(new BoardSnapshot.MobSnap
             {
                 Id = (ushort)(i + 1),
-                Type = (byte)(i % 2 == 0 ? MobType.Basic : MobType.Fast),
+                Type = (byte)(i % 2 == 0 ? 0 : 3),
                 X = BoardSnapshot.Enc(p.x),
                 Z = BoardSnapshot.Enc(p.z),
                 Hp = (byte)(255 - i * 30)

@@ -37,7 +37,7 @@ public class BoardSnapshot
             Mobs.Add(new MobSnap
             {
                 Id = m.NetId,
-                Type = (byte)m.Def.type,
+                Type = (byte)m.Def.index,
                 X = Enc(p.x),
                 Z = Enc(p.z),
                 Hp = (byte)Mathf.Clamp(Mathf.RoundToInt(hf * 255f), 0, 255)

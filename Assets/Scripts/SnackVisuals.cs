@@ -98,7 +98,7 @@ public static class MobVisual
     /// <summary>Returns the health-bar root; <paramref name="hpFill"/> is the green fill.</summary>
     public static Transform Build(Transform parent, MobDef def, out Transform hpFill)
     {
-        GameObject prefab = def.type == MobType.Basic ? SnackModels.Load(SnackModels.CrackerPath) : null;
+        GameObject prefab = SnackModels.Load(MobCatalog.ModelPath(def));
         float barY;
 
         if (prefab != null)

@@ -50,7 +50,7 @@ public static class TDPlacementPreview
         Vector3 mp = map.CellCenter(p.x, p.y);
         mobGO.transform.position = mp;
         Mob m = mobGO.AddComponent<Mob>();
-        m.Init(MobCatalog.Get(MobType.Basic), map.Waypoints, null, 1f, 1f);
+        m.Init(MobCatalog.Get("Apple"), map.Waypoints, null, 1f, 1f);
         mobGO.transform.position = mp;
 
         // low-ish angle so the ground contact is obvious

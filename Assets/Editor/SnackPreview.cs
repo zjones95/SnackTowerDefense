@@ -36,13 +36,13 @@ public static class SnackPreview
             }
         }
 
-        MobType[] mobs = { MobType.Basic, MobType.Fast, MobType.Tank, MobType.Boss };
+        string[] mobs = { "Apple", "Banana", "Potato", "Watermelon" };
         for (int i = 0; i < mobs.Length; i++)
         {
             MobDef def = MobCatalog.Get(mobs[i]);
             GameObject go = new GameObject("M_" + mobs[i]);
             go.transform.position = new Vector3(-3.9f + i * 2.6f, 0f, -5.6f);
-            GameObject prefab = mobs[i] == MobType.Basic ? SnackModels.Load(SnackModels.CrackerPath) : null;
+            GameObject prefab = SnackModels.Load(MobCatalog.ModelPath(def));
             if (prefab != null)
             {
                 GameObject m = Object.Instantiate(prefab, go.transform);

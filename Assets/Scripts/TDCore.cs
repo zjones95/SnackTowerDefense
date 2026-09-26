@@ -4,6 +4,7 @@ public enum GameState
     MainMenu,
     DifficultySelect,
     TowerViewer,
+    MobViewer,
     MultiplayerMenu,
     Lobby,
     Playing,

@@ -120,7 +120,7 @@ public class RemoteBoard : MonoBehaviour
                 GameObject go = new GameObject("RMob_" + ms.Id);
                 go.transform.SetParent(liveRoot, false);
 
-                MobDef def = MobCatalog.Get((MobType)ms.Type);
+                MobDef def = MobCatalog.All[Mathf.Clamp(ms.Type, 0, MobCatalog.All.Length - 1)];
                 Transform fill;
                 Transform hpRoot = MobVisual.Build(go.transform, def, out fill);
                 Vector3 p = BoardOffset + new Vector3(BoardSnapshot.Dec(ms.X), 0f, BoardSnapshot.Dec(ms.Z));

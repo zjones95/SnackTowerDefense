@@ -21,6 +21,8 @@ public class Mob : MonoBehaviour
     private Transform hpRoot;
     private Transform hpFill;
     private float barWidth = 0.9f;
+    private float dashTimer;
+    private float dashCooldown;
 
     public void Init(MobDef def, List<Vector3> waypoints, TDGameManager g, float healthMult, float speedMult)
     {
@@ -41,6 +43,32 @@ public class Mob : MonoBehaviour
     {
         if (path == null || pathIndex >= path.Count) return;
 
+        // boss traits
+        if (Def.regen > 0f && Health < MaxHealth)
+        {
+            Health = Mathf.Min(MaxHealth, Health + Def.regen * Time.deltaTime);
+            UpdateBar();
+        }
+
+        float enrage = Def.enrage > 0f
+            ? 1f + Def.enrage * (1f - Mathf.Clamp01(Health / MaxHealth))
+            : 1f;
+
+        float dash = 1f;
+        if (Def.dashEvery > 0f)
+        {
+            if (dashTimer > 0f)
+            {
+                dashTimer -= Time.deltaTime;
+                dash = 2.6f;
+            }
+            else
+            {
+                dashCooldown -= Time.deltaTime;
+                if (dashCooldown <= 0f) { dashTimer = 0.8f; dashCooldown = Def.dashEvery; }
+            }
+        }
+
         if (slowTimer > 0f)
         {
             slowTimer -= Time.deltaTime;
@@ -55,7 +83,7 @@ public class Mob : MonoBehaviour
             if (Health <= 0f) { Die(); return; }
         }
 
-        float speed = Def.speed * waveSpeed * speedMul;
+        float speed = Def.speed * waveSpeed * speedMul * enrage * dash;
         Vector3 target = path[pathIndex];
         Vector3 pos = transform.position;
         Vector3 flat = new Vector3(target.x - pos.x, 0f, target.z - pos.z);
@@ -87,6 +115,7 @@ public class Mob : MonoBehaviour
 
     public void ApplySlow(float removedFraction, float duration)
     {
+        if (Def.slowImmune) return;   // e.g. Coconut and the Granola Mom
         float mul = 1f - Mathf.Clamp01(removedFraction);
         if (mul < speedMul) speedMul = mul;
         slowTimer = Mathf.Max(slowTimer, duration);
@@ -101,6 +130,8 @@ public class Mob : MonoBehaviour
     public void TakeDamage(float dmg)
     {
         if (dmg <= 0f || Health <= 0f) return;
+        dmg = Mathf.Max(0f, dmg - Def.armour);   // armoured bosses shrug off flat damage
+        if (dmg <= 0f) return;
         Health -= dmg;
         UpdateBar();
         if (Health <= 0f) Die();

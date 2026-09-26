@@ -74,21 +74,8 @@ public partial class TDGameManager : MonoBehaviour
     private Renderer[] hoverRends;
     private Material hoverValid, hoverInvalid;
 
-    // wave spawning
-    private struct SpawnEntry { public MobType type; public float time; }
-    private struct SpawnGroup
-    {
-        public MobType type; public int count; public float startDelay; public float interval;
-        public SpawnGroup(MobType t, int c, float d, float i) { type = t; count = c; startDelay = d; interval = i; }
-    }
-    private static readonly SpawnGroup[][] Waves =
-    {
-        new[] { new SpawnGroup(MobType.Basic, 8, 0f, 0.9f) },
-        new[] { new SpawnGroup(MobType.Basic, 10, 0f, 0.7f), new SpawnGroup(MobType.Fast, 4, 5f, 0.7f) },
-        new[] { new SpawnGroup(MobType.Basic, 10, 0f, 0.6f), new SpawnGroup(MobType.Tank, 3, 4f, 1.4f) },
-        new[] { new SpawnGroup(MobType.Fast, 12, 0f, 0.45f), new SpawnGroup(MobType.Tank, 5, 5f, 1.2f) },
-        new[] { new SpawnGroup(MobType.Basic, 12, 0f, 0.5f), new SpawnGroup(MobType.Tank, 6, 4f, 1.0f), new SpawnGroup(MobType.Boss, 1, 12f, 1f) },
-    };
+    // wave spawning — the wave table itself lives in TDBalance
+    private struct SpawnEntry { public string mob; public float time; }
 
     private List<SpawnEntry> spawnQueue = new List<SpawnEntry>();
     private int spawnIndex;
@@ -302,14 +289,9 @@ public partial class TDGameManager : MonoBehaviour
     List<SpawnEntry> BuildWave(int wave)
     {
         List<SpawnEntry> q = new List<SpawnEntry>();
-        SpawnGroup[] groups = Waves[Mathf.Clamp(wave - 1, 0, Waves.Length - 1)];
-        for (int g = 0; g < groups.Length; g++)
-        {
-            SpawnGroup grp = groups[g];
-            for (int i = 0; i < grp.count; i++)
-                q.Add(new SpawnEntry { type = grp.type, time = grp.startDelay + i * grp.interval });
-        }
-        q.Sort((a, b) => a.time.CompareTo(b.time));
+        TDBalance.WaveDef w = TDBalance.Waves[Mathf.Clamp(wave - 1, 0, TDBalance.Waves.Length - 1)];
+        for (int i = 0; i < w.count; i++)
+            q.Add(new SpawnEntry { mob = w.mob, time = w.startDelay + i * w.interval });
         return q;
     }
 
@@ -347,7 +329,7 @@ public partial class TDGameManager : MonoBehaviour
         waveTime += Time.deltaTime;
         while (spawnIndex < spawnQueue.Count && spawnQueue[spawnIndex].time <= waveTime)
         {
-            SpawnMob(spawnQueue[spawnIndex].type);
+            SpawnMob(spawnQueue[spawnIndex].mob);
             spawnIndex++;
         }
 
@@ -355,10 +337,10 @@ public partial class TDGameManager : MonoBehaviour
         if (spawnQueue.Count > 0 && spawnIndex >= spawnQueue.Count && Mobs.Count == 0) EndWave();
     }
 
-    void SpawnMob(MobType type)
+    void SpawnMob(string id)
     {
-        MobDef def = MobCatalog.Get(type);
-        GameObject go = new GameObject("Mob_" + type);
+        MobDef def = MobCatalog.Get(id);
+        GameObject go = new GameObject("Mob_" + id);
         go.transform.SetParent(mobsRoot, false);
         Mob m = go.AddComponent<Mob>();
         m.Init(def, map.Waypoints, this,
@@ -607,6 +589,7 @@ public partial class TDGameManager : MonoBehaviour
         if (State == GameState.MainMenu) { DrawMenu(); return; }
         if (State == GameState.DifficultySelect) { DrawDifficulty(); return; }
         if (State == GameState.TowerViewer) { DrawTowerViewer(); return; }
+        if (State == GameState.MobViewer) { DrawMobViewer(); return; }
         if (State == GameState.MultiplayerMenu || State == GameState.Lobby) { DrawMultiplayer(); return; }
         DrawHud();
         if (State == GameState.GameOver) DrawEnd(false);
@@ -631,25 +614,30 @@ public partial class TDGameManager : MonoBehaviour
 
         GUI.Label(new Rect(0, Screen.height * 0.22f, Screen.width, 70), "SNACK TOWER DEFENSE", Style(46, TextAnchor.MiddleCenter, new Color(1f, 0.85f, 0.4f)));
 
-        float bw = 260f, bh = 56f;
+        float bw = 260f, bh = 54f;
         float bx = (Screen.width - bw) * 0.5f;
-        float by = Screen.height * 0.40f;
+        float by = Screen.height * 0.33f;
         if (GUI.Button(new Rect(bx, by, bw, bh), "Single Player"))
         {
             if (TDAudio.Instance != null) TDAudio.Instance.Click();
             State = GameState.DifficultySelect;
         }
-        if (GUI.Button(new Rect(bx, by + bh + 14f, bw, bh), "Multiplayer"))
+        if (GUI.Button(new Rect(bx, by + bh + 12f, bw, bh), "Multiplayer"))
         {
             if (TDAudio.Instance != null) TDAudio.Instance.Click();
             EnterMultiplayer();
         }
-        if (GUI.Button(new Rect(bx, by + 2f * (bh + 14f), bw, bh), "Tower Viewer"))
+        if (GUI.Button(new Rect(bx, by + 2f * (bh + 12f), bw, bh), "Tower Viewer"))
         {
             if (TDAudio.Instance != null) TDAudio.Instance.Click();
             OpenTowerViewer();
         }
-        if (GUI.Button(new Rect(bx, by + 3f * (bh + 14f), bw, bh), "Quit")) Application.Quit();
+        if (GUI.Button(new Rect(bx, by + 3f * (bh + 12f), bw, bh), "Mob Viewer"))
+        {
+            if (TDAudio.Instance != null) TDAudio.Instance.Click();
+            OpenMobViewer();
+        }
+        if (GUI.Button(new Rect(bx, by + 4f * (bh + 12f), bw, bh), "Quit")) Application.Quit();
     }
 
     void DrawDifficulty()

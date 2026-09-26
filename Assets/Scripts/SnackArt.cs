@@ -143,15 +143,15 @@ public static class SnackArt
         Material icing = TDVisuals.Mat(new Color(1f, 0.55f, 0.75f), 0f, 0.5f);
         Material white = TDVisuals.Mat(new Color(0.98f, 0.95f, 0.90f), 0f, 0.4f);
 
-        switch (def.type)
+        switch (def.archetype)
         {
-            case MobType.Basic: // cracker
+            case MobArchetype.Basic: // cracker
                 TDVisuals.Box(art, "Cracker", new Vector3(0f, 0.10f, 0f), new Vector3(0.72f, 0.16f, 0.72f), body);
                 for (int i = 0; i < 4; i++)
                     TDVisuals.Sphere(art, "Salt" + i, new Vector3(-0.18f + (i % 2) * 0.36f, 0.20f, -0.18f + (i / 2) * 0.36f), 0.07f, white);
                 break;
 
-            case MobType.Fast: // gummy
+            case MobArchetype.Fast: // gummy
                 TDVisuals.Sphere(art, "Body", new Vector3(0f, 0.30f, 0f), 0.60f, body);
                 TDVisuals.Sphere(art, "EarL", new Vector3(-0.18f, 0.52f, 0f), 0.22f, body);
                 TDVisuals.Sphere(art, "EarR", new Vector3(0.18f, 0.52f, 0f), 0.22f, body);
@@ -159,7 +159,7 @@ public static class SnackArt
                 TDVisuals.Sphere(art, "EyeR", new Vector3(0.12f, 0.34f, 0.24f), 0.08f, white);
                 break;
 
-            case MobType.Tank: // donut
+            case MobArchetype.Tank: // donut
                 TDVisuals.Cyl(art, "Donut", new Vector3(0f, 0.15f, 0f), 0.44f, 0.30f, body);
                 TDVisuals.Cyl(art, "Icing", new Vector3(0f, 0.31f, 0f), 0.41f, 0.10f, icing);
                 TDVisuals.Cyl(art, "Hole", new Vector3(0f, 0.37f, 0f), 0.12f, 0.08f, dark);
@@ -170,7 +170,12 @@ public static class SnackArt
                 }
                 break;
 
-            case MobType.Boss: // layered cake
+            case MobArchetype.Swarm: // little berry
+                TDVisuals.Sphere(art, "Berry", new Vector3(0f, 0.16f, 0f), 0.34f, body);
+                TDVisuals.Cyl(art, "Stem", new Vector3(0f, 0.33f, 0f), 0.035f, 0.10f, dark);
+                break;
+
+            case MobArchetype.Boss: // layered cake
                 TDVisuals.Cyl(art, "Tier1", new Vector3(0f, 0.15f, 0f), 0.66f, 0.30f, white);
                 TDVisuals.Cyl(art, "Tier2", new Vector3(0f, 0.42f, 0f), 0.50f, 0.28f, icing);
                 TDVisuals.Cyl(art, "Tier3", new Vector3(0f, 0.68f, 0f), 0.34f, 0.26f, white);
