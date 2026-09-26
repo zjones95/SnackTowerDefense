@@ -140,9 +140,10 @@ public static class TDSynth
     }
 
     // ================================================================ music
-    // Cinematic loop: Dm - Bb - F - C (two bars each), 8 bars at 100 BPM.
-    // Ostinato strings + sub drone throughout; pad enters at bar 3, taikos at
-    // bar 5, riser through bar 8.
+    // Upbeat deep-house loop: Am7 - Fmaj7 - Dm7 - E7 (two bars each), 8 bars at
+    // 122 BPM. Four-on-the-floor kick, backbeat claps with a flam, offbeat hats,
+    // a rolling sub bass, warm pads and offbeat Rhodes stabs, plus a sparse
+    // pentatonic lead and a filter riser that loops back to the top.
 
     static void W(float[] buf, int idx, float v)
     {
@@ -313,28 +314,125 @@ public static class TDSynth
         }
     }
 
+    // ---- deep house voices ----
+    static float Note(float semisFromA2) { return 110f * Mathf.Pow(2f, semisFromA2 / 12f); }
+
+    // Four-on-the-floor kick: sine with a fast pitch drop plus a click transient.
+    static void Kick(float[] l, float[] r, float t0, float amp)
+    {
+        int start = (int)(t0 * SR);
+        int len = (int)(0.30f * SR);
+        float phase = 0f;
+        for (int i = 0; i < len; i++)
+        {
+            float t = (float)i / SR;
+            float f = 48f + 120f * Mathf.Exp(-t * 26f);
+            phase += TAU * f / SR;
+            float click = Noise() * Mathf.Exp(-t * 180f) * 0.30f;
+            float val = (Mathf.Sin(phase) * Mathf.Exp(-t * 10f) + click) * amp;
+            W(l, start + i, val);
+            W(r, start + i, val);
+        }
+    }
+
+    // High-passed noise hat (short = closed, longer = open).
+    static void Hat(float[] l, float[] r, float t0, float amp, float decay, float pan)
+    {
+        int start = (int)(t0 * SR);
+        int len = (int)(0.28f * SR);
+        float gl = PanL(pan), gr = PanR(pan);
+        float lp = 0f;
+        for (int i = 0; i < len; i++)
+        {
+            float t = (float)i / SR;
+            float x = Noise();
+            lp += (x - lp) * 0.55f;
+            float val = (x - lp) * Mathf.Exp(-t * decay) * amp;
+            W(l, start + i, val * gl);
+            W(r, start + i, val * gr);
+        }
+    }
+
+    // Backbeat clap: band-ish noise burst (call twice for a flam).
+    static void Clap(float[] l, float[] r, float t0, float amp)
+    {
+        int start = (int)(t0 * SR);
+        int len = (int)(0.22f * SR);
+        float lp = 0f;
+        for (int i = 0; i < len; i++)
+        {
+            float t = (float)i / SR;
+            float x = Noise();
+            lp += (x - lp) * 0.40f;
+            float val = (x - lp) * Mathf.Exp(-t * 18f) * amp;
+            W(l, start + i, val);
+            W(r, start + i, val);
+        }
+    }
+
+    // Warm rolling sub: sine plus a lowpassed saw for body.
+    static void Bass(float[] l, float[] r, float t0, float dur, float freq, float amp)
+    {
+        int start = (int)(t0 * SR);
+        int len = (int)(dur * SR);
+        float phase = 0f, lp = 0f;
+        for (int i = 0; i < len; i++)
+        {
+            float t = (float)i / SR;
+            float env = Mathf.Min(1f, t * 90f) * Mathf.Clamp01((dur - t) / 0.05f);
+            phase += TAU * freq / SR;
+            lp += (Saw(phase) - lp) * 0.16f;
+            float val = (Mathf.Sin(phase) * 0.85f + lp * 0.22f) * env * amp;
+            W(l, start + i, val);
+            W(r, start + i, val);
+        }
+    }
+
+    // Rhodes-ish chord stab: summed sines with a soft attack and a quick decay.
+    static void ChordHit(float[] l, float[] r, float t0, float dur, float[] freqs, float amp, float pan)
+    {
+        int start = (int)(t0 * SR);
+        int len = (int)(dur * SR);
+        float gl = PanL(pan), gr = PanR(pan);
+        float[] ph = new float[freqs.Length];
+        for (int i = 0; i < len; i++)
+        {
+            float t = (float)i / SR;
+            float env = Mathf.Min(1f, t * 70f) * Mathf.Exp(-t * 3.0f);
+            float s = 0f;
+            for (int v = 0; v < freqs.Length; v++)
+            {
+                ph[v] += TAU * freqs[v] / SR;
+                s += Mathf.Sin(ph[v]) + 0.22f * Mathf.Sin(ph[v] * 2f);
+            }
+            s /= freqs.Length;
+            float val = s * env * amp;
+            W(l, start + i, val * gl);
+            W(r, start + i, val * gr);
+        }
+    }
+
     public static AudioClip Music()
     {
-        const float bpm = 100f;
+        const float bpm = 122f;
         const int bars = 8;
-        float beat = 60f / bpm;          // 0.6s
-        float bar = beat * 4f;           // 2.4s
-        float dur = bars * bar;          // 19.2s
+        float beat = 60f / bpm;
+        float bar = beat * 4f;
+        float dur = bars * bar;          // ~15.7s loop
 
         int n = (int)(dur * SR);
         float[] l = new float[n];
         float[] r = new float[n];
 
-        // i - VI - III - VII, two bars each
-        float[] roots = { 73.42f, 58.27f, 87.31f, 65.41f }; // D2, Bb1, F2, C2
+        // i - VI - iv - V in A minor, two bars each (Am7 / Fmaj7 / Dm7 / E7)
+        float[] roots = { 0f, -4f, 5f, 7f };                  // semitones from A2
         int[][] chords =
         {
-            new[] { 0, 3, 7, 12 },   // Dm
-            new[] { 0, 4, 7, 12 },   // Bb
-            new[] { 0, 4, 7, 12 },   // F
-            new[] { 0, 4, 7, 12 }    // C
+            new[] { 0, 3, 7, 10 },   // Am7
+            new[] { 0, 4, 7, 11 },   // Fmaj7
+            new[] { 0, 3, 7, 10 },   // Dm7
+            new[] { 0, 4, 7, 10 }    // E7
         };
-        int[] ostinato = { 0, 7, 12, 7 };  // 16th-note cell
 
         for (int b = 0; b < bars; b++)
         {
@@ -343,50 +441,64 @@ public static class TDSynth
             int[] chord = chords[seg];
             float b0 = b * bar;
 
-            // sub drone, one note per bar
-            Sub(l, r, b0, bar * 0.98f, root * 0.5f, 0.30f);
+            // four-on-the-floor kick
+            for (int k = 0; k < 4; k++) Kick(l, r, b0 + k * beat, 0.95f);
 
-            // ostinato: every 16th, denser as the loop builds
-            int steps = 16;
-            for (int s = 0; s < steps; s++)
+            // backbeat clap (2 and 4) with a flam
+            Clap(l, r, b0 + beat, 0.30f);
+            Clap(l, r, b0 + beat + 0.013f, 0.18f);
+            Clap(l, r, b0 + 3f * beat, 0.30f);
+            Clap(l, r, b0 + 3f * beat + 0.013f, 0.18f);
+
+            // hats: open on the off-beats of 2 and 4, closed elsewhere
+            for (int k = 0; k < 4; k++)
             {
-                if (b < 2 && s % 2 == 1) continue;           // sparse intro
-                float t = b0 + s * (bar / steps);
-                int semi = ostinato[s % ostinato.Length];
-                float f = root * 4f * Mathf.Pow(2f, semi / 12f);
-                float pan = (s % 2 == 0) ? -0.30f : 0.30f;
-                Pluck(l, r, t, f, 0.16f, 12f, pan);
+                float off = b0 + (k + 0.5f) * beat;
+                bool isOpen = (k == 1 || k == 3);
+                Hat(l, r, off, isOpen ? 0.18f : 0.10f, isOpen ? 8f : 30f, (k % 2 == 0) ? -0.3f : 0.3f);
             }
 
-            // pad: enters bar 3, filter opens across the loop
+            // rolling sub bass with an octave/fifth pickup at the end of the bar
+            float br = Note(root - 12f);
+            Bass(l, r, b0, beat * 0.85f, br, 0.55f);
+            Bass(l, r, b0 + 1.5f * beat, beat * 0.4f, br, 0.35f);
+            Bass(l, r, b0 + 2f * beat, beat * 0.85f, br, 0.55f);
+            Bass(l, r, b0 + 2.5f * beat, beat * 0.4f, br, 0.35f);
+            Bass(l, r, b0 + 3f * beat, beat * 0.45f, br * 1.5f, 0.32f);
+            Bass(l, r, b0 + 3.5f * beat, beat * 0.45f, br, 0.40f);
+
+            // warm pad, filter opening across the loop
+            float open = Mathf.Lerp(0.10f, 0.30f, b / (float)(bars - 1));
+            for (int c = 0; c < chord.Length; c++)
+                Strings(l, r, b0, bar * 1.02f, Note(root + chord[c] + 12f), 0.05f, 0.6f, 0.6f, 0.006f, 4, 0f, open * 0.6f, open);
+
+            // offbeat Rhodes stabs (from bar 3)
             if (b >= 2)
             {
-                float open = Mathf.Lerp(0.06f, 0.30f, (b - 2) / 5f);
-                for (int c = 0; c < chord.Length; c++)
+                float[] cf = new float[chord.Length];
+                for (int c = 0; c < chord.Length; c++) cf[c] = Note(root + chord[c] + 12f);
+                ChordHit(l, r, b0 + 1.5f * beat, 0.55f, cf, 0.13f, -0.12f);
+                ChordHit(l, r, b0 + 3.5f * beat, 0.55f, cf, 0.10f, 0.12f);
+            }
+
+            // sparse pentatonic lead, easing in from bar 5
+            if (b >= 4)
+            {
+                int[] mel = { 12, 15, 17, 19, 17, 15, 12, 10 };
+                for (int m = 0; m < mel.Length; m++)
                 {
-                    float f = root * 2f * Mathf.Pow(2f, chord[c] / 12f);
-                    Strings(l, r, b0, bar * 1.02f, f, 0.09f, 0.9f, 0.8f, 0.004f, 5, 0f, open * 0.7f, open);
+                    if (b == 4 && m < 4) continue;
+                    float mf = Note(mel[(m + b) % mel.Length]);
+                    Pluck(l, r, b0 + m * (bar / 8f), mf, 0.09f, 7f, (m % 2 == 0) ? -0.25f : 0.25f);
                 }
             }
 
-            // taikos: enter bar 5
-            if (b >= 4)
-            {
-                Taiko(l, r, b0, 0.55f);
-                Taiko(l, r, b0 + beat * 1.5f, 0.30f);
-                Taiko(l, r, b0 + beat * 2f, 0.50f);
-                if (b >= 6) Taiko(l, r, b0 + beat * 3.5f, 0.30f);
-            }
-
-            // riser through the final bar, back into the loop
+            // filter riser on the last bar, looping back into the top
             if (b == bars - 1)
-                Riser(l, r, b0, bar, 0.30f);
-
-            // a low hit on the downbeat of each 2-bar phrase for weight
-            if (b % 2 == 0) Taiko(l, r, b0, 0.45f);
+                Riser(l, r, b0, bar, 0.26f);
         }
 
-        Reverb(l, r, 0.34f, 0.72f);
+        Reverb(l, r, 0.28f, 0.70f);
 
         // normalize, then micro-fade the loop point
         float peak = 0f;

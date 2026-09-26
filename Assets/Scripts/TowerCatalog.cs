@@ -206,14 +206,14 @@ public static class TowerCatalog
 
         d = new TowerDef();
         d.type = TowerType.Sniper; d.displayName = "Sour Straw"; d.color = new Color(0.90f, 0.50f, 0.95f);
-        d.tiers.Add(new TowerTierStats { damage = 10, range = 9f, fireInterval = 0.90f });
-        d.tiers.Add(new TowerTierStats { damage = 18, range = 11f, fireInterval = 0.80f });
-        d.tiers.Add(new TowerTierStats { damage = 32, range = 13f, fireInterval = 0.70f });
+        d.tiers.Add(new TowerTierStats { damage = 10, range = 6.75f, fireInterval = 0.90f });
+        d.tiers.Add(new TowerTierStats { damage = 18, range = 8.25f, fireInterval = 0.80f });
+        d.tiers.Add(new TowerTierStats { damage = 32, range = 9.75f, fireInterval = 0.70f });
         // T4 pure stats; T5 Powdered Sour (30% crit x2.5, pierces armour);
         // T6 Deadeye (+15%/stack cap x1.8, +5% crit/stack) on top of the crit.
-        d.tiers.Add(new TowerTierStats { damage = 38, range = 15f, fireInterval = 0.62f });
-        d.tiers.Add(new TowerTierStats { damage = 54, range = 17f, fireInterval = 0.56f, critChance = 0.30f, critMult = 2.5f, critPierceArmour = true });
-        d.tiers.Add(new TowerTierStats { damage = 77, range = 19f, fireInterval = 0.50f, critChance = 0.30f, critMult = 2.5f, critPierceArmour = true, deadeyeRamp = 0.15f, deadeyeCap = 1.8f, deadeyeCrit = 0.05f });
+        d.tiers.Add(new TowerTierStats { damage = 38, range = 11.25f, fireInterval = 0.62f });
+        d.tiers.Add(new TowerTierStats { damage = 54, range = 12.75f, fireInterval = 0.56f, critChance = 0.30f, critMult = 2.5f, critPierceArmour = true });
+        d.tiers.Add(new TowerTierStats { damage = 77, range = 14.25f, fireInterval = 0.50f, critChance = 0.30f, critMult = 2.5f, critPierceArmour = true, deadeyeRamp = 0.15f, deadeyeCap = 1.8f, deadeyeCrit = 0.05f });
         defs[d.type] = d;
 
         // --- new types ---
