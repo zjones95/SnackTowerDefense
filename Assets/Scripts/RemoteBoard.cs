@@ -22,9 +22,12 @@ public class RemoteBoard : MonoBehaviour
         public GameObject Go;
         public Transform HpRoot;
         public Transform Fill;
+        public MobStatusIcons Icons;
         public MobDef Def;
         public float HpFraction;
         public Vector3 Target;
+        public byte Status;
+        public byte Stacks;
     }
 
     private class RemoteTower
@@ -113,6 +116,16 @@ public class RemoteBoard : MonoBehaviour
     /// <summary>The boss currently on this board (if any), for the on-screen boss bar.</summary>
     public bool TryGetBoss(out string name, out float fraction)
     {
+        bool slowed, poisoned;
+        int stacks;
+        return TryGetBoss(out name, out fraction, out slowed, out poisoned, out stacks);
+    }
+
+    /// <summary>As above, but also reports the boss's slow/poison state for the
+    /// boss HUD's status icons.</summary>
+    public bool TryGetBoss(out string name, out float fraction,
+                           out bool slowed, out bool poisoned, out int stacks)
+    {
         foreach (var kv in mobs)
         {
             RemoteMob rm = kv.Value;
@@ -120,11 +133,17 @@ public class RemoteBoard : MonoBehaviour
             {
                 name = rm.Def.displayName;
                 fraction = rm.HpFraction;
+                slowed = (rm.Status & 1) != 0;
+                poisoned = rm.Stacks > 0;
+                stacks = rm.Stacks;
                 return true;
             }
         }
         name = null;
         fraction = 0f;
+        slowed = false;
+        poisoned = false;
+        stacks = 0;
         return false;
     }
 
@@ -148,13 +167,22 @@ public class RemoteBoard : MonoBehaviour
                 Vector3 p = BoardOffset + new Vector3(BoardSnapshot.Dec(ms.X), 0f, BoardSnapshot.Dec(ms.Z));
                 go.transform.position = p;
 
-                rm = new RemoteMob { Go = go, HpRoot = hpRoot, Fill = fill, Def = def, Target = p };
+                rm = new RemoteMob { Go = go, HpRoot = hpRoot, Fill = fill, Def = def, Target = p,
+                                     Icons = MobStatusIcons.Get(hpRoot) };
                 mobs[ms.Id] = rm;
             }
 
             rm.Target = BoardOffset + new Vector3(BoardSnapshot.Dec(ms.X), 0f, BoardSnapshot.Dec(ms.Z));
             rm.HpFraction = ms.Hp / 255f;
             MobVisual.SetFill(rm.Fill, rm.HpFraction);
+
+            rm.Status = ms.Status;
+            rm.Stacks = ms.Stacks;
+            if (rm.Icons != null)
+            {
+                bool slowed = (ms.Status & 1) != 0;    // bit0 covers slow and stun
+                rm.Icons.Set(slowed, ms.Stacks > 0, ms.Stacks);
+            }
         }
 
         mobGone.Clear();

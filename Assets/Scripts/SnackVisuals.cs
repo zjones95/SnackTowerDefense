@@ -208,7 +208,73 @@ public static class MobVisual
         NoShadow(fill);
 
         hpFill = fill.transform;
+        BuildStatusIcons(hp.transform);
         return hp.transform;
+    }
+
+    static Material poisonIconMat, slowIconMat;
+    static Shader iconShader;
+
+    /// <summary>Tiny status icon quads sit at the top-right of the floating bar:
+    /// poison (with its stack count) then slow. Both hide until the mob is
+    /// actually affected, and billboard with the bar because they are its children.
+    /// The bar is billboarded with LookRotation(direction to camera), so its local
+    /// +X points screen-LEFT — the icons use negative X to land on the right.</summary>
+    static void BuildStatusIcons(Transform hp)
+    {
+        if (poisonIconMat == null) poisonIconMat = IconMaterial(TDTextures.IconPoison());
+        if (slowIconMat == null) slowIconMat = IconMaterial(TDTextures.IconSlow());
+
+        float poisonX = -(BarWidth * 0.5f + 0.16f);
+        float slowX = -(BarWidth * 0.5f + 0.38f);
+
+        GameObject poison = TDVisuals.Quad(hp, "IconPoison",
+            new Vector3(poisonX, 0.10f, 0f), 0.24f, poisonIconMat);
+        GameObject slow = TDVisuals.Quad(hp, "IconSlow",
+            new Vector3(slowX, 0.10f, 0f), 0.24f, slowIconMat);
+        NoShadow(poison);
+        NoShadow(slow);
+
+        GameObject labelGO = new GameObject("Stacks");
+        labelGO.transform.SetParent(hp, false);
+        labelGO.transform.localPosition = new Vector3(poisonX - 0.14f, 0.10f + 0.15f, 0.005f);
+        labelGO.AddComponent<BillboardLabel>();
+        TextMesh tm = labelGO.AddComponent<TextMesh>();
+        tm.text = "x1";
+        tm.characterSize = 0.028f;
+        tm.fontSize = 90;
+        tm.anchor = TextAnchor.LowerLeft;
+        tm.alignment = TextAlignment.Left;
+        tm.color = new Color(0.62f, 1f, 0.55f);
+        Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        if (font == null) font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        if (font != null)
+        {
+            tm.font = font;
+            MeshRenderer mr = labelGO.GetComponent<MeshRenderer>();
+            if (mr != null) mr.sharedMaterial = font.material;
+        }
+
+        MobStatusIcons icons = hp.gameObject.AddComponent<MobStatusIcons>();
+        icons.Poison = poison.transform;
+        icons.Slow = slow.transform;
+        icons.Stacks = tm;
+        icons.Set(false, false, 0);
+    }
+
+    /// <summary>Build-safe alpha material for a status icon (same Resources shader
+    /// SplashFX uses, so the transparent variant can't be stripped from a build).</summary>
+    static Material IconMaterial(Texture2D tex)
+    {
+        if (iconShader == null) iconShader = Resources.Load<Shader>("Snack/Fx");
+        if (iconShader == null) iconShader = Shader.Find("Snack/Fx");
+
+        Material m = iconShader != null ? new Material(iconShader)
+                                        : TDVisuals.TransparentMat(Color.white, 1f, 0.15f);
+        m.mainTexture = tex;
+        if (m.HasProperty("_Color")) m.SetColor("_Color", Color.white);
+        if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", Color.white);
+        return m;
     }
 
     /// <summary>Health bars shouldn't cast or receive shadows.</summary>
@@ -236,5 +302,42 @@ public static class MobVisual
         float f = Mathf.Clamp01(fraction);
         hpFill.localScale = new Vector3(BarWidth * f, hpFill.localScale.y, hpFill.localScale.z);
         hpFill.localPosition = new Vector3(-(BarWidth * (1f - f)) * 0.5f, hpFill.localPosition.y, hpFill.localPosition.z);
+    }
+}
+
+/// <summary>The poison/slow icon quads and stack label hanging off a mob's
+/// floating health bar. Lives on the bar root, so fetch it with
+/// <see cref="Get"/> or <c>bar.GetComponent&lt;MobStatusIcons&gt;()</c>.</summary>
+public class MobStatusIcons : MonoBehaviour
+{
+    public Transform Poison;
+    public Transform Slow;
+    public TextMesh Stacks;
+
+    public static MobStatusIcons Get(Transform barRoot)
+    {
+        return barRoot != null ? barRoot.GetComponent<MobStatusIcons>() : null;
+    }
+
+    /// <summary>Toggles the two icons and updates the poison stack count.
+    /// <paramref name="slowed"/> covers both slow and stun.</summary>
+    public void Set(bool slowed, bool poisoned, int stacks)
+    {
+        Toggle(Slow, slowed);
+        Toggle(Poison, poisoned);
+
+        if (Stacks == null) return;
+        bool show = poisoned && stacks > 0;
+        Toggle(Stacks.transform, show);
+        if (show)
+        {
+            string s = "x" + stacks;
+            if (Stacks.text != s) Stacks.text = s;
+        }
+    }
+
+    static void Toggle(Transform t, bool on)
+    {
+        if (t != null && t.gameObject.activeSelf != on) t.gameObject.SetActive(on);
     }
 }

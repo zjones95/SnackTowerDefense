@@ -194,4 +194,133 @@ public static class TDTextures
         menuFade = t;
         return t;
     }
+
+    // ------------------------------------------------------ mob status icons
+    static Texture2D iconPoison, iconSlow;
+
+    /// <summary>Green poison droplet on a transparent background.</summary>
+    public static Texture2D IconPoison()
+    {
+        if (iconPoison != null) return iconPoison;
+        int S = 64;
+        Texture2D t = New(S);
+        t.wrapMode = TextureWrapMode.Clamp;   // a single icon, not a tiling texture
+        Color body = new Color(0.32f, 0.82f, 0.22f);
+        Color edge = new Color(0.08f, 0.36f, 0.10f);
+        Color gloss = new Color(0.84f, 1.00f, 0.78f);
+
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float u = (x + 0.5f) / S * 2f - 1f;   // -1 .. 1, y up
+                float v = (y + 0.5f) / S * 2f - 1f;
+
+                // Teardrop: a round base with a tapered point above it.
+                const float cy = -0.26f, r = 0.58f, top = 0.86f;
+                float inside;
+                if (v <= cy)
+                {
+                    float dx = u, dy = v - cy;
+                    inside = r - Mathf.Sqrt(dx * dx + dy * dy);
+                }
+                else
+                {
+                    float halfW = r * Mathf.Clamp01((top - v) / (top - cy));
+                    inside = Mathf.Min(halfW - Mathf.Abs(u), top - v);
+                }
+                float cov = Mathf.Clamp01(inside * S * 0.5f + 0.5f);   // ~1px anti-alias
+                if (cov <= 0.001f) { t.SetPixel(x, y, new Color(0f, 0f, 0f, 0f)); continue; }
+
+                float rim = Mathf.Clamp01(inside / 0.14f);             // darken near the edge
+                Color c = Color.Lerp(edge, body, rim);
+                c = Color.Lerp(c, gloss, Mathf.Clamp01((v + 0.30f) / 0.55f) * 0.30f);   // light from above
+
+                float gx = u + 0.22f, gy = v - 0.02f;                  // glossy highlight
+                float gl = Mathf.Clamp01(1f - Mathf.Sqrt(gx * gx + gy * gy) / 0.20f);
+                c = Color.Lerp(c, gloss, gl * 0.75f);
+                t.SetPixel(x, y, new Color(c.r, c.g, c.b, cov));
+            }
+        }
+        t.Apply();
+        t.filterMode = FilterMode.Bilinear;
+        iconPoison = t;
+        return t;
+    }
+
+    /// <summary>Light-blue ice cube with a white snowflake on a transparent background.</summary>
+    public static Texture2D IconSlow()
+    {
+        if (iconSlow != null) return iconSlow;
+        int S = 64;
+        Texture2D t = New(S);
+        t.wrapMode = TextureWrapMode.Clamp;
+        Color top = new Color(0.78f, 0.94f, 1.00f);
+        Color bottom = new Color(0.40f, 0.72f, 0.95f);
+        Color edge = new Color(0.20f, 0.46f, 0.78f);
+        Color snow = new Color(0.97f, 1.00f, 1.00f);
+
+        const float half = 0.80f, radius = 0.24f;
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float u = (x + 0.5f) / S * 2f - 1f;
+                float v = (y + 0.5f) / S * 2f - 1f;
+
+                // Rounded box (signed distance field; negative inside).
+                float qx = Mathf.Abs(u) - (half - radius);
+                float qy = Mathf.Abs(v) - (half - radius);
+                float ox = Mathf.Max(qx, 0f), oy = Mathf.Max(qy, 0f);
+                float d = Mathf.Sqrt(ox * ox + oy * oy) + Mathf.Min(Mathf.Max(qx, qy), 0f) - radius;
+                float inside = -d;
+                float cov = Mathf.Clamp01(inside * S * 0.5f + 0.5f);
+                if (cov <= 0.001f) { t.SetPixel(x, y, new Color(0f, 0f, 0f, 0f)); continue; }
+
+                float grad = Mathf.Clamp01((v + 1f) * 0.5f);
+                Color c = Color.Lerp(bottom, top, grad);
+                c = Color.Lerp(edge, c, Mathf.Clamp01(inside / 0.16f));   // shaded rim
+
+                float snowCov = Mathf.Clamp01((0.050f - SnowflakeDist(u, v)) * S * 0.5f + 0.5f);
+                c = Color.Lerp(c, snow, snowCov);
+
+                t.SetPixel(x, y, new Color(c.r, c.g, c.b, cov));
+            }
+        }
+        t.Apply();
+        t.filterMode = FilterMode.Bilinear;
+        iconSlow = t;
+        return t;
+    }
+
+    /// <summary>Distance from (x, y) to the nearest line of a 6-arm snowflake.</summary>
+    static float SnowflakeDist(float x, float y)
+    {
+        float best = 10f;
+        for (int i = 0; i < 6; i++)
+        {
+            float a = i * Mathf.PI / 3f;
+            float ex = Mathf.Cos(a) * 0.58f, ey = Mathf.Sin(a) * 0.58f;
+            best = Mathf.Min(best, SegmentDist(x, y, 0f, 0f, ex, ey));
+
+            // two small branches near the outer third of each arm
+            float bx = Mathf.Cos(a) * 0.36f, by = Mathf.Sin(a) * 0.36f;
+            for (int s = -1; s <= 1; s += 2)
+            {
+                float ba = a + s * Mathf.PI / 3f;
+                best = Mathf.Min(best, SegmentDist(x, y, bx, by,
+                    bx + Mathf.Cos(ba) * 0.20f, by + Mathf.Sin(ba) * 0.20f));
+            }
+        }
+        return best;
+    }
+
+    static float SegmentDist(float px, float py, float ax, float ay, float bx, float by)
+    {
+        float dx = bx - ax, dy = by - ay;
+        float l2 = dx * dx + dy * dy;
+        float q = l2 > 0f ? Mathf.Clamp01(((px - ax) * dx + (py - ay) * dy) / l2) : 0f;
+        float cx = ax + q * dx, cy = ay + q * dy;
+        return Mathf.Sqrt((px - cx) * (px - cx) + (py - cy) * (py - cy));
+    }
 }

@@ -1345,6 +1345,8 @@ public partial class TDGameManager : MonoBehaviour
 
         string name;
         float frac;
+        bool bSlowed, bPoisoned;
+        int bStacks;
         if (ViewingOwnBoard)
         {
             Mob boss = null;
@@ -1356,11 +1358,14 @@ public partial class TDGameManager : MonoBehaviour
             if (boss == null) return;
             name = boss.Def.displayName;
             frac = boss.MaxHealth > 0f ? Mathf.Clamp01(boss.Health / boss.MaxHealth) : 0f;
+            bSlowed = boss.IsSlowed;
+            bStacks = boss.PoisonStacks;
+            bPoisoned = bStacks > 0;
         }
         else
         {
             RemoteBoard rb = BoardForSlot(viewSlot);
-            if (rb == null || !rb.TryGetBoss(out name, out frac)) return;
+            if (rb == null || !rb.TryGetBoss(out name, out frac, out bSlowed, out bPoisoned, out bStacks)) return;
         }
 
         frac = Mathf.Clamp01(frac);
@@ -1381,6 +1386,30 @@ public partial class TDGameManager : MonoBehaviour
         GUI.Label(new Rect(x, y, w, h),
             name.ToUpper() + "   " + Mathf.CeilToInt(frac * 100f) + "%",
             Style(18, TextAnchor.MiddleCenter, Color.white));
+
+        DrawBossStatusIcons(x + w + 10f, y + h * 0.5f, bSlowed, bPoisoned, bStacks);
+    }
+
+    /// <summary>Small status badges just right of the boss HUD bar, using the same
+    /// procedural icon textures as the floating mob bars so a boss reads the same
+    /// on your own board and on a spectated one.</summary>
+    void DrawBossStatusIcons(float cx, float cy, bool slowed, bool poisoned, int stacks)
+    {
+        const float size = 30f;
+        const float gap = 8f;
+        float x = cx;
+        float top = cy - size * 0.5f;
+
+        if (poisoned)
+        {
+            GUI.DrawTexture(new Rect(x, top, size, size), TDTextures.IconPoison(), ScaleMode.ScaleToFit, true);
+            if (stacks > 0)
+                GUI.Label(new Rect(x + size - 2f, top - 16f, 44f, 18f), "x" + stacks,
+                    Style(13, TextAnchor.LowerLeft, new Color(0.62f, 1f, 0.55f)));
+            x += size + gap;
+        }
+        if (slowed)
+            GUI.DrawTexture(new Rect(x, top, size, size), TDTextures.IconSlow(), ScaleMode.ScaleToFit, true);
     }
 
     void DrawEnd(bool won)

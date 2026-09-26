@@ -9,7 +9,7 @@ using UnityEngine;
 /// </summary>
 public class BoardSnapshot
 {
-    public struct MobSnap { public ushort Id; public byte Type; public short X; public short Z; public byte Hp; }
+    public struct MobSnap { public ushort Id; public byte Type; public short X; public short Z; public byte Hp; public byte Status; public byte Stacks; }
     public struct TowerSnap { public byte Type; public byte Tier; public short Cx; public short Cy; public byte Yaw; }
     public struct ProjSnap { public int Id; public short X; public short Y; public short Z; }
 
@@ -34,13 +34,18 @@ public class BoardSnapshot
             if (m == null) continue;
             Vector3 p = m.transform.position - off;
             float hf = m.MaxHealth > 0f ? Mathf.Clamp01(m.Health / m.MaxHealth) : 0f;
+            byte status = 0;
+            if (m.IsSlowed) status |= 1;   // bit0: slowed (or stunned)
+            if (m.IsStunned) status |= 2;  // bit1: stunned
             Mobs.Add(new MobSnap
             {
                 Id = m.NetId,
                 Type = (byte)m.Def.index,
                 X = Enc(p.x),
                 Z = Enc(p.z),
-                Hp = (byte)Mathf.Clamp(Mathf.RoundToInt(hf * 255f), 0, 255)
+                Hp = (byte)Mathf.Clamp(Mathf.RoundToInt(hf * 255f), 0, 255),
+                Status = status,
+                Stacks = (byte)Mathf.Clamp(m.PoisonStacks, 0, 255)
             });
         }
 
@@ -85,6 +90,8 @@ public class BoardSnapshot
             w.WriteValueSafe(m.X);
             w.WriteValueSafe(m.Z);
             w.WriteValueSafe(m.Hp);
+            w.WriteValueSafe(m.Status);
+            w.WriteValueSafe(m.Stacks);
         }
 
         w.WriteValueSafe((ushort)Towers.Count);
@@ -122,6 +129,8 @@ public class BoardSnapshot
             r.ReadValueSafe(out m.X);
             r.ReadValueSafe(out m.Z);
             r.ReadValueSafe(out m.Hp);
+            r.ReadValueSafe(out m.Status);
+            r.ReadValueSafe(out m.Stacks);
             Mobs.Add(m);
         }
 

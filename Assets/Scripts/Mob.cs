@@ -34,6 +34,18 @@ public class Mob : MonoBehaviour
     private float barWidth = 0.9f;
     private float dashTimer;
     private float dashCooldown;
+    private MobStatusIcons statusIcons;
+    private bool lastSlowed, lastStunned;
+    private int lastStacks;
+
+    /// <summary>Slowed (or stunned, which also stops movement).</summary>
+    public bool IsSlowed => slowTimer > 0f || stunTimer > 0f;
+
+    /// <summary>Held in place by a Chain T5 "Twin Lash" stun.</summary>
+    public bool IsStunned => stunTimer > 0f;
+
+    /// <summary>Number of concurrent poison stacks currently on the mob.</summary>
+    public int PoisonStacks => poisonStacks.Count;
 
     public void Init(MobDef def, List<Vector3> waypoints, TDGameManager g, float healthMult, float speedMult)
     {
@@ -48,11 +60,29 @@ public class Mob : MonoBehaviour
 
         hpRoot = MobVisual.Build(transform, def, out hpFill);
         barWidth = MobVisual.BarWidth;
+        statusIcons = MobStatusIcons.Get(hpRoot);
+        RefreshStatusIcons();
+    }
+
+    /// <summary>Push the current slow/poison state to the floating icons (cheap:
+    /// only touches the GameObjects when something actually changed).</summary>
+    void RefreshStatusIcons()
+    {
+        bool slowed = IsSlowed;
+        bool stunned = IsStunned;
+        int stacks = poisonStacks.Count;
+        if (slowed == lastSlowed && stunned == lastStunned && stacks == lastStacks) return;
+        lastSlowed = slowed;
+        lastStunned = stunned;
+        lastStacks = stacks;
+        if (statusIcons != null) statusIcons.Set(slowed, stacks > 0, stacks);
     }
 
     void Update()
     {
         if (path == null || pathIndex >= path.Count) return;
+
+        RefreshStatusIcons();
 
         // boss traits
         if (Def.regen > 0f && Health < MaxHealth)

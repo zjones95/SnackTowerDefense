@@ -91,6 +91,19 @@ public static class TDVisuals
         return g;
     }
 
+    // Flat camera-facing plate (status icons, etc.).
+    public static GameObject Quad(Transform parent, string name, Vector3 pos, float size, Material m)
+    {
+        GameObject g = GameObject.CreatePrimitive(PrimitiveType.Quad);
+        Strip(g);
+        g.name = name;
+        g.transform.SetParent(parent, false);
+        g.transform.localPosition = pos;
+        g.transform.localScale = new Vector3(size, size, 1f);
+        g.GetComponent<Renderer>().sharedMaterial = m;
+        return g;
+    }
+
     public static GameObject Sphere(Transform parent, string name, Vector3 pos, float diameter, Material m)
     {
         GameObject g = GameObject.CreatePrimitive(PrimitiveType.Sphere);
