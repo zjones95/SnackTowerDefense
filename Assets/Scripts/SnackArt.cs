@@ -71,14 +71,6 @@ public static class SnackArt
                 }
                 break;
 
-            case TowerType.Bounce: // bouncy ball on a spring
-                TDVisuals.Cyl(root, "Base", new Vector3(0f, 0.10f, 0f), 0.42f, 0.2f, silver);
-                for (int i = 0; i < 5; i++)
-                    TDVisuals.Cyl(root, "Spring" + i, new Vector3(0f, 0.22f + i * 0.09f, 0f), 0.12f, 0.05f, silver);
-                TDVisuals.Sphere(turret, "Ball", new Vector3(0f, 0f, 0f), 0.52f, accent);
-                TDVisuals.Cyl(turret, "Stripe", new Vector3(0f, 0f, 0f), 0.265f, 0.10f, TDVisuals.Mat(Color.white, 0f, 0.5f));
-                break;
-
             case TowerType.Poison: // wasabi blob
                 TDVisuals.Cyl(root, "Base", new Vector3(0f, 0.10f, 0f), 0.42f, 0.2f, silver);
                 TDVisuals.Box(root, "Post", new Vector3(0f, 0.45f, 0f), new Vector3(0.16f, 0.5f, 0.16f), dark);

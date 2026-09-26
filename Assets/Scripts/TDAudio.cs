@@ -36,7 +36,6 @@ public class TDAudio : MonoBehaviour
             TDSynth.Shot(2), // Sniper
             TDSynth.Shot(2), // Chain
             TDSynth.Shot(0), // Pierce
-            TDSynth.Shot(1), // Bounce
             TDSynth.Shot(3)  // Poison
         };
         death = TDSynth.Death();

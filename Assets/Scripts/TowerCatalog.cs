@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum TowerType { SingleShot, Splash, Slow, Sniper, Chain, Pierce, Bounce, Poison }
+public enum TowerType { SingleShot, Splash, Slow, Sniper, Chain, Pierce, Poison }
 
 [System.Serializable]
 public class TowerTierStats
@@ -55,7 +55,7 @@ public static class TowerCatalog
     public static readonly TowerType[] AllTypes =
     {
         TowerType.SingleShot, TowerType.Splash, TowerType.Slow, TowerType.Sniper,
-        TowerType.Chain, TowerType.Pierce, TowerType.Bounce, TowerType.Poison
+        TowerType.Chain, TowerType.Pierce, TowerType.Poison
     };
 
     public static TowerType RandomType() { return AllTypes[Random.Range(0, AllTypes.Length)]; }
@@ -108,13 +108,6 @@ public static class TowerCatalog
         d.tiers.Add(new TowerTierStats { damage = 6, range = 7f, fireInterval = 0.65f, pierceCount = 3, pierceWidth = 1.1f });
         d.tiers.Add(new TowerTierStats { damage = 11, range = 8.5f, fireInterval = 0.60f, pierceCount = 4, pierceWidth = 1.3f });
         d.tiers.Add(new TowerTierStats { damage = 19, range = 10f, fireInterval = 0.55f, pierceCount = 5, pierceWidth = 1.5f });
-        defs[d.type] = d;
-
-        d = new TowerDef();
-        d.type = TowerType.Bounce; d.displayName = "Jelly Bean"; d.color = new Color(0.95f, 0.40f, 0.80f);
-        d.tiers.Add(new TowerTierStats { damage = 4, range = 4.5f, fireInterval = 0.45f, projectileSpeed = 18f, bounceCount = 2, bounceRange = 4f });
-        d.tiers.Add(new TowerTierStats { damage = 7, range = 5.2f, fireInterval = 0.40f, projectileSpeed = 20f, bounceCount = 3, bounceRange = 4.5f });
-        d.tiers.Add(new TowerTierStats { damage = 11, range = 6.0f, fireInterval = 0.35f, projectileSpeed = 22f, bounceCount = 4, bounceRange = 5f });
         defs[d.type] = d;
 
         d = new TowerDef();

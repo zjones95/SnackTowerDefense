@@ -157,7 +157,7 @@ public static class SnackPreview
         string[] paths =
         {
             "Snack/Towers/Popcorn", "Snack/Towers/Soda", "Snack/Towers/Gum", "Snack/Towers/Pretzel",
-            "Snack/Towers/Chain", "Snack/Towers/Pierce", "Snack/Towers/Bounce", "Snack/Towers/Wasabi",
+            "Snack/Towers/Chain", "Snack/Towers/Pierce", "Snack/Towers/Wasabi",
             "Snack/Mobs/Cracker"
         };
         for (int i = 0; i < paths.Length; i++)

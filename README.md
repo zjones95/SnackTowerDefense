@@ -31,18 +31,20 @@ tower/mob characters are modelled in Blender and imported as glTF (`.glb`).
 
 ## Towers
 
-8 types, 3 tiers each. A merge picks the resulting type at random.
+7 types, 3 tiers each. A merge picks the resulting type at random.
 
-| Type | Name | Role |
+| Type | Name | Attack |
 |---|---|---|
-| SingleShot | Popcorn Popper | Cheap single-target DPS (8/16/30 dmg) |
-| Splash | Soda Mortar | Area damage (1.6/2.1/2.7 radius) |
-| Slow | Gum Snare | No damage; slows 45/55/65% for 1.2-1.6s |
-| Sniper | Pretzel Sniper | Long range, big hits (25/45/80 dmg, 9-13 range) |
-| Chain | Sour Static Belt | Damage jumps to 2/3/4 extra targets |
-| Pierce | Skewer | Hits 3/4/5 enemies along a line |
-| Bounce | Bouncy Ball | Projectile hops to 2/3/4 more targets |
-| Poison | Wasabi | Small hit + 6/11/18 dmg/sec over time |
+| SingleShot | Popcorn Bucket | Fires popping kernels — fast single-target DPS |
+| Splash | Soda Cup | Lobs a liquid blob that bursts for area damage |
+| Slow | Gumball Machine | Volleys 2/4/6 gumballs that slow on impact |
+| Sniper | Sour Straw | Long-range neon bolt, big single hits |
+| Chain | Sour Belt | Bolt arcs to 2/3/4 more enemies (25% falloff per hop) |
+| Pierce | Skewer | Throws a slow metal rod that skewers 3/4/5 enemies |
+| Poison | Spicy Chips | Fires a tortilla chip that applies damage over time |
+
+Every tower fires twice as often for half the damage vs. the original numbers,
+so DPS is similar but the board is far busier.
 
 Stats live in `Assets/Scripts/TowerCatalog.cs`.
 

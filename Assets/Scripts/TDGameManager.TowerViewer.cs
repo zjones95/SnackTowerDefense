@@ -120,7 +120,6 @@ public partial class TDGameManager
                     case TowerType.Slow: return "x" + s.multiShot + " - " + Mathf.RoundToInt(s.slowFactor * 100f) + "% / " + s.slowDuration.ToString("0.#") + "s";
                     case TowerType.Chain: return "jumps " + s.chainCount;
                     case TowerType.Pierce: return "pierces " + s.pierceCount;
-                    case TowerType.Bounce: return "bounces " + s.bounceCount;
                     case TowerType.Poison: return s.poisonDps.ToString("0.#") + "/s for " + s.poisonDuration.ToString("0.#") + "s";
                     default: return "-";
                 }
@@ -137,7 +136,6 @@ public partial class TDGameManager
             case TowerType.Sniper: return "Huge hits at very long range, but slow to fire.";
             case TowerType.Chain: return "Damage arcs on to nearby enemies after the first hit.";
             case TowerType.Pierce: return "Fires a line that skewers every enemy it passes through.";
-            case TowerType.Bounce: return "The projectile hops from enemy to enemy.";
             case TowerType.Poison: return "Applies damage over time that keeps ticking.";
             default: return "";
         }
