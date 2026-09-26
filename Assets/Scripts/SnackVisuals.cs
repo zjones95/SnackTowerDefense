@@ -73,8 +73,10 @@ public static class TowerVisual
     }
 
     /// <summary>Thin dark outline drawn behind the digit, in world units.</summary>
-    const float OutlineOffset = 0.012f;
-    static readonly Color OutlineColour = new Color(0.07f, 0.06f, 0.09f);
+    const float OutlineOffset = 0.008f;
+    /// <summary>Both the outline copies and the coloured digit are drawn at half opacity.</summary>
+    const float LabelAlpha = 0.5f;
+    static readonly Color OutlineColour = new Color(0.07f, 0.06f, 0.09f, LabelAlpha);
 
     /// <summary>Floating tier number above the tower, tinted with the tier colour
     /// and outlined in dark so it stays readable without a background plate.</summary>
@@ -105,11 +107,11 @@ public static class TowerVisual
         txtGO.transform.localPosition = offset;
         TextMesh tm = txtGO.AddComponent<TextMesh>();
         tm.text = tier.ToString();
-        tm.characterSize = 0.06f;
+        tm.characterSize = 0.042f;
         tm.fontSize = 120;
         tm.anchor = TextAnchor.MiddleCenter;
         tm.alignment = TextAlignment.Center;
-        tm.color = colour;
+        tm.color = new Color(colour.r, colour.g, colour.b, LabelAlpha);
         Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         if (font == null) font = Resources.GetBuiltinResource<Font>("Arial.ttf");
         if (font != null)

@@ -27,10 +27,19 @@ tower/mob characters are modelled in Blender and imported as glTF (`.glb`).
 - **Difficulty** — chosen before a single-player run, or by the host in a
   multiplayer lobby: **Easy** (-25% mob health), **Normal**, **Hard** (+25%),
   **Insane** (+50%).
-- **Building** — you can only build **random tier-1** towers.
-- **Merging** — select a tower, press **Merge**, then click another tower of the
-  **same tier** (any type). You pay `$10` and get a **tier + 1** tower of a random
-  type. Tiers go **1 → 3**, designed to be extended.
+- **Building** — press **B** (or the **Build (B)** HUD button) to enter build
+  mode. A translucent **"?" ghost** follows the mouse over the board and turns
+  **green** when the tile is free and the `$25` is affordable, **red** otherwise.
+  Left-click to place a **random tier-1** tower; stay in the mode for repeated
+  placement, and cancel with right-click or **Esc**.
+- **Merging** — select a tower, press **E** (or the **Merge (E)** button), then
+  click another tower of the **same tier** (any type). You pay `$10` and get a
+  **tier + 1** tower of a random type. Tiers go **1 → 3**, designed to be extended.
+- **Re-rolling** — select a tower of **tier 2+**, press **R** (or the
+  **Re-roll (R)** button), then click a tower **exactly one tier below** it. The
+  lower tower is consumed and the selected tower becomes a **different random
+  type** at the **same tier, cell and selection**. There is **no money cost** —
+  the spent tower is the price. Max-tier towers can re-roll too.
 - Mobs that reach the end drain lives; reaching 0 ends the run.
 
 ## Towers
@@ -69,15 +78,17 @@ Defined in `Assets/Scripts/MobCatalog.cs`; models live in
 
 | Input | Action |
 |---|---|
-| **Left-click** | Build a tower (`$25`) on an empty play-mat tile, or select a tower |
-| **Merge button** | Then click another same-tier tower to combine (`$10`) |
-| **Right-click** | Deselect / cancel a merge |
+| **B** / **Build (B)** button | Enter/leave build mode; the ghost shows where a tower would go |
+| **E** / **Merge (E)** button | With a tower selected: pick another tower of the **same tier** to combine (`$10`) |
+| **R** / **Re-roll (R)** button | With a tier-2+ tower selected: pick a tower **exactly one tier below** to consume and re-type the selected tower (no money) |
+| **Left-click** | In build mode: place a random tier-1 tower (`$25`) on a green tile. Otherwise: select / deselect a tower |
+| **Right-click** | Cancel build / merge / re-roll mode, or deselect |
 | **W / A / S / D** (or arrows) | Pan the camera |
 | **Middle-mouse drag** | Orbit / rotate |
 | **Scroll wheel** | Zoom |
 | **1–8** / **0** or **H** | In a match: jump to another player's board / back to yours |
 | **M** | Mute / unmute the music |
-| **Esc** | Open the pause menu (Settings / Quit to Main Menu / Quit Game); during a merge it cancels the merge |
+| **Esc** | Cancel the active build/merge/re-roll mode; otherwise open the pause menu (Settings / Quit to Main Menu / Quit Game) |
 
 ## Menus & settings
 

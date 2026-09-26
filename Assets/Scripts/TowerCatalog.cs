@@ -60,6 +60,16 @@ public static class TowerCatalog
 
     public static TowerType RandomType() { return AllTypes[Random.Range(0, AllTypes.Length)]; }
 
+    /// <summary>Random type that is guaranteed to differ from <paramref name="exclude"/>
+    /// (used by re-roll so the result is visibly a change).</summary>
+    public static TowerType RandomTypeExcluding(TowerType exclude)
+    {
+        if (AllTypes.Length <= 1) return exclude;
+        TowerType t;
+        do { t = RandomType(); } while (t == exclude);
+        return t;
+    }
+
     public static TowerDef Get(TowerType t) { EnsureInit(); return defs[t]; }
 
     static void EnsureInit()

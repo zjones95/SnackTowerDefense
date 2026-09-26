@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 // Builds snack-themed visuals for towers and mobs from primitives.
@@ -182,5 +183,77 @@ public static class SnackArt
                 TDVisuals.Sphere(art, "Cherry", new Vector3(0f, 0.92f, 0f), 0.22f, TDVisuals.Mat(new Color(0.90f, 0.15f, 0.20f), 0f, 0.7f));
                 break;
         }
+    }
+
+    // --------------------------------------------------------- build ghost
+    /// <summary>
+    /// Translucent "?" placement preview shown while build mode is active. The
+    /// built tower type is random, so no specific tower is previewed — just a
+    /// camera-facing question mark over a soft base that the manager tints
+    /// green/red for valid/invalid placement.
+    /// </summary>
+    public static TowerGhost BuildGhost(Transform parent)
+    {
+        GameObject root = new GameObject("BuildGhost");
+        root.transform.SetParent(parent, false);
+
+        TowerGhost ghost = new TowerGhost();
+        ghost.validMat = TDVisuals.TransparentMat(new Color(0.35f, 1f, 0.45f), 0.45f, 0.6f);
+        ghost.invalidMat = TDVisuals.TransparentMat(new Color(1f, 0.35f, 0.30f), 0.45f, 0.6f);
+
+        List<Renderer> parts = new List<Renderer>();
+        parts.Add(TDVisuals.Cyl(root.transform, "Base", new Vector3(0f, 0.05f, 0f), 0.55f, 0.10f, ghost.validMat).GetComponent<Renderer>());
+        parts.Add(TDVisuals.Cyl(root.transform, "Column", new Vector3(0f, 0.42f, 0f), 0.30f, 0.64f, ghost.validMat).GetComponent<Renderer>());
+        ghost.parts = parts.ToArray();
+
+        GameObject markGO = new GameObject("Mark");
+        markGO.transform.SetParent(root.transform, false);
+        markGO.transform.localPosition = new Vector3(0f, 0.98f, 0f);
+        markGO.AddComponent<BillboardLabel>();   // TextMesh reads from -Z
+        TextMesh tm = markGO.AddComponent<TextMesh>();
+        tm.text = "?";
+        tm.characterSize = 0.12f;
+        tm.fontSize = 120;
+        tm.anchor = TextAnchor.MiddleCenter;
+        tm.alignment = TextAlignment.Center;
+        Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        if (font == null) font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        if (font != null)
+        {
+            tm.font = font;
+            MeshRenderer tr = markGO.GetComponent<MeshRenderer>();
+            if (tr != null)
+            {
+                tr.sharedMaterial = font.material;
+                tr.sortingOrder = 2;
+            }
+        }
+        ghost.mark = tm;
+
+        ghost.root = root.transform;
+        ghost.SetValid(true);
+        return ghost;
+    }
+}
+
+/// <summary>Root + materials for the translucent "?" build preview.</summary>
+public class TowerGhost
+{
+    public Transform root;
+    public Renderer[] parts;
+    public TextMesh mark;
+    public Material validMat;
+    public Material invalidMat;
+
+    /// <summary>Tints the whole preview green (valid + affordable) or red.</summary>
+    public void SetValid(bool valid)
+    {
+        if (root == null) return;
+        Material m = valid ? validMat : invalidMat;
+        if (parts != null)
+            for (int i = 0; i < parts.Length; i++)
+                if (parts[i] != null) parts[i].sharedMaterial = m;
+        if (mark != null)
+            mark.color = valid ? new Color(0.45f, 1f, 0.55f) : new Color(1f, 0.45f, 0.40f);
     }
 }

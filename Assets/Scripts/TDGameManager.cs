@@ -75,6 +75,9 @@ public partial class TDGameManager : MonoBehaviour
     private string message = "";
     private float messageTimer;
     private bool merging;
+    private bool building;      // build mode: click a cell to place a random tower
+    private bool reRolling;     // re-roll mode: click a tower one tier below
+    private TowerGhost ghost;   // "?" placement preview shown in build mode
     private Transform hover;
     private Renderer[] hoverRends;
     private Material hoverValid, hoverInvalid;
@@ -253,6 +256,8 @@ public partial class TDGameManager : MonoBehaviour
         towers.Clear();
         Selected = null;
         merging = false;
+        building = false;
+        reRolling = false;
         cleared = false;
         eliminated = false;
         if (worldRoot != null) Destroy(worldRoot.gameObject);
@@ -294,6 +299,7 @@ public partial class TDGameManager : MonoBehaviour
 
         TDBoardBuilder.BuildTiles(worldRoot, map);
         BuildHover();
+        BuildGhost();
         TDBoardBuilder.BuildRoom(worldRoot, map, boardOffset);
     }
 
@@ -316,6 +322,12 @@ public partial class TDGameManager : MonoBehaviour
         hoverRends = new Renderer[4];
         for (int i = 0; i < 4; i++) hoverRends[i] = edges[i].GetComponent<Renderer>();
         h.SetActive(false);
+    }
+
+    void BuildGhost()
+    {
+        ghost = SnackArt.BuildGhost(worldRoot);
+        ghost.root.gameObject.SetActive(false);
     }
 
     void BeginWave()
@@ -424,7 +436,7 @@ public partial class TDGameManager : MonoBehaviour
 
         if (State != GameState.Playing)
         {
-            if (hover != null) hover.gameObject.SetActive(false);
+            HideHover();
 
             // Settings can be opened over the main menu; Esc closes it there.
             if (settingsOpen && Input.GetKeyDown(KeyCode.Escape)) CloseSettings();
@@ -443,10 +455,13 @@ public partial class TDGameManager : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.Escape))
         {
-            if (merging) { merging = false; return; }
-            OpenPause();
+            // Esc first cancels an active build/merge/re-roll mode, then pauses.
+            if (building || merging || reRolling) CancelMode();
+            else OpenPause();
             return;
         }
+
+        HandleHotkeys();
 
         if (mpActive)
         {
@@ -478,30 +493,41 @@ public partial class TDGameManager : MonoBehaviour
 
     void UpdateHover()
     {
-        if (!ViewingOwnBoard)
-        {
-            if (hover != null) hover.gameObject.SetActive(false);
-            return;
-        }
+        if (!ViewingOwnBoard) { HideHover(); return; }
 
         if (hover == null) return;
-        if (MouseOverUI()) { hover.gameObject.SetActive(false); return; }
+        if (MouseOverUI()) { HideHover(); return; }
 
         Ray ray = cam.ScreenPointToRay(Input.mousePosition);
         Plane plane = new Plane(Vector3.up, Vector3.zero);
         float d;
-        if (!plane.Raycast(ray, out d)) { hover.gameObject.SetActive(false); return; }
+        if (!plane.Raycast(ray, out d)) { HideHover(); return; }
         Vector3 p = ray.GetPoint(d);
 
         int x, y;
         map.WorldToCell(p, out x, out y);
-        if (!map.InBounds(x, y)) { hover.gameObject.SetActive(false); return; }
+        if (!map.InBounds(x, y)) { HideHover(); return; }
 
-        bool valid = map.IsBuildable(x, y) && !towers.ContainsKey(map.Idx(x, y));
-        Material m = valid ? hoverValid : hoverInvalid;
+        bool placeable = map.IsBuildable(x, y) && !towers.ContainsKey(map.Idx(x, y));
+        Material m = placeable ? hoverValid : hoverInvalid;
         for (int i = 0; i < hoverRends.Length; i++) hoverRends[i].sharedMaterial = m;
         hover.position = map.CellCenter(x, y) + Vector3.up * 0.05f;
         hover.gameObject.SetActive(true);
+
+        // The "?" ghost follows the mouse, but only while build mode is active.
+        if (ghost == null) return;
+        if (!building) { ghost.root.gameObject.SetActive(false); return; }
+
+        bool affordable = Money >= TDBalance.BuildCost;
+        ghost.root.position = map.CellCenter(x, y) + Vector3.up * 0.02f;
+        ghost.SetValid(placeable && affordable);
+        ghost.root.gameObject.SetActive(true);
+    }
+
+    void HideHover()
+    {
+        if (hover != null) hover.gameObject.SetActive(false);
+        if (ghost != null) ghost.root.gameObject.SetActive(false);
     }
 
     void ClearWorld()
@@ -510,7 +536,10 @@ public partial class TDGameManager : MonoBehaviour
         towers.Clear();
         Selected = null;
         merging = false;
+        building = false;
+        reRolling = false;
         hover = null;
+        ghost = null;
         if (worldRoot != null) { Destroy(worldRoot.gameObject); worldRoot = null; }
     }
 
@@ -518,8 +547,9 @@ public partial class TDGameManager : MonoBehaviour
     {
         float mx = Input.mousePosition.x;
         float my = Screen.height - Input.mousePosition.y;
-        if (my < 78f || my > Screen.height - 40f) return true;
-        if (Selected != null && mx < 390f && my > 66f && my < 190f) return true;
+        if (my < 116f) return true;                                   // top stats + Build button
+        if (my > Screen.height - 40f) return true;                    // bottom legend
+        if (Selected != null && mx < 400f && my < 250f) return true;  // selected-tower panel
         return false;
     }
 
@@ -529,7 +559,7 @@ public partial class TDGameManager : MonoBehaviour
 
         if (Input.GetMouseButtonDown(1))
         {
-            if (merging) { merging = false; message = "Merge cancelled"; messageTimer = 1.5f; }
+            if (building || merging || reRolling) CancelMode();
             else SetSelected(null);
             return;
         }
@@ -544,10 +574,20 @@ public partial class TDGameManager : MonoBehaviour
 
         int x, y;
         map.WorldToCell(p, out x, out y);
-        if (!map.InBounds(x, y)) { if (!merging) SetSelected(null); return; }
+        if (!map.InBounds(x, y))
+        {
+            if (!building && !merging && !reRolling) SetSelected(null);
+            return;
+        }
 
         int idx = map.Idx(x, y);
         Tower t = towers.ContainsKey(idx) ? towers[idx] : null;
+
+        if (building)
+        {
+            TryBuild(x, y);   // stays in build mode for repeated placement
+            return;
+        }
 
         if (merging)
         {
@@ -559,16 +599,85 @@ public partial class TDGameManager : MonoBehaviour
             return;
         }
 
+        if (reRolling)
+        {
+            if (Selected == null) { reRolling = false; return; }
+            if (t == null) { message = "Select a Tier " + (Selected.Tier - 1) + " tower to re-roll with"; messageTimer = 1.8f; return; }
+            if (t == Selected) return;
+            if (t.Tier == Selected.Tier - 1) { if (TryReRoll(Selected, t)) reRolling = false; }
+            else { message = "Need a Tier " + (Selected.Tier - 1) + " tower"; messageTimer = 2f; }
+            return;
+        }
+
+        // Not in a mode: left-click only selects (or deselects) a tower, never builds.
         if (t != null)
         {
             if (Selected == t) SetSelected(null);
             else SetSelected(t);
         }
-        else
+        else if (Selected != null)
         {
-            if (Selected != null) { SetSelected(null); return; }
-            TryBuild(x, y);
+            SetSelected(null);
         }
+    }
+
+    // --------------------------------------------------------- action modes
+    void HandleHotkeys()
+    {
+        if (Input.GetKeyDown(KeyCode.B)) ToggleBuildMode();
+        if (Input.GetKeyDown(KeyCode.E)) TryStartMerge();
+        if (Input.GetKeyDown(KeyCode.R)) TryStartReRoll();
+    }
+
+    void CancelMode()
+    {
+        if (building) { building = false; message = "Build cancelled"; }
+        else if (merging) { merging = false; message = "Merge cancelled"; }
+        else if (reRolling) { reRolling = false; message = "Re-roll cancelled"; }
+        messageTimer = 1.5f;
+    }
+
+    void ToggleBuildMode()
+    {
+        if (!ViewingOwnBoard) return;   // spectating is read-only
+        if (building) { CancelMode(); return; }
+        if (TDAudio.Instance != null) TDAudio.Instance.Click();
+        building = true;
+        SetSelected(null);   // clears the panel, and any merge/re-roll mode
+        message = "Build mode: click a tile to place ($" + TDBalance.BuildCost + ").  Right-click / Esc cancels.";
+        messageTimer = 3f;
+    }
+
+    void TryStartMerge()
+    {
+        if (!ViewingOwnBoard) return;
+        if (Selected == null) { message = "Select a tower first"; messageTimer = 1.5f; return; }
+        if (Selected.Tier >= TowerCatalog.MaxTier) { message = "Max tier reached"; messageTimer = 1.5f; return; }
+        if (Money < TDBalance.MergeCost)
+        {
+            message = "Not enough money to merge ($" + TDBalance.MergeCost + ")";
+            messageTimer = 1.8f;
+            return;
+        }
+        if (TDAudio.Instance != null) TDAudio.Instance.Click();
+        building = false;
+        merging = true;
+        reRolling = false;
+        message = "Select another Tier " + Selected.Tier + " tower";
+        messageTimer = 2.5f;
+    }
+
+    void TryStartReRoll()
+    {
+        if (!ViewingOwnBoard) return;
+        if (Selected == null) { message = "Select a tower first"; messageTimer = 1.5f; return; }
+        if (Selected.Tier < 2) { message = "A Tier 1 tower can't re-roll"; messageTimer = 1.8f; return; }
+        if (TDAudio.Instance != null) TDAudio.Instance.Click();
+        building = false;
+        merging = false;
+        reRolling = true;
+        message = "Select a Tier " + (Selected.Tier - 1) + " tower to re-roll with";
+        messageTimer = 3f;
     }
 
     void SetSelected(Tower t)
@@ -576,14 +685,14 @@ public partial class TDGameManager : MonoBehaviour
         if (Selected != null) Selected.SetSelected(false);
         Selected = t;
         if (Selected != null) Selected.SetSelected(true);
-        else merging = false;
+        else { merging = false; reRolling = false; }
     }
 
     void TryBuild(int x, int y)
     {
-        if (!map.IsBuildable(x, y)) return;
+        if (!map.IsBuildable(x, y)) { message = "Can't build there"; messageTimer = 1.2f; return; }
         int idx = map.Idx(x, y);
-        if (towers.ContainsKey(idx)) return;
+        if (towers.ContainsKey(idx)) { message = "That tile is taken"; messageTimer = 1.2f; return; }
 
         if (Money < TDBalance.BuildCost)
         {
@@ -632,6 +741,36 @@ public partial class TDGameManager : MonoBehaviour
         SetSelected(nt);
         if (TDAudio.Instance != null) TDAudio.Instance.Merge();
         message = "Merged into " + nt.DisplayName + " (Tier " + nt.Tier + ")  -$" + TDBalance.MergeCost;
+        messageTimer = 2f;
+        return true;
+    }
+
+    /// <summary>
+    /// Re-rolls tower A into a different random type, consuming tower B (exactly
+    /// one tier below) instead of money. A keeps its tier, cell and selection.
+    /// Written so it stays correct if MaxTier grows: a Tier N tower consumes a
+    /// Tier N-1 tower, and a max-tier tower is allowed to re-roll.
+    /// </summary>
+    bool TryReRoll(Tower a, Tower b)
+    {
+        if (a == null || b == null || a == b) return false;
+        if (a.Tier < 2 || b.Tier != a.Tier - 1) return false;
+
+        int cx = a.CellX, cy = a.CellY;
+        int tier = a.Tier;
+        TowerType old = a.Type;
+
+        towers.Remove(map.Idx(a.CellX, a.CellY));
+        towers.Remove(map.Idx(b.CellX, b.CellY));
+        a.SetSelected(false);
+        Destroy(a.gameObject);
+        Destroy(b.gameObject);
+
+        TowerType result = TowerCatalog.RandomTypeExcluding(old);
+        Tower nt = CreateTower(cx, cy, result, tier);   // same cell, same tier, new type
+        SetSelected(nt);
+        if (TDAudio.Instance != null) TDAudio.Instance.Merge();
+        message = "Re-rolled " + TowerCatalog.Get(old).displayName + " into " + nt.DisplayName + " (Tier " + tier + ")";
         messageTimer = 2f;
         return true;
     }
@@ -811,47 +950,73 @@ public partial class TDGameManager : MonoBehaviour
         if (!string.IsNullOrEmpty(message))
             GUI.Label(new Rect(0, 40, Screen.width, 26), message, Style(16, TextAnchor.MiddleCenter, new Color(0.6f, 1f, 0.6f)));
 
+        // ---- build mode toggle (highlighted while active; hidden while spectating) ----
+        if (ViewingOwnBoard)
+        {
+            Color prevBg = GUI.backgroundColor;
+            if (building) GUI.backgroundColor = new Color(0.45f, 1f, 0.5f);
+            if (GUI.Button(new Rect(12, 82, 170, 30), "Build (B)"))
+                ToggleBuildMode();
+            GUI.backgroundColor = prevBg;
+        }
+
         if (Selected != null)
         {
             TowerTierStats s = Selected.Stats;
-            GUI.Box(new Rect(12, 70, 360, 118), GUIContent.none);
-            GUI.Label(new Rect(20, 74, 344, 58),
+            GUI.Box(new Rect(12, 118, 380, 124), GUIContent.none);
+            GUI.Label(new Rect(20, 122, 364, 56),
                 Selected.DisplayName + "  -  Tier " + Selected.Tier + "\n" +
                 "Damage " + s.damage + "    Rate " + s.fireInterval.ToString("0.00") + "s",
                 Style(14, TextAnchor.UpperLeft, Color.white));
 
+            bool canMerge = Selected.Tier < TowerCatalog.MaxTier;
+            bool canReRoll = Selected.Tier >= 2;   // a lower tier exists (max tier allowed)
+
             if (merging)
             {
-                GUI.Label(new Rect(20, 132, 344, 20),
+                GUI.Label(new Rect(20, 176, 364, 20),
                     "Select a Tier " + Selected.Tier + " tower to merge with",
                     Style(13, TextAnchor.UpperLeft, new Color(1f, 0.9f, 0.4f)));
-                if (GUI.Button(new Rect(20, 154, 120, 26), "Cancel"))
+                if (GUI.Button(new Rect(20, 200, 110, 26), "Cancel"))
                 {
                     if (TDAudio.Instance != null) TDAudio.Instance.Click();
-                    merging = false;
+                    CancelMode();
                 }
             }
-            else if (Selected.Tier < TowerCatalog.MaxTier)
+            else if (reRolling)
             {
-                bool canAfford = Money >= TDBalance.MergeCost;
-                GUI.enabled = canAfford;
-                if (GUI.Button(new Rect(20, 132, 150, 28), "Merge ($" + TDBalance.MergeCost + ")"))
+                GUI.Label(new Rect(20, 176, 364, 20),
+                    "Select a Tier " + (Selected.Tier - 1) + " tower to re-roll with",
+                    Style(13, TextAnchor.UpperLeft, new Color(1f, 0.9f, 0.4f)));
+                if (GUI.Button(new Rect(20, 200, 110, 26), "Cancel"))
                 {
                     if (TDAudio.Instance != null) TDAudio.Instance.Click();
-                    merging = true;
-                    message = "Select another Tier " + Selected.Tier + " tower";
-                    messageTimer = 2.5f;
+                    CancelMode();
                 }
-                GUI.enabled = true;
             }
             else
             {
-                GUI.Label(new Rect(20, 132, 344, 20), "Max tier reached", Style(13, TextAnchor.UpperLeft, new Color(0.8f, 0.8f, 0.8f)));
+                if (canMerge)
+                {
+                    bool canAfford = Money >= TDBalance.MergeCost;
+                    GUI.enabled = canAfford;
+                    if (GUI.Button(new Rect(20, 178, 160, 30), "Merge (E)  $" + TDBalance.MergeCost))
+                        TryStartMerge();
+                    GUI.enabled = true;
+                }
+                else
+                {
+                    GUI.Label(new Rect(20, 182, 160, 22), "Max tier",
+                        Style(13, TextAnchor.MiddleLeft, new Color(0.8f, 0.8f, 0.8f)));
+                }
+
+                if (canReRoll && GUI.Button(new Rect(190, 178, 170, 30), "Re-roll (R)"))
+                    TryStartReRoll();
             }
         }
 
         GUI.Label(new Rect(0, Screen.height - 30, Screen.width, 24),
-            "Left-click: build ($" + TDBalance.BuildCost + ") / select   |   Merge ($" + TDBalance.MergeCost + ") -> same-tier   |   WASD: move   |   Middle-drag: rotate   |   Scroll: zoom   |   M: music   |   Esc: menu",
+            "B: Build ($" + TDBalance.BuildCost + ")   |   E: Merge ($" + TDBalance.MergeCost + ")   |   R: Re-roll   |   Left-click: place / select   |   Right-click: cancel   |   WASD: move   |   Middle-drag: rotate   |   Scroll: zoom   |   M: music   |   Esc: menu",
             Style(13, TextAnchor.MiddleCenter, new Color(0.8f, 0.8f, 0.8f)));
 
         DrawBossBar();
