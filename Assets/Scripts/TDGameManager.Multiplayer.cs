@@ -125,6 +125,7 @@ public partial class TDGameManager
         slotCount = count;
         mySlot = slot;
         viewSlot = slot;
+        CurrentDifficulty = ns != null ? ns.MatchDifficulty : Difficulty.Normal;
 
         StartRun(BoardLayout.Position(slot, count));
         BuildRemoteBoards(ns, slot, count);
@@ -463,6 +464,39 @@ public partial class TDGameManager
             if (players[i].ClientId == NetworkManagerLocalClientId()) nm += "   (you)";
             GUI.Label(new Rect(cx - 200f, listY + 30f + i * 24f, 400f, 22f),
                 "• " + nm, Style(16, TextAnchor.MiddleLeft, new Color(0.9f, 0.92f, 0.95f)));
+        }
+
+        // ---- difficulty ----
+        float dy = Screen.height * 0.63f;
+        GUI.Label(new Rect(cx - 280f, dy, 560f, 24f),
+            host ? "Difficulty (you choose):" : "Difficulty:",
+            Style(16, TextAnchor.MiddleCenter, new Color(0.75f, 0.8f, 0.85f)));
+
+        if (host)
+        {
+            float dbw = 116f, dbh = 34f, gap = 10f;
+            float total = 4f * dbw + 3f * gap;
+            float dx = cx - total * 0.5f;
+            for (int i = 0; i < 4; i++)
+            {
+                Difficulty d = (Difficulty)i;
+                bool sel = (int)ns.MatchDifficulty == i;
+                GUIStyle st = new GUIStyle(GUI.skin.button);
+                st.fontSize = 14;
+                st.normal.textColor = sel ? Color.white : TDBalance.DifficultyColour(d);
+                if (GUI.Button(new Rect(dx + i * (dbw + gap), dy + 26f, dbw, dbh),
+                        (sel ? "> " : "") + TDBalance.DifficultyName(d), st))
+                {
+                    Click();
+                    ns.SetDifficulty(d);
+                }
+            }
+        }
+        else
+        {
+            GUI.Label(new Rect(cx - 240f, dy + 26f, 480f, 28f),
+                TDBalance.DifficultyName(ns.MatchDifficulty) + "   (" + TDBalance.DifficultyBlurb(ns.MatchDifficulty) + ")",
+                Style(16, TextAnchor.MiddleCenter, TDBalance.DifficultyColour(ns.MatchDifficulty)));
         }
 
         // ---- actions ----------------------------------------------------

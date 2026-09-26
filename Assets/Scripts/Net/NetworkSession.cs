@@ -41,6 +41,16 @@ public class NetworkSession : MonoBehaviour
     public bool AddressIsRelay { get; private set; }
     public string Error { get; private set; } = "";
 
+    /// <summary>Host-chosen difficulty, replicated with the lobby roster.</summary>
+    public Difficulty MatchDifficulty { get; private set; } = Difficulty.Normal;
+
+    public void SetDifficulty(Difficulty d)
+    {
+        if (!IsHost) return;
+        MatchDifficulty = d;
+        BroadcastLobby();
+    }
+
     /// <summary>Authoritative on the host; populated from messages on clients.</summary>
     public readonly List<LobbyPlayerInfo> Players = new List<LobbyPlayerInfo>();
 
@@ -357,6 +367,7 @@ public class NetworkSession : MonoBehaviour
 
         using var writer = new FastBufferWriter(4 + NetConfig.MaxPlayers * 48, Allocator.Temp);
         writer.WriteValueSafe(Players.Count);
+        writer.WriteValueSafe((byte)MatchDifficulty);
         for (int i = 0; i < Players.Count; i++)
         {
             writer.WriteValueSafe(Players[i].ClientId);
@@ -369,6 +380,8 @@ public class NetworkSession : MonoBehaviour
     void OnLobbyMessage(ulong sender, FastBufferReader reader)
     {
         reader.ReadValueSafe(out int count);
+        reader.ReadValueSafe(out byte diff);
+        MatchDifficulty = (Difficulty)Mathf.Clamp(diff, 0, 3);
         Players.Clear();
         for (int i = 0; i < count && i < NetConfig.MaxPlayers; i++)
         {

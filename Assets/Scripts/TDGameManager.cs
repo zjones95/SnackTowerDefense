@@ -13,6 +13,7 @@ public partial class TDGameManager : MonoBehaviour
     public int Money { get; private set; }
     public int Lives { get; private set; }
     public int Wave { get; private set; }
+    public Difficulty CurrentDifficulty { get; private set; } = Difficulty.Normal;
 
     public readonly List<Mob> Mobs = new List<Mob>();
 
@@ -360,7 +361,9 @@ public partial class TDGameManager : MonoBehaviour
         GameObject go = new GameObject("Mob_" + type);
         go.transform.SetParent(mobsRoot, false);
         Mob m = go.AddComponent<Mob>();
-        m.Init(def, map.Waypoints, this, TDBalance.HealthMult(Wave), TDBalance.SpeedMult(Wave));
+        m.Init(def, map.Waypoints, this,
+               TDBalance.HealthMult(Wave) * TDBalance.HealthMultiplier(CurrentDifficulty),
+               TDBalance.SpeedMult(Wave));
         m.NetId = nextMobId++;
         Mobs.Add(m);
     }
@@ -602,6 +605,7 @@ public partial class TDGameManager : MonoBehaviour
     void OnGUI()
     {
         if (State == GameState.MainMenu) { DrawMenu(); return; }
+        if (State == GameState.DifficultySelect) { DrawDifficulty(); return; }
         if (State == GameState.TowerViewer) { DrawTowerViewer(); return; }
         if (State == GameState.MultiplayerMenu || State == GameState.Lobby) { DrawMultiplayer(); return; }
         DrawHud();
@@ -633,7 +637,7 @@ public partial class TDGameManager : MonoBehaviour
         if (GUI.Button(new Rect(bx, by, bw, bh), "Single Player"))
         {
             if (TDAudio.Instance != null) TDAudio.Instance.Click();
-            StartRun();
+            State = GameState.DifficultySelect;
         }
         if (GUI.Button(new Rect(bx, by + bh + 14f, bw, bh), "Multiplayer"))
         {
@@ -646,6 +650,47 @@ public partial class TDGameManager : MonoBehaviour
             OpenTowerViewer();
         }
         if (GUI.Button(new Rect(bx, by + 3f * (bh + 14f), bw, bh), "Quit")) Application.Quit();
+    }
+
+    void DrawDifficulty()
+    {
+        Color old = GUI.color;
+        GUI.color = new Color(0.05f, 0.06f, 0.09f, 0.94f);
+        GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.whiteTexture);
+        GUI.color = old;
+
+        GUI.Label(new Rect(0f, Screen.height * 0.11f, Screen.width, 60f), "SELECT DIFFICULTY",
+            Style(40, TextAnchor.MiddleCenter, new Color(1f, 0.85f, 0.4f)));
+
+        float bw = 300f, bh = 56f;
+        float bx = (Screen.width - bw) * 0.5f - 120f;
+        float by = Screen.height * 0.30f;
+
+        for (int i = 0; i < 4; i++)
+        {
+            Difficulty d = (Difficulty)i;
+            float y = by + i * (bh + 12f);
+            if (GUI.Button(new Rect(bx, y, bw, bh), TDBalance.DifficultyName(d)))
+            {
+                if (TDAudio.Instance != null) TDAudio.Instance.Click();
+                CurrentDifficulty = d;
+                StartRun();
+            }
+            GUI.Label(new Rect(bx + bw + 18f, y, 300f, bh), TDBalance.DifficultyBlurb(d),
+                Style(16, TextAnchor.MiddleLeft, TDBalance.DifficultyColour(d)));
+        }
+
+        if (GUI.Button(new Rect(bx, by + 4f * (bh + 12f) + 12f, bw, 46f), "Back"))
+        {
+            if (TDAudio.Instance != null) TDAudio.Instance.Click();
+            State = GameState.MainMenu;
+        }
+
+        GUI.Label(new Rect(0f, Screen.height - 30f, Screen.width, 24f),
+            "Esc to go back", Style(13, TextAnchor.MiddleCenter, new Color(0.7f, 0.73f, 0.78f)));
+
+        if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Escape)
+            State = GameState.MainMenu;
     }
 
     void DrawHud()

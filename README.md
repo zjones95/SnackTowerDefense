@@ -23,6 +23,9 @@ tower/mob characters are modelled in Blender and imported as glTF (`.glb`).
   | Kill reward | `$3` |
   | Round bonus | `15 + 5 x wave` |
   | Starting lives | `20` |
+- **Difficulty** — chosen before a single-player run, or by the host in a
+  multiplayer lobby: **Easy** (-25% mob health), **Normal**, **Hard** (+25%),
+  **Insane** (+50%).
 - **Building** — you can only build **random tier-1** towers.
 - **Merging** — select a tower, press **Merge**, then click another tower of the
   **same tier** (any type). You pay `$10` and get a **tier + 1** tower of a random
