@@ -10,8 +10,15 @@ public class Projectile : MonoBehaviour
     public float BounceRange = 0f;
     public float PoisonDps = 0f;
     public float PoisonDuration = 0f;
+    public int PoisonMaxStacks = 0;            // Poison T5: concurrent stacks
+    public float PoisonDetonateRadius = 0f;    // Poison T6: on-death detonation
+    public float PoisonDetonateFraction = 0f;
     public float SlowFactor = 0f;
     public float SlowDuration = 0f;
+    public float SplashSlowFactor = 0f;        // Splash T6: slow applied to everything caught
+    public float SplashSlowDuration = 0f;
+    public float TarDamageBonus = 0f;          // Slow T6: damage-taken bonus while slowed
+    public float TarLinger = 0f;
     public int GoldPerHit = 0;   // Gold tower: money awarded on a confirmed hit
 
     public Color Tint = new Color(0.4f, 0.7f, 1f);
@@ -91,21 +98,30 @@ public class Projectile : MonoBehaviour
                     Mob m = mobs[i];
                     if (m == null) continue;
                     if (Vector3.Distance(m.transform.position, transform.position) <= SplashRadius)
+                    {
+                        // Splash T6 "Sticky Soda": the splash also slows everything caught.
+                        if (SplashSlowFactor > 0f) m.ApplySlow(SplashSlowFactor, SplashSlowDuration);
                         m.TakeDamage(Damage);
+                    }
                 }
             }
         }
         else if (Target != null)
         {
             if (SlowFactor > 0f) Target.ApplySlow(SlowFactor, SlowDuration);
-            if (PoisonDps > 0f) Target.ApplyPoison(PoisonDps, PoisonDuration);
+            if (PoisonDps > 0f)
+                Target.ApplyPoison(PoisonDps, PoisonDuration, PoisonMaxStacks,
+                                   PoisonDetonateRadius, PoisonDetonateFraction);
             Target.TakeDamage(Damage);
+            // tar is applied after this impact so the same gumball doesn't buff itself
+            if (TarDamageBonus > 0f && Target != null) Target.ApplyTar(TarDamageBonus, TarLinger);
             // economy towers pay out only on a confirmed hit (the target still exists)
             if (GoldPerHit > 0 && gm != null) gm.AwardMoney(GoldPerHit);
         }
 
-        // ricochet to the nearest other enemy
-        if (Bounces > 0 && mobs != null && Target != null)
+        // ricochet to the nearest other enemy (continues even if the impact killed
+        // the current target, so a lethal hit still chains)
+        if (Bounces > 0 && mobs != null)
         {
             Mob next = null;
             float best = BounceRange;

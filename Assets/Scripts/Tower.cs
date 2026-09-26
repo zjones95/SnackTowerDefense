@@ -11,6 +11,10 @@ public class Tower : MonoBehaviour
     private Transform turret;
     private bool isSelected;
 
+    // Sniper T6 "Deadeye": consecutive hits on one target build a damage/crit ramp.
+    private Mob deadeyeTarget;
+    private int deadeyeStacks;
+
     // where shots leave the model: half its height, just clear of its body
     private float muzzleY = 0.6f;
     private float muzzleForward = 0.5f;
@@ -84,6 +88,13 @@ public class Tower : MonoBehaviour
                 turret.rotation = Quaternion.Slerp(turret.rotation, Quaternion.LookRotation(dir), 12f * Time.deltaTime);
         }
 
+        // Deadeye (Sniper T6) resets the moment the target changes or is lost.
+        if (Type == TowerType.Sniper && s.deadeyeRamp > 0f && target != deadeyeTarget)
+        {
+            deadeyeTarget = target;
+            deadeyeStacks = 0;
+        }
+
         cooldown -= Time.deltaTime;
         if (cooldown > 0f) return;
 
@@ -102,8 +113,7 @@ public class Tower : MonoBehaviour
         switch (Type)
         {
             case TowerType.Sniper:
-                target.TakeDamage(s.damage);
-                Tracer(muzzle, target.transform.position + Vector3.up * 0.4f);
+                FireSniper(muzzle, target, s);
                 break;
             case TowerType.Pierce:
                 FirePierce(muzzle, target, s);
@@ -112,9 +122,41 @@ public class Tower : MonoBehaviour
                 FireChain(muzzle, target, s);
                 break;
             default:
-                SpawnProjectile(muzzle, target, s);
+                // SingleShot T6 "Kettle Burst" fires a volley at several targets.
+                if (s.multiShot > 1) SpawnVolley(muzzle, target, s);
+                else SpawnProjectile(muzzle, target, s);
                 break;
         }
+    }
+
+    /// <summary>Sniper T5/T6: roll a crit (which can bypass armour) and apply
+    /// the Deadeye ramp built up from consecutive hits on this target.</summary>
+    void FireSniper(Vector3 from, Mob target, TowerTierStats s)
+    {
+        int stacks = s.deadeyeRamp > 0f ? deadeyeStacks : 0;
+
+        float dmg = s.damage;
+        if (s.deadeyeRamp > 0f)
+            dmg *= Mathf.Min(1f + s.deadeyeRamp * stacks, s.deadeyeCap);
+
+        float critChance = s.critChance + (s.deadeyeRamp > 0f ? s.deadeyeCrit * stacks : 0f);
+        bool crit = critChance > 0f && Random.value < critChance;
+        if (crit) dmg *= s.critMult;
+
+        Vector3 hitPoint = target.transform.position + Vector3.up * 0.4f;
+        if (crit && s.critPierceArmour) target.TakeDamageIgnoringArmour(dmg);
+        else target.TakeDamage(dmg);
+
+        if (s.deadeyeRamp > 0f)
+            deadeyeStacks = Mathf.Min(deadeyeStacks + 1, DeadeyeMaxStacks(s));
+
+        Tracer(from, hitPoint);
+    }
+
+    static int DeadeyeMaxStacks(TowerTierStats s)
+    {
+        if (s.deadeyeRamp <= 0f) return 0;
+        return Mathf.Max(0, Mathf.CeilToInt((s.deadeyeCap - 1f) / s.deadeyeRamp));
     }
 
     void FirePierce(Vector3 from, Mob target, TowerTierStats s)
@@ -156,6 +198,7 @@ public class Tower : MonoBehaviour
         p.Width = s.pierceWidth;
         p.MaxHits = Mathf.Max(1, s.pierceCount);
         p.MaxDistance = s.range;
+        p.Boomerang = s.boomerangReturn;   // Pierce T6: return pass at full damage
     }
 
     void FireChain(Vector3 from, Mob target, TowerTierStats s)
@@ -163,31 +206,65 @@ public class Tower : MonoBehaviour
         var mobs = TDGameManager.Instance != null ? TDGameManager.Instance.Mobs : null;
         List<Mob> hit = new List<Mob>();
         List<Vector3> pts = new List<Vector3>();
+        List<int> parent = new List<int>();
 
-        Mob cur = target;
-        for (int i = 0; i <= s.chainCount && cur != null; i++)
+        int maxTargets = Mathf.Max(1, s.chainCount + 1);   // total hit cap
+        int fanout = 1 + Mathf.Max(0, s.chainBranches);    // T5 Twin Lash arcs to more neighbours
+
+        // Breadth-first: each node arcs to its nearest un-hit mobs. With
+        // chainBranches 0 this is the original single-path chain exactly.
+        Queue<Mob> q = new Queue<Mob>();
+        Queue<int> depths = new Queue<int>();
+        Queue<int> parents = new Queue<int>();
+        HashSet<Mob> seen = new HashSet<Mob>();
+        q.Enqueue(target); depths.Enqueue(0); parents.Enqueue(-1); seen.Add(target);
+
+        while (q.Count > 0 && hit.Count < maxTargets)
         {
-            Vector3 cp = cur.transform.position + Vector3.up * 0.4f;
-            pts.Add(cp);
-            hit.Add(cur);
-            cur.TakeDamage(s.damage * Mathf.Pow(0.75f, i));
+            Mob cur = q.Dequeue();
+            int depth = depths.Dequeue();
+            int par = parents.Dequeue();
+            if (cur == null || hit.Contains(cur)) continue;
 
-            Mob next = null;
-            float best = s.chainRange;
-            if (mobs != null)
+            Vector3 cp = cur.transform.position + Vector3.up * 0.4f;
+            int myIndex = pts.Count;
+            pts.Add(cp);
+            parent.Add(par);
+            hit.Add(cur);
+
+            // Sticky Sour (T6) ignores the 0.75^i falloff; T5 keeps it by depth.
+            float dmg = s.chainFullDamage ? s.damage : s.damage * Mathf.Pow(0.75f, depth);
+            cur.TakeDamage(dmg);
+            if (s.slowFactor > 0f) cur.ApplySlow(s.slowFactor, s.slowDuration);
+
+            int found = 0;
+            while (found < fanout && hit.Count + q.Count < maxTargets)
             {
-                for (int j = 0; j < mobs.Count; j++)
+                Mob next = null;
+                float best = s.chainRange;
+                if (mobs != null)
                 {
-                    Mob m = mobs[j];
-                    if (m == null || hit.Contains(m)) continue;
-                    float d = Vector3.Distance(cp, m.transform.position);
-                    if (d <= best) { best = d; next = m; }
+                    for (int j = 0; j < mobs.Count; j++)
+                    {
+                        Mob m = mobs[j];
+                        if (m == null || seen.Contains(m)) continue;
+                        float d = Vector3.Distance(cp, m.transform.position);
+                        if (d <= best) { best = d; next = m; }
+                    }
                 }
+                if (next == null) break;
+
+                seen.Add(next);
+                q.Enqueue(next);
+                depths.Enqueue(depth + 1);
+                parents.Enqueue(myIndex);
+                found++;
             }
-            cur = next;
         }
 
-        for (int i = 0; i < pts.Count; i++) Tracer(i == 0 ? from : pts[i - 1], pts[i]);
+        // Draw each arc from its actual source (root draws from the muzzle).
+        for (int i = 0; i < pts.Count; i++)
+            Tracer(parent[i] < 0 ? from : pts[parent[i]], pts[i]);
     }
 
     // ---------------------------------------------------------- gumball slow
@@ -262,9 +339,11 @@ public class Tower : MonoBehaviour
         Projectile p = go.AddComponent<Projectile>();
         p.Target = target;
         p.Speed = 14f;
-        p.Damage = 0f;
+        p.Damage = s.damage;               // Candy Shell (T5/T6): gumballs hit for real
         p.SlowFactor = s.slowFactor;
         p.SlowDuration = s.slowDuration;
+        p.TarDamageBonus = s.tarDamageBonus;   // Sticky Tar (T6)
+        p.TarLinger = s.tarLinger;
         p.Tint = colour;
     }
 
@@ -299,14 +378,44 @@ public class Tower : MonoBehaviour
         p.Target = target;
         p.Speed = s.projectileSpeed;
         p.Damage = s.damage;
-        p.SplashRadius = s.splashRadius;
+        // Kettle Burst mini-splash: fall back to impactSplash when the tier has
+        // no dedicated splashRadius.
+        p.SplashRadius = s.splashRadius > 0f ? s.splashRadius : s.impactSplash;
         p.Bounces = s.bounceCount;
         p.BounceRange = s.bounceRange;
         p.PoisonDps = s.poisonDps;
         p.PoisonDuration = s.poisonDuration;
+        p.PoisonMaxStacks = s.poisonMaxStacks;
+        p.PoisonDetonateRadius = s.poisonDetonateRadius;
+        p.PoisonDetonateFraction = s.poisonDetonateFraction;
+        p.SplashSlowFactor = s.splashSlowFactor;
+        p.SplashSlowDuration = s.splashSlowDuration;
         p.GoldPerHit = s.goldPerHit;
         p.Tint = TowerCatalog.Get(Type).color;
         p.Spin = Type != TowerType.Splash;   // the soda blob wobbles instead
+    }
+
+    /// <summary>SingleShot T6 "Kettle Burst": one pellet per in-range target,
+    /// favouring whatever is furthest along the path.</summary>
+    void SpawnVolley(Vector3 from, Mob target, TowerTierStats s)
+    {
+        var mobs = TDGameManager.Instance != null ? TDGameManager.Instance.Mobs : null;
+        if (mobs == null) { SpawnProjectile(from, target, s); return; }
+
+        List<Mob> inRange = new List<Mob>();
+        for (int i = 0; i < mobs.Count; i++)
+        {
+            Mob m = mobs[i];
+            if (m == null) continue;
+            if (Vector3.Distance(transform.position, m.transform.position) <= s.range)
+                inRange.Add(m);
+        }
+        if (inRange.Count == 0) { SpawnProjectile(from, target, s); return; }
+        inRange.Sort((a, b) => b.Progress.CompareTo(a.Progress));
+
+        int shots = Mathf.Min(s.multiShot, inRange.Count);
+        for (int i = 0; i < shots; i++)
+            SpawnProjectile(from, inRange[i], s);
     }
 
     // A fast "bolt" of sour energy: a wide, flat ribbon that always faces the
