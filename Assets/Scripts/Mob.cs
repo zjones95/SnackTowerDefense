@@ -21,11 +21,12 @@ public class Mob : MonoBehaviour
     private float tarBonus;
     private float tarTimer;
 
-    // Poison (Poison T5/T6): concurrent stacks, each with its own dps + timer.
-    private class PoisonStack { public float dps; public float timer; }
+    // Poison (Poison T5/T6): concurrent stacks, each with its own dps + timer + source tower.
+    private class PoisonStack { public float dps; public float timer; public Tower source; }
     private readonly List<PoisonStack> poisonStacks = new List<PoisonStack>();
     private float poisonSourceDuration;
     private int poisonSourceMaxStacks;
+    private Tower poisonSource;
     private float poisonDetonateRadius;
     private float poisonDetonateFraction;
 
@@ -35,7 +36,7 @@ public class Mob : MonoBehaviour
     private float dashTimer;
     private float dashCooldown;
     private MobStatusIcons statusIcons;
-    private bool lastSlowed, lastStunned;
+    private bool lastSlowed, lastStunned, lastTarred;
     private int lastStacks;
 
     /// <summary>Slowed (or stunned, which also stops movement).</summary>
@@ -43,6 +44,9 @@ public class Mob : MonoBehaviour
 
     /// <summary>Held in place by a Chain T5 "Twin Lash" stun.</summary>
     public bool IsStunned => stunTimer > 0f;
+
+    /// <summary>Coated in Slow T6 "Sticky Tar" (takes bonus damage while it lingers).</summary>
+    public bool IsTarred => tarBonus > 0f && tarTimer > 0f;
 
     /// <summary>Number of concurrent poison stacks currently on the mob.</summary>
     public int PoisonStacks => poisonStacks.Count;
@@ -71,11 +75,13 @@ public class Mob : MonoBehaviour
         bool slowed = IsSlowed;
         bool stunned = IsStunned;
         int stacks = poisonStacks.Count;
-        if (slowed == lastSlowed && stunned == lastStunned && stacks == lastStacks) return;
+        bool tarred = IsTarred;
+        if (slowed == lastSlowed && stunned == lastStunned && stacks == lastStacks && tarred == lastTarred) return;
         lastSlowed = slowed;
         lastStunned = stunned;
         lastStacks = stacks;
-        if (statusIcons != null) statusIcons.Set(slowed, stacks > 0, stacks);
+        lastTarred = tarred;
+        if (statusIcons != null) statusIcons.Set(slowed, stacks > 0, stacks, tarred);
     }
 
     void Update()
@@ -121,7 +127,12 @@ public class Mob : MonoBehaviour
 
         if (poisonStacks.Count > 0)
         {
-            Health -= CurrentPoisonDps() * Time.deltaTime;
+            for (int i = 0; i < poisonStacks.Count; i++)
+            {
+                float dmg = poisonStacks[i].dps * Time.deltaTime;
+                Health -= dmg;
+                if (poisonStacks[i].source != null) poisonStacks[i].source.AddDamage(dmg);
+            }
             UpdateBar();
             if (Health <= 0f) { Die(); return; }
 
@@ -195,12 +206,13 @@ public class Mob : MonoBehaviour
     /// concurrent stacks, each with its own duration. A maxStacks of 0/1 keeps
     /// the legacy single-stack (strongest-DPS) behaviour. T6 "Ghost Pepper"
     /// stores the detonation config to use when the mob dies.</summary>
-    public void ApplyPoison(float dps, float duration, int maxStacks = 0,
+    public void ApplyPoison(float dps, float duration, int maxStacks, Tower source,
                             float detonateRadius = 0f, float detonateFraction = 0f)
     {
         if (dps <= 0f || duration <= 0f) return;
         poisonSourceDuration = duration;
         poisonSourceMaxStacks = maxStacks;
+        poisonSource = source;
         poisonDetonateRadius = detonateRadius;
         poisonDetonateFraction = detonateFraction;
 
@@ -210,12 +222,13 @@ public class Mob : MonoBehaviour
             PoisonStack s = poisonStacks[0];
             if (dps > s.dps) s.dps = dps;
             s.timer = Mathf.Max(s.timer, duration);
+            s.source = source;
             return;
         }
 
         if (poisonStacks.Count < maxStacks)
         {
-            poisonStacks.Add(new PoisonStack { dps = dps, timer = duration });
+            poisonStacks.Add(new PoisonStack { dps = dps, timer = duration, source = source });
             return;
         }
 
@@ -225,6 +238,7 @@ public class Mob : MonoBehaviour
             if (poisonStacks[i].timer < poisonStacks[oldest].timer) oldest = i;
         poisonStacks[oldest].dps = Mathf.Max(poisonStacks[oldest].dps, dps);
         poisonStacks[oldest].timer = Mathf.Max(poisonStacks[oldest].timer, duration);
+        poisonStacks[oldest].source = source;
     }
 
     float CurrentPoisonDps()
@@ -304,9 +318,10 @@ public class Mob : MonoBehaviour
         {
             Mob m = caught[i];
             if (m == null) continue;
-            m.ApplyPoison(dps, poisonSourceDuration, poisonSourceMaxStacks,
+            m.ApplyPoison(dps, poisonSourceDuration, poisonSourceMaxStacks, poisonSource,
                           poisonDetonateRadius, poisonDetonateFraction);
             m.TakeDamage(dmg);
+            if (poisonSource != null) poisonSource.AddDamage(dmg);
         }
     }
 

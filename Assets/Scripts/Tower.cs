@@ -12,6 +12,7 @@ public class Tower : MonoBehaviour
     public TowerTargeting Targeting = TowerTargeting.Default;
     public float DamageDone;   // total damage this tower has dealt (selection panel)
     public int GoldEarned;   // total gold this tower has paid out (selection panel)
+    public int InvestedCost;   // total money sunk into this tower (for selling)
 
     private float cooldown;
     private Transform turret;

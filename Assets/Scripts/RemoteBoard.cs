@@ -116,15 +116,15 @@ public class RemoteBoard : MonoBehaviour
     /// <summary>The boss currently on this board (if any), for the on-screen boss bar.</summary>
     public bool TryGetBoss(out string name, out float fraction)
     {
-        bool slowed, poisoned;
+        bool slowed, poisoned, tarred;
         int stacks;
-        return TryGetBoss(out name, out fraction, out slowed, out poisoned, out stacks);
+        return TryGetBoss(out name, out fraction, out slowed, out poisoned, out stacks, out tarred);
     }
 
-    /// <summary>As above, but also reports the boss's slow/poison state for the
+    /// <summary>As above, but also reports the boss's slow/poison/tar state for the
     /// boss HUD's status icons.</summary>
     public bool TryGetBoss(out string name, out float fraction,
-                           out bool slowed, out bool poisoned, out int stacks)
+                           out bool slowed, out bool poisoned, out int stacks, out bool tarred)
     {
         foreach (var kv in mobs)
         {
@@ -136,6 +136,7 @@ public class RemoteBoard : MonoBehaviour
                 slowed = (rm.Status & 1) != 0;
                 poisoned = rm.Stacks > 0;
                 stacks = rm.Stacks;
+                tarred = (rm.Status & 4) != 0;
                 return true;
             }
         }
@@ -144,6 +145,7 @@ public class RemoteBoard : MonoBehaviour
         slowed = false;
         poisoned = false;
         stacks = 0;
+        tarred = false;
         return false;
     }
 
@@ -181,7 +183,8 @@ public class RemoteBoard : MonoBehaviour
             if (rm.Icons != null)
             {
                 bool slowed = (ms.Status & 1) != 0;    // bit0 covers slow and stun
-                rm.Icons.Set(slowed, ms.Stacks > 0, ms.Stacks);
+                bool tarred = (ms.Status & 4) != 0;    // bit2: tar (+damage taken)
+                rm.Icons.Set(slowed, ms.Stacks > 0, ms.Stacks, tarred);
             }
         }
 

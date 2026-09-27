@@ -196,7 +196,7 @@ public static class TDTextures
     }
 
     // ------------------------------------------------------ mob status icons
-    static Texture2D iconPoison, iconSlow;
+    static Texture2D iconPoison, iconSlow, iconTar;
 
     /// <summary>Green poison droplet on a transparent background.</summary>
     public static Texture2D IconPoison()
@@ -290,6 +290,65 @@ public static class TDTextures
         t.Apply();
         t.filterMode = FilterMode.Bilinear;
         iconSlow = t;
+        return t;
+    }
+
+    /// <summary>Glossy amber syrup droplet on a transparent background — the
+    /// Sticky Tar debuff (targets take extra damage), deliberately warmer and
+    /// browner than the green poison droplet.</summary>
+    public static Texture2D IconTar()
+    {
+        if (iconTar != null) return iconTar;
+        int S = 64;
+        Texture2D t = New(S);
+        t.wrapMode = TextureWrapMode.Clamp;   // a single icon, not a tiling texture
+        Color body = new Color(0.88f, 0.54f, 0.14f);   // warm amber syrup
+        Color edge = new Color(0.26f, 0.12f, 0.03f);   // dark brown rim
+        Color gloss = new Color(1.00f, 0.87f, 0.55f);  // pale golden highlight
+
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float u = (x + 0.5f) / S * 2f - 1f;   // -1 .. 1, y up
+                float v = (y + 0.5f) / S * 2f - 1f;
+
+                // Fat teardrop (thicker than the poison drip) with a tapered
+                // point above it, plus a small satellite blob on the right so
+                // the silhouette reads as one thick dollop of syrup.
+                const float cy = -0.24f, r = 0.60f, top = 0.88f;
+                float inside;
+                if (v <= cy)
+                {
+                    float dx = u, dy = v - cy;
+                    inside = r - Mathf.Sqrt(dx * dx + dy * dy);
+                }
+                else
+                {
+                    float halfW = r * Mathf.Clamp01((top - v) / (top - cy));
+                    inside = Mathf.Min(halfW - Mathf.Abs(u), top - v);
+                }
+
+                float bx = u - 0.62f, by = v + 0.42f;   // satellite drip
+                float inside2 = 0.20f - Mathf.Sqrt(bx * bx + by * by);
+                if (inside2 > inside) inside = inside2;
+
+                float cov = Mathf.Clamp01(inside * S * 0.5f + 0.5f);   // ~1px anti-alias
+                if (cov <= 0.001f) { t.SetPixel(x, y, new Color(0f, 0f, 0f, 0f)); continue; }
+
+                float rim = Mathf.Clamp01(inside / 0.14f);             // darken near the edge
+                Color c = Color.Lerp(edge, body, rim);
+                c = Color.Lerp(c, gloss, Mathf.Clamp01((v + 0.30f) / 0.55f) * 0.32f);   // light from above
+
+                float gx = u + 0.22f, gy = v - 0.04f;                  // glossy highlight
+                float gl = Mathf.Clamp01(1f - Mathf.Sqrt(gx * gx + gy * gy) / 0.20f);
+                c = Color.Lerp(c, gloss, gl * 0.80f);
+                t.SetPixel(x, y, new Color(c.r, c.g, c.b, cov));
+            }
+        }
+        t.Apply();
+        t.filterMode = FilterMode.Bilinear;
+        iconTar = t;
         return t;
     }
 

@@ -63,6 +63,10 @@ public partial class TDGameManager : MonoBehaviour
     private Vector3 camFocus;
     // in-game camera state (reset to these when a run starts)
     private const float GameYaw = 45f, GamePitch = 42f, GameDist = 32f;
+    // bottom HUD chrome: the controls legend sits directly above the build toolbar
+    private const float ToolbarButtonH = 34f;
+    private const float ToolbarBottomMargin = 6f;
+    private const float ToolbarLegendH = 22f;
     private float camYaw = GameYaw, camPitch = GamePitch;
     private float camDist = GameDist;
     private readonly float camDistMin = 12f, camDistMax = 90f;
@@ -594,8 +598,8 @@ public partial class TDGameManager : MonoBehaviour
     {
         float mx = Input.mousePosition.x;
         float my = Screen.height - Input.mousePosition.y;
-        if (my < 116f) return true;                                   // top stats + Build button
-        if (my > Screen.height - 40f) return true;                    // bottom legend
+        if (my < 84f) return true;                                    // top stats (top-left build buttons removed)
+        if (my > Screen.height - ToolbarBottomMargin - ToolbarButtonH - ToolbarLegendH) return true;  // bottom legend + toolbar
         if (Selected != null && mx < 460f && my < 446f) return true;  // selected-tower panel
         return false;
     }
@@ -684,6 +688,7 @@ public partial class TDGameManager : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.E)) TryStartMerge();
         if (Input.GetKeyDown(KeyCode.U)) TryStartAscend();
         if (Input.GetKeyDown(KeyCode.R)) TryStartReRoll();
+        if (Input.GetKeyDown(KeyCode.X)) TrySell();
     }
 
     void CancelMode()
@@ -803,7 +808,7 @@ public partial class TDGameManager : MonoBehaviour
             return;
         }
         Money -= TDBalance.BuildCost;
-        CreateTower(x, y, TowerCatalog.RandomType(), 1);
+        CreateTower(x, y, TowerCatalog.RandomType(), 1).InvestedCost = TDBalance.BuildCost;
         if (TDAudio.Instance != null) TDAudio.Instance.Build();
         building = false;   // one tower per activation
     }
@@ -829,7 +834,7 @@ public partial class TDGameManager : MonoBehaviour
             return;
         }
         Money -= TDBalance.BuildCost;
-        CreateTower(x, y, TowerType.Gold, 1);
+        CreateTower(x, y, TowerType.Gold, 1).InvestedCost = TDBalance.BuildCost;
         if (TDAudio.Instance != null) TDAudio.Instance.Build();
         goldBuilding = false;   // one tower per activation
     }
@@ -870,6 +875,7 @@ public partial class TDGameManager : MonoBehaviour
         Money -= TDBalance.MergeCost;
 
         int cx = a.CellX, cy = a.CellY;
+        int invested = a.InvestedCost + b.InvestedCost + TDBalance.MergeCost;
         towers.Remove(map.Idx(a.CellX, a.CellY));
         towers.Remove(map.Idx(b.CellX, b.CellY));
         a.SetSelected(false);
@@ -878,6 +884,7 @@ public partial class TDGameManager : MonoBehaviour
 
         TowerType result = TowerCatalog.RandomType();
         Tower nt = CreateTower(cx, cy, result, a.Tier + 1);
+        nt.InvestedCost = invested;
         SetSelected(nt);
         if (TDAudio.Instance != null) TDAudio.Instance.Merge();
         message = "Merged into " + nt.DisplayName + " (Tier " + nt.Tier + ")  -$" + TDBalance.MergeCost;
@@ -924,12 +931,14 @@ public partial class TDGameManager : MonoBehaviour
         int cx = t.CellX, cy = t.CellY;
         TowerType type = t.Type;
         int next = t.Tier + 1;
+        int invested = t.InvestedCost + cost;
 
         towers.Remove(map.Idx(cx, cy));
         t.SetSelected(false);
         Destroy(t.gameObject);
 
         Tower nt = CreateTower(cx, cy, type, next);   // same cell, same type, +1 tier
+        nt.InvestedCost = invested;
         SetSelected(nt);
         if (TDAudio.Instance != null)
         {
@@ -955,6 +964,7 @@ public partial class TDGameManager : MonoBehaviour
         int cx = a.CellX, cy = a.CellY;
         int tier = a.Tier;
         TowerType old = a.Type;
+        int invested = a.InvestedCost + b.InvestedCost;   // b's price is the re-roll fee
 
         towers.Remove(map.Idx(a.CellX, a.CellY));
         towers.Remove(map.Idx(b.CellX, b.CellY));
@@ -964,11 +974,35 @@ public partial class TDGameManager : MonoBehaviour
 
         TowerType result = TowerCatalog.RandomTypeExcluding(old);
         Tower nt = CreateTower(cx, cy, result, tier);   // same cell, same tier, new type
+        nt.InvestedCost = invested;
         SetSelected(nt);
         if (TDAudio.Instance != null) TDAudio.Instance.Merge();
         message = "Re-rolled " + TowerCatalog.Get(old).displayName + " into " + nt.DisplayName + " (Tier " + tier + ")";
         messageTimer = 2f;
         return true;
+    }
+
+    /// <summary>Sells the selected tower back for a fraction of everything sunk
+    /// into it (hotkey X). Gold towers can be sold too; removing it from the
+    /// board frees a Gold cap slot because GoldTowerCount recomputes.</summary>
+    void TrySell()
+    {
+        if (!ViewingOwnBoard) return;
+        if (Selected == null) { message = "Select a tower to sell"; messageTimer = 1.5f; return; }
+
+        Tower t = Selected;
+        int refund = Mathf.FloorToInt(TDBalance.SellRefund * t.InvestedCost);
+        string sold = t.DisplayName + " (Tier " + t.Tier + ")";
+        int idx = map.Idx(t.CellX, t.CellY);
+
+        SetSelected(null);              // clear the selection BEFORE destroying the tower
+        towers.Remove(idx);
+        Destroy(t.gameObject);
+        Money += refund;
+
+        if (TDAudio.Instance != null) TDAudio.Instance.Merge();   // cash-in chime
+        message = "Sold " + sold + " for $" + refund;
+        messageTimer = 2f;
     }
 
     // --------------------------------------------------------------- GUI
@@ -1147,27 +1181,6 @@ public partial class TDGameManager : MonoBehaviour
         if (!string.IsNullOrEmpty(message))
             GUI.Label(new Rect(0, 40, Screen.width, 26), message, Style(16, TextAnchor.MiddleCenter, new Color(0.6f, 1f, 0.6f)));
 
-        // ---- build mode toggles (highlighted while active; hidden while spectating) ----
-        if (ViewingOwnBoard)
-        {
-            Color prevBg = GUI.backgroundColor;
-            if (building) GUI.backgroundColor = new Color(0.45f, 1f, 0.5f);
-            if (GUI.Button(new Rect(12, 82, 170, 30), "Build (B)"))
-                ToggleBuildMode();
-            GUI.backgroundColor = prevBg;
-
-            int goldCount = GoldTowerCount();
-            bool goldCapped = goldCount >= TowerCatalog.MaxGoldTowers;
-            prevBg = GUI.backgroundColor;
-            if (goldBuilding) GUI.backgroundColor = new Color(1f, 0.85f, 0.3f);
-            GUI.enabled = goldBuilding || !goldCapped;   // always allow toggling off
-            if (GUI.Button(new Rect(190, 82, 180, 30),
-                "Gold (G) " + goldCount + "/" + TowerCatalog.MaxGoldTowers))
-                ToggleGoldBuild();
-            GUI.enabled = true;
-            GUI.backgroundColor = prevBg;
-        }
-
         if (Selected != null)
         {
             TowerTierStats s = Selected.Stats;
@@ -1227,6 +1240,7 @@ public partial class TDGameManager : MonoBehaviour
             int ascendCost = UpgradeCost(Selected);   // Gold 1->2->3; others ascend 4->5->6
             bool canAscend = ascendCost > 0;
             bool canReRoll = Selected.Tier >= 2;   // a lower tier exists (max tier allowed)
+            int sellValue = Mathf.FloorToInt(TDBalance.SellRefund * Selected.InvestedCost);
 
             if (merging)
             {
@@ -1238,6 +1252,8 @@ public partial class TDGameManager : MonoBehaviour
                     if (TDAudio.Instance != null) TDAudio.Instance.Click();
                     CancelMode();
                 }
+                if (GUI.Button(new Rect(140, 400, 150, 26), "Sell (X)  $" + sellValue))
+                    TrySell();
             }
             else if (reRolling)
             {
@@ -1249,6 +1265,8 @@ public partial class TDGameManager : MonoBehaviour
                     if (TDAudio.Instance != null) TDAudio.Instance.Click();
                     CancelMode();
                 }
+                if (GUI.Button(new Rect(140, 400, 150, 26), "Sell (X)  $" + sellValue))
+                    TrySell();
             }
             else
             {
@@ -1256,7 +1274,7 @@ public partial class TDGameManager : MonoBehaviour
                 {
                     bool canAfford = Money >= TDBalance.MergeCost;
                     GUI.enabled = canAfford;
-                    if (GUI.Button(new Rect(20, 378, 160, 30), "Merge (E)  $" + TDBalance.MergeCost))
+                    if (GUI.Button(new Rect(20, 378, 150, 30), "Merge (E)  $" + TDBalance.MergeCost))
                         TryStartMerge();
                     GUI.enabled = true;
                 }
@@ -1265,24 +1283,55 @@ public partial class TDGameManager : MonoBehaviour
                     bool canAfford = Money >= ascendCost;
                     GUI.enabled = canAfford;
                     string upLabel = (Selected.Type == TowerType.Gold ? "Upgrade (U)  $" : "Ascend (U)  $") + ascendCost;
-                    if (GUI.Button(new Rect(20, 378, 160, 30), upLabel))
+                    if (GUI.Button(new Rect(20, 378, 150, 30), upLabel))
                         TryStartAscend();
                     GUI.enabled = true;
                 }
                 else
                 {
-                    GUI.Label(new Rect(20, 382, 160, 22), "Max tier",
+                    GUI.Label(new Rect(20, 382, 150, 22), "Max tier",
                         Style(13, TextAnchor.MiddleLeft, new Color(0.8f, 0.8f, 0.8f)));
                 }
 
-                if (canReRoll && GUI.Button(new Rect(190, 378, 170, 30), "Re-roll (R)"))
+                if (canReRoll && GUI.Button(new Rect(180, 378, 130, 30), "Re-roll (R)"))
                     TryStartReRoll();
+                if (GUI.Button(new Rect(320, 378, 120, 30), "Sell (X)  $" + sellValue))
+                    TrySell();
             }
         }
 
-        GUI.Label(new Rect(0, Screen.height - 30, Screen.width, 24),
-            "B: Build ($" + TDBalance.BuildCost + ")   |   G: Gold ($" + TDBalance.BuildCost + ", max " + TowerCatalog.MaxGoldTowers + ")   |   E: Merge ($" + TDBalance.MergeCost + ")   |   U: Ascend ($" + TDBalance.AscendCost4to5 + "/$" + TDBalance.AscendCost5to6 + "), Gold ($" + TDBalance.GoldUpgrade1to2 + "/$" + TDBalance.GoldUpgrade2to3 + ")   |   R: Re-roll   |   Left-click: place / select   |   Right-click: cancel   |   WASD: move   |   Middle-drag: rotate   |   Scroll: zoom   |   M: music   |   Esc: menu",
+        // ---- bottom toolbar: build slots (room for future options) + controls legend ----
+        float legendY = Screen.height - ToolbarBottomMargin - ToolbarButtonH - ToolbarLegendH;
+        GUI.Label(new Rect(0, legendY, Screen.width, ToolbarLegendH),
+            "B: Build ($" + TDBalance.BuildCost + ")   |   G: Gold ($" + TDBalance.BuildCost + ", max " + TowerCatalog.MaxGoldTowers + ")   |   E: Merge ($" + TDBalance.MergeCost + ")   |   U: Ascend ($" + TDBalance.AscendCost4to5 + "/$" + TDBalance.AscendCost5to6 + "), Gold ($" + TDBalance.GoldUpgrade1to2 + "/$" + TDBalance.GoldUpgrade2to3 + ")   |   R: Re-roll   |   X: Sell (50%)   |   Left-click: place / select   |   Right-click: cancel   |   WASD: move   |   Middle-drag: rotate   |   Scroll: zoom   |   M: music   |   Esc: menu",
             Style(13, TextAnchor.MiddleCenter, new Color(0.8f, 0.8f, 0.8f)));
+
+        if (ViewingOwnBoard)
+        {
+            float btnY = Screen.height - ToolbarBottomMargin - ToolbarButtonH;
+            const float slotW = 200f, slotGap = 8f;
+            float slotX = 12f;
+
+            Color prevBg = GUI.backgroundColor;
+            if (building) GUI.backgroundColor = new Color(0.45f, 1f, 0.5f);
+            if (GUI.Button(new Rect(slotX, btnY, slotW, ToolbarButtonH),
+                "Tower (B)  $" + TDBalance.BuildCost))
+                ToggleBuildMode();
+            GUI.backgroundColor = prevBg;
+            slotX += slotW + slotGap;   // onward: room for future build options
+
+            int goldCount = GoldTowerCount();
+            bool goldCapped = goldCount >= TowerCatalog.MaxGoldTowers;
+            prevBg = GUI.backgroundColor;
+            if (goldBuilding) GUI.backgroundColor = new Color(1f, 0.85f, 0.3f);
+            GUI.enabled = goldBuilding || !goldCapped;   // always allow toggling off
+            if (GUI.Button(new Rect(slotX, btnY, slotW, ToolbarButtonH),
+                "Gold Tower (G)  " + goldCount + "/" + TowerCatalog.MaxGoldTowers))
+                ToggleGoldBuild();
+            GUI.enabled = true;
+            GUI.backgroundColor = prevBg;
+            slotX += slotW + slotGap;   // future slot starts here
+        }
 
         DrawWaveIntro();
         DrawBossBar();
@@ -1356,6 +1405,7 @@ public partial class TDGameManager : MonoBehaviour
         float frac;
         bool bSlowed, bPoisoned;
         int bStacks;
+        bool bTarred;
         if (ViewingOwnBoard)
         {
             Mob boss = null;
@@ -1370,11 +1420,12 @@ public partial class TDGameManager : MonoBehaviour
             bSlowed = boss.IsSlowed;
             bStacks = boss.PoisonStacks;
             bPoisoned = bStacks > 0;
+            bTarred = boss.IsTarred;
         }
         else
         {
             RemoteBoard rb = BoardForSlot(viewSlot);
-            if (rb == null || !rb.TryGetBoss(out name, out frac, out bSlowed, out bPoisoned, out bStacks)) return;
+            if (rb == null || !rb.TryGetBoss(out name, out frac, out bSlowed, out bPoisoned, out bStacks, out bTarred)) return;
         }
 
         frac = Mathf.Clamp01(frac);
@@ -1396,13 +1447,13 @@ public partial class TDGameManager : MonoBehaviour
             name.ToUpper() + "   " + Mathf.CeilToInt(frac * 100f) + "%",
             Style(18, TextAnchor.MiddleCenter, Color.white));
 
-        DrawBossStatusIcons(x + w + 10f, y + h * 0.5f, bSlowed, bPoisoned, bStacks);
+        DrawBossStatusIcons(x + w + 10f, y + h * 0.5f, bSlowed, bPoisoned, bStacks, bTarred);
     }
 
     /// <summary>Small status badges just right of the boss HUD bar, using the same
     /// procedural icon textures as the floating mob bars so a boss reads the same
     /// on your own board and on a spectated one.</summary>
-    void DrawBossStatusIcons(float cx, float cy, bool slowed, bool poisoned, int stacks)
+    void DrawBossStatusIcons(float cx, float cy, bool slowed, bool poisoned, int stacks, bool tarred)
     {
         const float size = 30f;
         const float gap = 8f;
@@ -1418,7 +1469,12 @@ public partial class TDGameManager : MonoBehaviour
             x += size + gap;
         }
         if (slowed)
+        {
             GUI.DrawTexture(new Rect(x, top, size, size), TDTextures.IconSlow(), ScaleMode.ScaleToFit, true);
+            x += size + gap;
+        }
+        if (tarred)
+            GUI.DrawTexture(new Rect(x, top, size, size), TDTextures.IconTar(), ScaleMode.ScaleToFit, true);
     }
 
     void DrawEnd(bool won)

@@ -18,6 +18,7 @@ public static class TDBalance
 
     public const int BuildCost = 25; // flat, always
     public const int MergeCost = 10; // per merge (2 towers -> 1 of next tier)
+    public const float SellRefund = 0.5f; // selling returns half of a tower's invested cost
 
     // Cash ascension: a single tower is upgraded in place, no second tower
     // consumed. 2:1 merging stops at T3+T3 -> T4, so these are the only way to

@@ -37,6 +37,7 @@ public class BoardSnapshot
             byte status = 0;
             if (m.IsSlowed) status |= 1;   // bit0: slowed (or stunned)
             if (m.IsStunned) status |= 2;  // bit1: stunned
+            if (m.IsTarred) status |= 4;   // bit2: tar (+damage taken)
             Mobs.Add(new MobSnap
             {
                 Id = m.NetId,

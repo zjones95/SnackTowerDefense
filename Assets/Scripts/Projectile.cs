@@ -112,7 +112,7 @@ public class Projectile : MonoBehaviour
         {
             if (SlowFactor > 0f) Target.ApplySlow(SlowFactor, SlowDuration);
             if (PoisonDps > 0f)
-                Target.ApplyPoison(PoisonDps, PoisonDuration, PoisonMaxStacks,
+                Target.ApplyPoison(PoisonDps, PoisonDuration, PoisonMaxStacks, Source,
                                    PoisonDetonateRadius, PoisonDetonateFraction);
             Target.TakeDamage(Damage);
             if (Source != null) Source.AddDamage(Damage);
