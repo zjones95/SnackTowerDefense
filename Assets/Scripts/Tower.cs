@@ -164,7 +164,8 @@ public class Tower : MonoBehaviour
             Vector3 dir = target.transform.position - turret.position;
             dir.y = 0f;
             if (dir.sqrMagnitude > 0.001f)
-                turret.rotation = Quaternion.Slerp(turret.rotation, Quaternion.LookRotation(dir), 12f * Time.deltaTime);
+                turret.rotation = Quaternion.Slerp(turret.rotation, Quaternion.LookRotation(dir),
+                    1f - Mathf.Exp(-12f * Time.deltaTime));
         }
 
         // Deadeye (Sniper T6) resets the moment the target changes or is lost.

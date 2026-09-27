@@ -36,11 +36,18 @@ public class RemoteBoard : MonoBehaviour
         public Transform Turret;
         public byte Type;
         public byte Tier;
+        public float TargetYaw;   // degrees; the turret slerps toward this each frame
+    }
+
+    private class RemoteProj
+    {
+        public GameObject Go;
+        public Vector3 Target;
     }
 
     private readonly Dictionary<ushort, RemoteMob> mobs = new Dictionary<ushort, RemoteMob>();
     private readonly Dictionary<int, RemoteTower> towers = new Dictionary<int, RemoteTower>();
-    private readonly Dictionary<int, GameObject> projs = new Dictionary<int, GameObject>();
+    private readonly Dictionary<int, RemoteProj> projs = new Dictionary<int, RemoteProj>();
 
     private readonly List<ushort> mobSeen = new List<ushort>();
     private readonly List<int> towerSeen = new List<int>();
@@ -49,7 +56,28 @@ public class RemoteBoard : MonoBehaviour
     private readonly List<int> towerGone = new List<int>();
     private readonly List<int> projGone = new List<int>();
 
-    private static Material projMat;
+    // Per-type projectile visuals (cached), mirroring the local SpawnProjectile look:
+    // the authored model when one exists, else a sphere tinted with the tower colour.
+    private static readonly Dictionary<byte, Material> projMats = new Dictionary<byte, Material>();
+    private static readonly Dictionary<byte, GameObject> projModels = new Dictionary<byte, GameObject>();
+
+    static Material ProjMat(byte type)
+    {
+        Material m;
+        if (projMats.TryGetValue(type, out m) && m != null) return m;
+        m = TDVisuals.Mat(TowerCatalog.Get((TowerType)type).color, 0.1f, 0.7f);
+        projMats[type] = m;
+        return m;
+    }
+
+    static GameObject ProjModel(TowerType t)
+    {
+        GameObject g;
+        if (projModels.TryGetValue((byte)t, out g)) return g;
+        g = SnackModels.Load(SnackModels.ProjectilePath(t));   // null when none exists
+        projModels[(byte)t] = g;
+        return g;
+    }
 
     public static RemoteBoard Create(Transform parent, Vector3 offset, ulong clientId, string playerName)
     {
@@ -225,12 +253,13 @@ public class RemoteBoard : MonoBehaviour
                 go.transform.position = map.CellCenter(ts.Cx, ts.Cy);
                 Transform turret = TowerVisual.Build(go.transform, (TowerType)ts.Type, ts.Tier);
                 TowerVisual.BuildTierLabel(go.transform, ts.Tier);
-                rt = new RemoteTower { Go = go, Turret = turret, Type = ts.Type, Tier = ts.Tier };
+                rt = new RemoteTower { Go = go, Turret = turret, Type = ts.Type, Tier = ts.Tier,
+                                       TargetYaw = BoardSnapshot.YawDeg(ts.Yaw) };
+                if (turret != null) turret.rotation = Quaternion.Euler(0f, rt.TargetYaw, 0f);
                 towers[key] = rt;
             }
 
-            if (rt.Turret != null)
-                rt.Turret.rotation = Quaternion.Euler(0f, BoardSnapshot.YawDeg(ts.Yaw), 0f);
+            rt.TargetYaw = BoardSnapshot.YawDeg(ts.Yaw);   // smoothed in Update
         }
 
         towerGone.Clear();
@@ -244,35 +273,48 @@ public class RemoteBoard : MonoBehaviour
 
     void SyncProjectiles(BoardSnapshot s)
     {
-        if (projMat == null)
-            projMat = TDVisuals.Mat(new Color(1f, 0.92f, 0.55f), 0.1f, 0.7f);
-
         projSeen.Clear();
         for (int i = 0; i < s.Projs.Count; i++)
         {
             BoardSnapshot.ProjSnap ps = s.Projs[i];
             projSeen.Add(ps.Id);
+            Vector3 target = BoardOffset + new Vector3(BoardSnapshot.Dec(ps.X), BoardSnapshot.Dec(ps.Y), BoardSnapshot.Dec(ps.Z));
 
-            GameObject go;
-            if (!projs.TryGetValue(ps.Id, out go) || go == null)
+            RemoteProj rp;
+            if (!projs.TryGetValue(ps.Id, out rp) || rp == null || rp.Go == null)
             {
-                go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                Collider c = go.GetComponent<Collider>();
-                if (c != null) Destroy(c);
-                go.name = "RProj";
+                TowerType t = (TowerType)ps.Type;
+                GameObject go;
+                GameObject model = ProjModel(t);
+                if (model != null)
+                {
+                    go = Instantiate(model);
+                    go.name = "RProj_" + t;
+                    go.transform.localScale = Vector3.one;
+                }
+                else
+                {
+                    go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                    Collider c = go.GetComponent<Collider>();
+                    if (c != null) Destroy(c);
+                    go.name = "RProj_" + t;
+                    go.transform.localScale = Vector3.one * 0.22f;
+                    go.GetComponent<Renderer>().sharedMaterial = ProjMat(ps.Type);
+                }
                 go.transform.SetParent(liveRoot, false);
-                go.transform.localScale = Vector3.one * 0.22f;
-                go.GetComponent<Renderer>().sharedMaterial = projMat;
-                projs[ps.Id] = go;
+                go.transform.position = target;
+                rp = new RemoteProj { Go = go, Target = target };
+                projs[ps.Id] = rp;
             }
-            go.transform.position = BoardOffset + new Vector3(BoardSnapshot.Dec(ps.X), BoardSnapshot.Dec(ps.Y), BoardSnapshot.Dec(ps.Z));
+            rp.Target = target;
         }
 
         projGone.Clear();
         foreach (var kv in projs) if (!projSeen.Contains(kv.Key)) projGone.Add(kv.Key);
         for (int i = 0; i < projGone.Count; i++)
         {
-            if (projs[projGone[i]] != null) Destroy(projs[projGone[i]]);
+            RemoteProj rp = projs[projGone[i]];
+            if (rp != null && rp.Go != null) Destroy(rp.Go);
             projs.Remove(projGone[i]);
         }
     }
@@ -282,9 +324,10 @@ public class RemoteBoard : MonoBehaviour
         if (nameplate != null && Camera.main != null)
             nameplate.rotation = Camera.main.transform.rotation;
 
-        // Smooth remote mobs toward their latest snapshot position. The factor is
-        // frame-rate independent and tuned for the ~15 Hz spectate snapshot rate.
-        float k = 1f - Mathf.Exp(-14f * Time.deltaTime);
+        // Frame-rate independent smoothing factor shared by mobs, projectiles and
+        // turret aim, so remote boards render smoothly at the display frame rate
+        // (60 fps) instead of stepping at the ~15 Hz snapshot rate.
+        float k = 1f - Mathf.Exp(-18f * Time.deltaTime);
         foreach (var kv in mobs)
         {
             RemoteMob rm = kv.Value;
@@ -296,6 +339,23 @@ public class RemoteBoard : MonoBehaviour
                 Vector3 dir = Camera.main.transform.position - rm.HpRoot.position;
                 if (dir.sqrMagnitude > 0.001f) rm.HpRoot.rotation = Quaternion.LookRotation(dir);
             }
+        }
+
+        // projectiles lerp toward their latest snapshot position too
+        foreach (var kv in projs)
+        {
+            RemoteProj rp = kv.Value;
+            if (rp == null || rp.Go == null) continue;
+            rp.Go.transform.position = Vector3.Lerp(rp.Go.transform.position, rp.Target, Mathf.Clamp01(k));
+        }
+
+        // turret aim slerps toward the latest snapshot yaw (was snapping at ~15 Hz)
+        foreach (var kv in towers)
+        {
+            RemoteTower rt = kv.Value;
+            if (rt == null || rt.Turret == null) continue;
+            rt.Turret.rotation = Quaternion.Slerp(rt.Turret.rotation,
+                Quaternion.Euler(0f, rt.TargetYaw, 0f), Mathf.Clamp01(k));
         }
     }
 }

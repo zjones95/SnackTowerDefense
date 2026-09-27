@@ -11,7 +11,7 @@ public class BoardSnapshot
 {
     public struct MobSnap { public ushort Id; public byte Type; public short X; public short Z; public byte Hp; public byte Status; public byte Stacks; }
     public struct TowerSnap { public byte Type; public byte Tier; public short Cx; public short Cy; public byte Yaw; }
-    public struct ProjSnap { public int Id; public short X; public short Y; public short Z; }
+    public struct ProjSnap { public int Id; public byte Type; public short X; public short Y; public short Z; }
 
     public readonly List<MobSnap> Mobs = new List<MobSnap>();
     public readonly List<TowerSnap> Towers = new List<TowerSnap>();
@@ -70,10 +70,26 @@ public class BoardSnapshot
             for (int i = 0; i < pr.childCount; i++)
             {
                 Transform c = pr.GetChild(i);
+                // Mirror only real tower projectiles: a zone/FX child has no
+                // Projectile/PierceProjectile and is skipped (so it can't show as a
+                // stray sphere). Type lets the remote render the right model.
+                byte type;
+                Projectile proj = c.GetComponent<Projectile>();
+                if (proj != null && proj.Source != null)
+                {
+                    type = (byte)proj.Source.Type;
+                }
+                else
+                {
+                    PierceProjectile pierce = c.GetComponent<PierceProjectile>();
+                    if (pierce == null || pierce.Source == null) continue;
+                    type = (byte)pierce.Source.Type;
+                }
                 Vector3 p = c.position - off;
                 Projs.Add(new ProjSnap
                 {
                     Id = c.gameObject.GetHashCode(),
+                    Type = type,
                     X = Enc(p.x), Y = Enc(p.y), Z = Enc(p.z)
                 });
             }
@@ -111,6 +127,7 @@ public class BoardSnapshot
         {
             ProjSnap p = Projs[i];
             w.WriteValueSafe(p.Id);
+            w.WriteValueSafe(p.Type);
             w.WriteValueSafe(p.X);
             w.WriteValueSafe(p.Y);
             w.WriteValueSafe(p.Z);
@@ -152,6 +169,7 @@ public class BoardSnapshot
         {
             ProjSnap p;
             r.ReadValueSafe(out p.Id);
+            r.ReadValueSafe(out p.Type);
             r.ReadValueSafe(out p.X);
             r.ReadValueSafe(out p.Y);
             r.ReadValueSafe(out p.Z);

@@ -12,7 +12,7 @@ public static class NetConfig
     /// <summary>Bumped when the wire protocol changes; mismatched builds are
     /// refused before the match starts. Builds append "+&lt;git sha&gt;" via
     /// Assets/Editor/BuildVersion.cs (see <see cref="FullVersion"/>).</summary>
-    public const string GameVersion = "0.5.0";
+    public const string GameVersion = "0.6.0";
 
     /// <summary>Relay join codes are 6 characters; direct targets look like "1.2.3.4:7777".</summary>
     public const int RelayCodeLength = 6;
