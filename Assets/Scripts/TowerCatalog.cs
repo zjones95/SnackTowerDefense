@@ -323,7 +323,7 @@ public static class TowerCatalog
         d = new TowerDef();
         d.type = TowerType.FondueFountain; d.displayName = "Fondue Fountain"; d.color = new Color(0.70f, 0.40f, 0.18f);
         for (int i = 0; i < TowerCatalog.MaxTier - 1; i++) d.tiers.Add(new TowerTierStats());
-        d.tiers.Add(new TowerTierStats { damage = 300, range = 10.5f, fireInterval = 0.45f, projectileSpeed = 26f, dippedBonus = 0.12f, dippedDuration = 4f, dippedMaxStacks = 5 });
+        d.tiers.Add(new TowerTierStats { damage = 200, range = 10.5f, fireInterval = 0.45f, projectileSpeed = 26f, dippedBonus = 0.12f, dippedDuration = 4f, dippedMaxStacks = 5 });
         defs[d.type] = d;
 
         d = new TowerDef();
