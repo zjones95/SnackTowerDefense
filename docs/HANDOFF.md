@@ -1,16 +1,20 @@
 # Handoff — Snack Tower Defense
 
-Written to let a **fresh session** pick this project up with minimal ramp-up.
-Read this first, then `docs/ARCHITECTURE.md`, then `docs/MobRoster.md`.
+Written so a **fresh session** can pick this project up fast. Read this first, then
+`docs/ARCHITECTURE.md`, then `docs/TierPlan.md` and `docs/MobRoster.md`.
+
+> **The GitHub issue tracker is the live to-do list** —
+> `github.com/zjones95/SnackTowerDefense/issues` (currently **#1–#19**). This doc is
+> the *state of the world*; the issues are the *work*.
 
 ---
 
 ## The project
 
-- **Unity 6.6 (`6000.6.0f1`)**, built-in pipeline, no authored scene — the game
+- **Unity 6.6 (`6000.6.0f1`)**, built-in pipeline, **no authored scene** — the game
   bootstraps itself at runtime.
 - **Path:** `C:\Users\Desktop\SnackTowerDefense`
-- **Repo:** `github.com/zjones95/SnackTowerDefense` (private), branch `main`
+- **Repo:** `github.com/zjones95/SnackTowerDefense` (private), branch `main`.
 - A kid's bedroom is attacked by **fruit & vegetable** mobs; you defend it with
   **snack towers** (popcorn bucket, soda cup, gumball machine…).
 
@@ -18,95 +22,130 @@ Read this first, then `docs/ARCHITECTURE.md`, then `docs/MobRoster.md`.
 
 | Area | State |
 |---|---|
-| Single player | **35 waves**, one mob type per wave, boss every 5th |
-| Towers | 7 random-build types × **6 tiers** + Gold (×3, procedural); merge two same-tier while source ≤ T3 (top merge T3+T3 → T4), then cash-ascend **T4→T5 `$150` / T5→T6 `$300`** with **U**. Tier 4 is stats-only; tiers 5/6 carry modifier **fields** whose behaviours are a follow-up pass (`docs/TierPlan.md`) |
+| Single player | **35 waves**, one mob type per wave, a standalone boss every 5th (waves 5–35) |
+| Towers | 7 random-build types × **6 tiers** + **Gold** (3 tiers). 2:1 merge while source tier ≤ T3 (top merge **T3+T3 → T4**); then cash **ascension** **T4→T5 `$150` / T5→T6 `$300`** with **U**. Tier 4 is stats-only. **T5/T6 modifiers are implemented** (all 7 types) and **T6 is cumulative with its T5 trait**. |
+| Targeting | Per-tower mode in the selection panel: Default / Nearest / Farthest / Random / Highest health / Lowest health (`TowerTargeting`) |
 | Mobs | 35 fruits/veg; **34 modelled**, Granola Mom is the procedural humanoid |
-| Projectiles | modelled popcorn / soda blob / skewer rod / jelly bean / chip |
-| Difficulty | Easy/Normal/Hard/Insane (−25% → +50% mob HP), single player + lobby |
+| Status FX | Floating bars **and** the boss bar show **poison (droplet + `xN`)** and **slow (ice cube)** icons (`MobStatusIcons`); the tar icon is issue **#19** |
+| Metrics | Per-tower **Damage done** (selection panel; poison DoT is *not* attributed — issue **#4**), collective **Gold Generated** (HUD top-right); per-gold-tower gold is issue **#16** |
+| Gold tower | Hotkey **G**, cap **4**, pays **$1/$2/$3** per hit, cash-upgrade T1→2 **$50** / T2→3 **$100**, never merges, excluded from the random pool |
+| Difficulty | Easy/Normal/Hard/Insane (−25% → +50% mob HP), single player + lobby — **untested** |
 | Viewers | **Tower Viewer** and **Mob Viewer** on the main menu |
-| Audio | fully procedural SFX + a looping music track (`M` toggles mute) |
-| Multiplayer | Phases 1–3 done: lobby (8 players, join code/IP), one board per player, host wave clock, live board sync, scoreboard |
-| CI | GameCI workflow exists but **fails — missing Unity licence secret** |
+| Audio | fully procedural SFX + a **deep-house** looping track (122 BPM, 8 bars); `M` toggles mute |
+| Menus | Orbiting board backdrop, construction-paper buttons, **Settings** (music/SFX), in-game **pause** menu |
+| Multiplayer | Lobby (8 players), one board each, **Unity Relay (UGS)** so 6-char codes work over the internet; live board sync (status icons included), scoreboard. Shared wave clock — *independent* waves are issue **#7** |
+| WebGL | `WebGLBuild.Build` → `build/WebGL`; share zip `C:\Users\Desktop\SnackTowerDefense-WebGL.zip`; workflow `.github/workflows/webgl-pages.yml` |
+| CI | Both GameCI workflows **fail on Unity licence activation (HTTP 401)** — see *CI / licence* below |
 
 ## Verified vs not
 
-**Verified by the agent** (batch mode): the project compiles, a
-`StandaloneWindows64` build links, and every model/level look has been checked
-with editor renders.
+**Verified by the agent** (batch mode): the project compiles; `StandaloneWindows64`
+and **WebGL** players link; models/levels checked with editor renders; music loop
+checked (`len 15.74 s, peak 0.92, rms 0.21, bad 0`).
 
 **NOT verified — needs a human play-test:**
-1. **Balance.** The health curve `1.13^(wave-1)`, tower DPS (after the
-   "2× rate, ½ damage" pass), and the economy are all **guesses** across 35
-   waves. This is the biggest unknown.
-2. **Boss behaviours** (`regen`, `armour`, `slowImmune`, `enrage`, `dash`) are
-   implemented but never play-tested.
-3. **Difficulty selector** — implemented, untested.
-4. **Multiplayer with the new content.** Phases 1–3 worked with the old 5-wave
-   roster; the mob/wave rework has not been re-tested online.
-5. **Tier 4-6 + cash ascension.** Costs (`$150` / `$300`), the capped merge
-   (source ≤ T3), the 6-tier scale/colours and the `U` panel are implemented and
-   compile, but the balance of the new stat rows has never been played. The
-   tier-5/6 **modifier behaviours** also do not exist yet — the fields are set in
-   `TowerCatalog` but nothing reads them.
-6. **Tier-4-6 modifier behaviours.** A follow-up pass implements crit + Deadeye,
-   Twin Lash branching, Sticky Sour, Candy Shell / Sticky Tar, poisoning stacks
-   + detonation, boomerang return, Kettle Burst, and Sticky Soda — see
-   [`docs/TierPlan.md`](TierPlan.md).
+1. **Balance** across 35 waves — the biggest unknown.
+2. **Boss behaviours** (`regen`, `armour`, `slowImmune`, `enrage`, `dash`).
+3. **Difficulty selector.**
+4. **Multiplayer end-to-end** (tiers, status icons, Relay over the internet).
+5. **T5/T6 modifier behaviours** — implemented, never played.
 
-## Suggested next steps (roughly in order)
+## Open work — GitHub issues
 
-1. **Implement the tier-5/6 modifier behaviours** (the field data is already in
-   `TowerCatalog`; nothing reads it yet) — crit + Deadeye, Twin Lash / Sticky
-   Sour, Candy Shell / Sticky Tar, poisoning stacks + detonation, boomerang
-   return, Kettle Burst, Sticky Soda. Full brief: [`docs/TierPlan.md`](TierPlan.md).
-2. **Play-test single player** and tune balance — most valuable thing right now.
-   - curve: `TDBalance.HealthMult`
-   - tower stats: `TowerCatalog` (now T1-6; ascension costs in `TDBalance`)
-   - economy: `TDBalance.KillReward` / `RoundBonus`
-   - new: `TDBalance.AscendCost4to5` / `AscendCost5to6`
-3. **Bump the Swarm scale.** `Swarm` is `0.42`, so Raspberry (0.32 tall) renders
-   ~0.2 units against a 2-unit tile — nearly invisible. ~`0.7` would fix it.
-   (`MobCatalog.Make`, the `Swarm` case.)
-4. **Delete the unused `Cracker.glb`** (and its `Assets/Models` mirror) — the
-   original cracker mob is gone.
-5. **Re-test multiplayer** now that waves/mobs changed (ParrelSync clone or two
-   builds; host + join `127.0.0.1:7777`).
-6. **Unity Gaming Services / Relay.** Join codes fall back to a LAN address
-   today. Creating a UGS project, enabling Relay and setting the Project ID makes
-   real 6-character codes work over the internet.
-7. **Fix CI** — add the `UNITY_LICENSE` secret (see README).
+| # | Title |
+|---|---|
+| 1 | UI: Sour Belt selection panel content is cut off — enlarge the panel |
+| 2 | UI: show full targeting-mode button names (needs #1) |
+| 3 | Sour Straw (Sniper) tracer ray should be green |
+| 4 | Bug: poison tower damage not counted in "Damage Done" |
+| 5 | Balance: nerf the poison death explosion by 20% |
+| 6 | Balance: bosses should never be immune to stuns *(superseded by #11)* |
+| 7 | Multiplayer: independent board wave progression |
+| 8 | Feature: roguelike upgrades (pick 1 of 3 after each boss wave) — design |
+| 9 | Feature: "Damage Test" end-of-run scenario |
+| 10 | Design: allow merging towers at any tier |
+| 11 | Balance: stuns always work on bosses; Sour Belt stun 5% → 10% |
+| 12 | Design: five new unique Tier 7 fusion towers — brainstorm for review |
+| 13 | UI: bottom toolbar for build options (Tower / Gold Tower) |
+| 14 | Balance: slow towers 50% effective on bosses instead of immune |
+| 15 | Perf: optimize multiplayer board syncing; raise spectate FPS |
+| 16 | UI: track gold earned per individual Gold tower |
+| 17 | Design: cooperative map (larger, non-symmetrical) |
+| 18 | Feature: sell towers for 50% of invested cost (hotkey X) |
+| 19 | UI: tar (+damage-taken) status icon on mob/boss bars |
 
-## Open design questions
+## Suggested next steps
 
-- **Boss overlap.** Durian *and* Granola Mom both enrage; Coconut *and* Mom are
-  both slow-immune. If every boss should be unique, give Durian something else
-  (e.g. spiky — reflects damage) and leave Coconut as "extremely tanky/slow".
-- **Swarm archetype** is new and only used by Blueberry / Raspberry / Lychee.
-- **Granola Mom** is the simple humanoid with long hair. She could use more
-  character (kale-print tee, sunglasses, tote details) if she should land harder.
+1. **Play-test single player** and tune balance (highest value).
+   - health curve: `TDBalance.HealthMult` (now tapers 13%→10%/wave)
+   - global mob HP: `TDBalance.MobHealthScale` (1.25)
+   - income: `TDBalance.KillReward` (1) / `RoundBonus` (flat 50)
+   - tower stats: `TowerCatalog`; ascension costs in `TDBalance`
+2. **Cheap wins:** #1–#3, #16, #19; balance tweaks #5, #11, #14.
+3. **Multiplayer:** #15 (perf/spectate FPS), then decide #7 (independent waves).
+4. **Design reviews** before code: #8 (roguelike), #12 (T7), #17 (co-op map).
+5. **Fix CI licence** to unblock the Pages deploy (below).
+
+## CI / licence / deploy
+
+- `.github/workflows/unity-ci.yml` (StandaloneLinux64) and
+  `.github/workflows/webgl-pages.yml` (WebGL → GitHub Pages) both use **GameCI** and
+  **currently fail**: Unity licence activation returns **HTTP 401**.
+- Secrets present: `UNITY_EMAIL`, `UNITY_PASSWORD`, `UNITY_LICENSE` (a valid, **unbound
+  Unity Personal** ULF); no `UNITY_SERIAL`.
+- Likely cause: stale credentials, or **2FA** on the Unity account (CI password login
+  can't satisfy 2FA).
+- Fixes: correct the credentials / disable 2FA; **or** delete the two credential
+  secrets to use the ULF alone; **or** add `UNITY_SERIAL` (paid seat).
+- **Fallback (recommended for a hobby project):** build WebGL **locally** and deploy
+  `build/WebGL` (Netlify/itch.io, or push it to a `gh-pages` branch) — no licence in CI.
+- Local build commands (editor **closed**): compile `-executeMethod CICompileCheck.EnsureBootScene`;
+  Windows player `-executeMethod CICompileCheck.Build` with env `CI_BUILD_TARGET=StandaloneWindows64`;
+  WebGL `-executeMethod WebGLBuild.Build`.
+
+## Multiplayer specifics (for a fresh context)
+
+- **UGS is linked** (`ProjectSettings.asset` `cloudProjectId`); **Relay + Anonymous auth
+  enabled** in the dashboard (anonymous needs no identity provider — verified against
+  the REST API).
+- `NetworkSession.TryRelayHost` / `JoinViaRelay` build `RelayServerData` from the
+  **endpoint matching the connection type** — desktop uses `dtls`, WebGL uses `wss`
+  (the old code passed the raw UDP port and failed).
+- `Application.runInBackground = true` + `Time.maximumDeltaTime = 1f` (a backgrounded
+  host keeps simulating; WebGL background tabs are still browser-throttled).
+- `MatchSync.Advance()` sets the local board's wave number (`MatchWaveStart`) before
+  `BeginWaveFromMatch()` — fixes the host replaying wave 1.
+- `RemoteBoard` rebuilds a tower when its **type or tier** changes (merge/re-roll).
+- `BoardSnapshot.MobSnap` carries `Status` / `Stacks` (status icons). **Changing the
+  wire format requires bumping `NetConfig.GameVersion`** — both peers must match.
+- Wave timing: only the **opening** wave has a prep timer; later waves start as soon as
+  every board clears (until #7 makes them independent).
 
 ## How to work here
 
-1. **Read** `README.md` → `docs/ARCHITECTURE.md` → `docs/MobRoster.md`.
-2. **Make changes** — remember the project has no scenes/prefabs; everything is
-   built in code.
-3. **Verify** with batch mode (the editor **must be closed**):
-   ```powershell
-   Unity.exe -batchmode -projectPath C:\Users\Desktop\SnackTowerDefense `
-             -executeMethod CICompileCheck.EnsureBootScene -quit -logFile <log>
-   ```
-   ...or render a preview (`SnackPreview.Render`, `TDArenaPreview.Render`, …).
-4. **Ask the user to play-test** anything behavioural — the agent cannot run
-   play mode or networking.
-5. **Commit and push** to `main` (`git add -A; git commit; git push`).
+1. **Read** `README.md` → `docs/ARCHITECTURE.md` → `docs/TierPlan.md` / `docs/MobRoster.md`.
+2. **Make changes** — no scenes/prefabs; everything is built in code.
+3. **Verify** with batch mode (the editor **must be closed**) — see ARCHITECTURE's
+   verification section — and/or the editor render helpers.
+4. **Ask the user to play-test** anything behavioural (the agent cannot run play mode
+   or networking).
+5. **Commit and push** to `main`.
+6. `gh` is **not logged in** by default; a token can be pulled from the git credential
+   store when filing issues/PRs.
 
-## Useful facts
+## Useful facts / gotchas
 
-- Adding a mob model needs **no code**: drop `<id>.glb` into
-  `Assets/Resources/Snack/Mobs/` where `<id>` matches `MobDef.id`, and mirror it
-  into `Assets/Models/Mobs/`.
-- Mobs and towers sit on **y = 0**, which is the play-mat's top face.
-- Tools used: **Blender MCP** for modelling, **PowerShell batch mode** for
-  verification, editor render helpers for visual checks.
-- The Blender MCP runs `exec` at module scope — use `print`, no top-level
-  `return`.
+- **Transparent Standard materials are stripped from player builds** (they render
+  opaque). For anything that must be translucent/additive at runtime, use the shader at
+  `Assets/Resources/Snack/Fx.shader` (unlit alpha-blend), loaded via
+  `Resources.Load<Shader>("Snack/Fx")`. This bit the tier glow, the Soda explosion and
+  the ghost; `SplashFX` and the status icons use it now.
+- Menu orbit camera uses its own `menuYaw/menuPitch/menuDist`; the game camera resets to
+  `45/42/32` on `StartRun`.
+- **Adding a mob needs no code**: drop `<id>.glb` into `Assets/Resources/Snack/Mobs/`
+  where `<id>` matches `MobDef.id`, and mirror it into `Assets/Models/Mobs/`.
+- Mobs and towers sit on **y = 0** (the play-mat top face; tiles are centred at y = -0.05).
+- TextMesh reads from its **−Z** face — billboard by copying `Camera.main` rotation.
+- The Blender MCP runs code at module scope — use `print`, no top-level `return`.
+- Leftovers: `Cracker.glb` is unused; `Swarm` scale `0.42` makes small swarms nearly
+  invisible (bump toward ~`0.7`).

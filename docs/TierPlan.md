@@ -1,11 +1,13 @@
-# Tier 4–6 Plan (approved)
+# Tier 4–6 Plan
 
-Design approved by the user. **Tier 4 = stats only. Tier 5 = the old tier-4
-modifiers. Tier 6 = the old tier-5 modifiers, strengthened.** The original
-tier-6 ideas are scrapped. Nothing here is implemented yet.
+**Tier 4 = stats only. Tier 5 = the old tier-4 modifiers. Tier 6 = the old tier-5
+modifiers.** The original tier-6 ideas were scrapped.
 
-> Status: **approved, to implement.** Numbers are a first pass and need a
-> play-test.
+> Status: **implemented.** The tier 4–6 stat rows *and* the T5/T6 modifier behaviours
+> are all in (`TowerCatalog`, `Tower`, `Projectile`, `PierceProjectile`, `Mob`), and
+> **a T6 tower keeps its T5 trait in addition** to its own modifier. Numbers still need
+> a play-test. Exact current numbers live in `TowerCatalog.cs`; some differ from the
+> first-pass table below (e.g. poison detonation and the Chain stun are tuned in code).
 
 ---
 
@@ -13,16 +15,16 @@ tier-6 ideas are scrapped. Nothing here is implemented yet.
 
 - **`MaxTier` 3 → 6.**
 - **Tier 4** adds no new behaviour — a pure stat tier.
-- **Tier 5 / Tier 6** each add one unique modifier per tower type (below).
-- **Economy — cash ascension.** Keep 2:1 merging for **T1 → T4** (a merge is
-  allowed while the source tier is ≤ 3, producing up to T4). **T4 → T5 and
-  T5 → T6 are single-tower ascensions paid in cash** (no second tower):
-  **T4→T5 `$150`, T5→T6 `$300`.**
-- **Gold tower payout is flat `$1` per hit at every tier** (the +25%/tier rate
-  is the upgrade). Gold stays capped at 4.
-- **Income note:** the old docs claimed a run earns ~$460, but the actual
-  `TDBalance` constants (`KillReward = 3`, `RoundBonus = 15 + 5·wave`) sum to
-  **several thousand dollars** over 35 waves. Verify in-engine before tuning.
+- **Tier 5 / Tier 6** each add a unique modifier per tower type (below), and **T6 is
+  cumulative** — a T6 tower also keeps its T5 trait.
+- **Economy — cash ascension.** 2:1 merging is allowed while the source tier is ≤ 3
+  (producing up to T4); **T4 → T5 and T5 → T6 are single-tower ascensions paid in
+  cash** (`$150` / `$300`). *(Issue #10 asks to allow merging at any tier again.)*
+- **Gold tower:** pays `$1/$2/$3` per hit by tier (rate `5.0/4.0/3.2 s`), capped at 4,
+  never merges, cash-upgraded `$50` / `$100` for T1→2 / T2→3, and excluded from the
+  random pool.
+- **Income:** `KillReward = 1` and a flat `$50` `RoundBonus` per completed round;
+  late-game scaling is meant to come from Gold towers.
 
 ---
 

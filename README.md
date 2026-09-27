@@ -87,6 +87,18 @@ tower damage by **20%** (exact multiplier **0.80**) across every tier.
 
 Stats live in `Assets/Scripts/TowerCatalog.cs`.
 
+- **Targeting** — each tower can pick its target mode from the selection panel:
+  Default (furthest along the path), Nearest, Farthest, Random, Highest health,
+  Lowest health.
+- **Tier 5/6 modifiers** are implemented for every type (crit/Deadeye, Twin Lash +
+  stun, Sticky Sour, Candy Shell, Sticky Tar, poison stacks + death explosion,
+  Ricochet Pop, Kettle Burst, Fizz Ricochet, Sticky Soda, Wide Skewer, Boomerang),
+  and **T6 keeps its T5 trait**. See [`docs/TierPlan.md`](docs/TierPlan.md).
+- **Status icons** — poisoned mobs show a droplet with a stack count and slowed mobs
+  an ice cube, on both the floating bars and the boss bar.
+- **Metrics** — each tower reports **Damage done** in the selection panel, and the HUD
+  tracks total **Gold Generated**.
+
 ## Mobs
 
 **35 waves of fruit & vegetables** — one type per wave (never mixed), with a
@@ -181,7 +193,7 @@ The main menu now splits into **Single Player** and **Multiplayer**.
 - Press **1-8** to jump the camera to a board, **0** (or **H**) to return to your
   own. While spectating you are read-only — build/merge only works on your board.
 - Remote boards show the other player's mobs (health bars included), towers with
-  tier glows, and projectiles, smoothly interpolated.
+  tier labels, and projectiles, smoothly interpolated.
 - The match ends with a **scoreboard** (wave, lives, money per player); the host
   can start another match from the lobby.
 

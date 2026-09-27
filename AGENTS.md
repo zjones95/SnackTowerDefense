@@ -7,6 +7,10 @@ Guidance for AI agents working in this repo.
 - `docs/ARCHITECTURE.md` — codebase map, conventions, verification loop, gotchas
 - `docs/MobRoster.md` — the 35-wave fruit & vegetable roster and boss concepts
 
+**Open work is tracked in GitHub issues** (`github.com/zjones95/SnackTowerDefense/issues`,
+currently **#1–#19**) — check there before starting something non-trivial, and file
+new work as an issue.
+
 ## The project
 
 - **Unity 6.6 (`6000.6.0f1`)**, built-in render pipeline.

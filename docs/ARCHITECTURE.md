@@ -55,7 +55,7 @@ MainMenu ─┬─ DifficultySelect ── StartingRun ── Playing ─┬─ 
 | `TDVisuals.cs` | Primitive + material helpers (`Mat`, `TransparentMat`, `Box`, …) |
 | `TDTextures`/`TDRoom`/`TDVisuals` | Pure scene dressing; safe to ignore for gameplay work |
 | `SnackModels.cs` | glTF loading, `CenterOn`, model path helpers |
-| `SnackVisuals.cs` | `TowerVisual`, `MobVisual`, `BillboardLabel` |
+| `SnackVisuals.cs` | `TowerVisual`, `MobVisual`, `MobStatusIcons` (poison/slow/tar icons), tier scale/colours |
 | `SnackArt.cs` | Procedural fallback art when a `.glb` is missing |
 | `ChildModel.cs` | Procedural humanoid with a walk cycle (used by Granola Mom) |
 | `TDAudio.cs` / `TDSynth.cs` | Procedural SFX + the looping music track |
@@ -66,6 +66,9 @@ MainMenu ─┬─ DifficultySelect ── StartingRun ── Playing ─┬─ 
 | `Net/BoardSnapshot.cs` | Compact quantised board state |
 | `Net/BoardLayout.cs` | Where each player's board sits in the world |
 | `RemoteBoard.cs` | Renders another player's board from snapshots |
+| `Assets/Editor/WebGLBuild.cs` | WebGL build entry point (`-executeMethod WebGLBuild.Build`) |
+| `Assets/Plugins/WebGL/WebGLClipboard.jslib` | Browser clipboard bridge for the multiplayer **Copy** button |
+| `Assets/Resources/Snack/Fx.shader` | Unlit alpha-blend shader for runtime FX/icons (build-safe) |
 
 ## Systems
 
@@ -75,28 +78,34 @@ MainMenu ─┬─ DifficultySelect ── StartingRun ── Playing ─┬─ 
 the local board and every remote one. Tiles are centred at **y = -0.05** so
 their top face is exactly **y = 0** — that is the plane towers and mobs sit on.
 
-**Towers** — `Tower` picks the enemy **furthest along the path** within range,
-then dispatches on type. Projectile towers spawn from `Muzzle()` (measured from
-the model's bounds: half its height, nudged forward). Instant towers draw a
-`Tracer` (a flat, camera-facing neon ribbon).
+**Towers** — `Tower` picks a target by its per-tower **targeting mode**
+(`TowerTargeting`: Default = furthest along the path, Nearest, Farthest, Random,
+Highest health, Lowest health; ties fall back to furthest-along), then dispatches on
+type. Projectile towers spawn from `Muzzle()` (half the model's height, nudged
+forward); instant towers draw a `Tracer` (flat camera-facing neon ribbon). Each tower
+tracks `DamageDone` (shown in the selection panel). **Gold** is an economy tower
+(`G`, cap 4, `$1/$2/$3` per hit) that never merges and is excluded from the random pool.
 
 Tiers: 2:1 **merging** (`E`) is capped at source tier ≤ `TowerCatalog.MaxMergeTier`
 (3), so **T3+T3 → T4** is the top merge. Tiers **4 → 5 → 6** advance by **cash
-ascension** (`U`, `TDBalance.AscendCost`) — a single tower rebuilt in place at
-tier + 1, same type, no second tower consumed. `MaxTier` is 6.
-`TowerTierStats` carries the tier-4-6 modifier schema (crit, deadeye, poison
-stacks/detonation, chain branches/full damage, tar, boomerang, impact splash,
-splash-slow). See [`docs/TierPlan.md`](TierPlan.md) — the **behaviour** pass for
-those fields is still to come; this pass is data/foundation only.
+ascension** (`U`, `TDBalance.AscendCost`) — a single tower rebuilt in place at tier + 1,
+same type, no second tower consumed. `MaxTier` is 6. **All T5/T6 modifier behaviours
+are implemented** (crit/Deadeye, Twin Lash + stun, Sticky Sour, Candy Shell, Sticky
+Tar, poison stacks + Ghost Pepper detonation, Ricochet Pop, Kettle Burst, Fizz
+Ricochet, Sticky Soda, Wide Skewer, Boomerang) and **T6 keeps its T5 trait**. See
+[`docs/TierPlan.md`](TierPlan.md).
 
 **Mobs** — one mob type per wave. `MobCatalog` derives stats from the archetype
 (Basic/Fast/Tank/Swarm/Boss) and then applies per-boss traits: `regen`,
 `armour` (flat damage reduction), `slowImmune`, `enrage` (speed rises as health
 falls) and `dashEvery` (periodic burst).
 
-**Waves** — `TDBalance.Waves` is the single source of truth: one mob id per
-wave, 35 waves, a standalone boss every 5th. Health is
-`1.13^(wave-1) × difficulty multiplier`.
+**Waves** — `TDBalance.Waves` is the single source of truth: one mob id per wave,
+35 waves, a standalone boss every 5th. Mob health is `TDBalance.HealthMult(wave)`
+(per-wave growth tapers from 13% → 10% by the last wave, ~41× at wave 35) times the
+difficulty multiplier and `TDBalance.MobHealthScale` (1.25). In single player the next
+wave starts immediately; in multiplayer the shared clock starts later waves when every
+board clears (independent waves = issue #7).
 
 **UI** — all IMGUI, drawn from `TDGameManager.OnGUI` and dispatched to the
 partial-class screens. The main/difficulty menus build a real board
@@ -105,10 +114,15 @@ a scrim (`TDTextures.MenuFade`); menu buttons use `TDTextures.Paper`.
 Esc in a run opens the pause menu (`TDGameManager.Settings.cs`), which freezes
 `Time.timeScale` and offers Settings / Quit to Main Menu / Quit Game.
 
-**Multiplayer** — host-authoritative. Each peer simulates its **own** board and
-streams a `BoardSnapshot` to the host; the host fans each board out to the other
-clients over **unreliable sequenced** delivery. The host owns the wave clock
-(`MatchSync`) and advances when every non-eliminated board reports `cleared`.
+**Multiplayer** — host-authoritative state, per-board simulation. Each peer simulates
+its **own** board and streams a `BoardSnapshot` to the host; the host fans each board
+out to the others over **unreliable sequenced** delivery. The host owns the shared wave
+clock (`MatchSync`) and advances when every non-eliminated board reports `cleared`
+(issue #7 wants independent boards). Connections go through **Unity Relay (UGS)** —
+`NetworkSession` picks the allocation endpoint by connection type (`dtls` desktop,
+`wss` WebGL) and uses anonymous auth. Snapshots carry each mob's **status**
+(`Status`/`Stacks`) so remote boards show the poison/slow icons too. Changing the
+snapshot format means bumping `NetConfig.GameVersion`.
 
 ## Conventions
 
@@ -135,6 +149,8 @@ clients over **unreliable sequenced** delivery. The host owns the wave clock
 Unity.exe -batchmode -projectPath <proj> -executeMethod CICompileCheck.EnsureBootScene -quit -logFile <log>
 # compile + build a player
 Unity.exe -batchmode -projectPath <proj> -executeMethod CICompileCheck.Build -quit -logFile <log>
+# WebGL (the shareable web build)
+Unity.exe -batchmode -projectPath <proj> -executeMethod WebGLBuild.Build -quit -logFile <log>
 ```
 
 Kill the right editor with:
@@ -149,7 +165,7 @@ Editor render helpers (write PNGs to `%TEMP%\opencode\`):
 
 | Method | Renders |
 |---|---|
-| `SnackPreview.Render` | tower grid (3 tiers each) + a few mobs |
+| `SnackPreview.Render` | tower grid (6 tiers each) + a few mobs |
 | `TDArenaPreview.Render` | map + room |
 | `TDMultiBoardPreview.Render` | four player boards side by side |
 | `TDSpectatePreview.Render` | a remote board fed a synthetic snapshot |
@@ -191,11 +207,17 @@ Driven through the Blender MCP (`tools["blender"]`).
    `Assets/Resources/Snack/Mobs/` where `<id>` matches `MobDef.id`.
 7. `Projectile.Bounces`/`Arc` remain from the retired Jelly Bean tower; `Arc` is
    currently unused.
+8. **Transparent Standard materials are stripped from player builds** (they render
+   opaque). For anything that must be translucent/additive at runtime use
+   `Assets/Resources/Snack/Fx.shader` (unlit alpha-blend), loaded via
+   `Resources.Load<Shader>("Snack/Fx")` — `SplashFX` and the status icons do this.
 
 ## Repo & CI
 
 - Branch `main`, remote `github.com/zjones95/SnackTowerDefense` (private).
 - `.gitignore` excludes `Library/`, `Temp/`, `Logs/`, `UserSettings/`, `build/`.
   `.gitattributes` keeps Unity YAML/binaries byte-stable (`core.autocrlf=true`).
-- `.github/workflows/unity-ci.yml` builds StandaloneLinux64 via GameCI and
-  **requires a Unity licence secret** (`UNITY_LICENSE`) — it fails without one.
+- `.github/workflows/unity-ci.yml` builds StandaloneLinux64 via GameCI;
+  `.github/workflows/webgl-pages.yml` builds WebGL and deploys it to GitHub Pages.
+  Both **require a Unity licence** (`UNITY_LICENSE` / credentials) and **currently fail
+  on activation (HTTP 401)** — see the *CI / licence* section in `docs/HANDOFF.md`.
