@@ -8,6 +8,7 @@ public class Mob : MonoBehaviour
     public float MaxHealth;
     public float Progress;   // distance travelled along the path (for targeting)
     public ushort NetId;     // stable id for spectating
+    public float DamageTaken; // damage recorded by an invincible mob (never applied to Health)
 
     private List<Vector3> path;
     private int pathIndex;
@@ -137,11 +138,14 @@ public class Mob : MonoBehaviour
             for (int i = 0; i < poisonStacks.Count; i++)
             {
                 float dmg = poisonStacks[i].dps * Time.deltaTime;
-                Health -= dmg;
+                if (Def.invincible)
+                    DamageTaken += dmg;   // recorded for scoring; health never drops
+                else
+                    Health -= dmg;
                 if (poisonStacks[i].source != null) poisonStacks[i].source.AddDamage(dmg);
             }
             UpdateBar();
-            if (Health <= 0f) { Die(); return; }
+            if (!Def.invincible && Health <= 0f) { Die(); return; }
 
             for (int i = poisonStacks.Count - 1; i >= 0; i--)
                 if ((poisonStacks[i].timer -= Time.deltaTime) <= 0f) poisonStacks.RemoveAt(i);
@@ -319,6 +323,12 @@ public class Mob : MonoBehaviour
         if (!ignoreArmour)
             dmg = Mathf.Max(0f, dmg - Def.armour);   // armoured bosses shrug off flat damage
         if (dmg <= 0f) return;
+        if (Def.invincible)
+        {
+            // Damage Test dummy: record the hit for scoring, but never wound it.
+            DamageTaken += dmg;
+            return;
+        }
         Health -= dmg;
         UpdateBar();
         if (Health <= 0f) Die();
@@ -334,6 +344,8 @@ public class Mob : MonoBehaviour
 
     void Die()
     {
+        if (Def != null && Def.invincible) return;   // an invincible dummy can never die
+
         // Poison T6 "Ghost Pepper": a poisoned mob detonates on death, dealing a
         // fraction of its current poison DPS in a radius and re-applying poison
         // (which can chain into further detonations).

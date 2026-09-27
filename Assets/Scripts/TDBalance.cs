@@ -15,6 +15,8 @@ public static class TDBalance
     public const int StartLives = 10;
     public const float PrepDuration = 10f;
     public const int TotalWaves = 35;
+    /// <summary>Length of the solo Damage Test scenario (issue #9).</summary>
+    public const float DamageTestDuration = 60f;
 
     public const int BuildCost = 25; // flat, always
     public const int MergeCost = 10; // per merge (2 towers -> 1 of next tier)

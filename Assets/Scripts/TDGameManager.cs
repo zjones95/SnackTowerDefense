@@ -293,6 +293,11 @@ public partial class TDGameManager : MonoBehaviour
         camPitch = GamePitch;
         camDist = GameDist;
         message = "";
+        // a rebuilt world owns no dummy: drop any Damage Test state with it
+        damageTestDummy = null;
+        damageTestTimer = 0f;
+        damageTestResult = "";
+        damageTestResultTimer = 0f;
 
         BuildWorld();
     }
@@ -463,6 +468,8 @@ public partial class TDGameManager : MonoBehaviour
             messageTimer -= Time.deltaTime;
             if (messageTimer <= 0f) message = "";
         }
+
+        TickDamageTest();   // solo Damage Test timers (issue #9)
 
         if (waveIntroTimer > 0f) waveIntroTimer -= Time.deltaTime;
 
@@ -1042,9 +1049,11 @@ public partial class TDGameManager : MonoBehaviour
         else if (State == GameState.MultiplayerMenu || State == GameState.Lobby) DrawMultiplayer();
         else
         {
-            DrawHud();
+            if (State == GameState.DamageTest) DrawDamageTestHud();
+            else DrawHud();
             if (State == GameState.GameOver) DrawEnd(false);
             else if (State == GameState.Victory) DrawEnd(true);
+            DrawDamageTestResult();   // fading final total, drawn over the end screen
             DrawPauseMenu();
         }
 
@@ -1559,6 +1568,19 @@ public partial class TDGameManager : MonoBehaviour
         {
             Click();
             ReturnToMainMenu();
+        }
+
+        // Solo-only follow-up (issue #9): score the surviving board on a dummy.
+        if (won)
+        {
+            if (GUI.Button(new Rect(bx, Screen.height * 0.64f, bw, bh), "Damage Test", btn))
+            {
+                Click();
+                StartDamageTest();
+            }
+            GUI.Label(new Rect(0f, Screen.height * 0.64f + bh + 6f, Screen.width, 22f),
+                "Send an invincible dummy down the path and score your towers' damage",
+                Style(13, TextAnchor.MiddleCenter, new Color(0.78f, 0.82f, 0.88f)));
         }
     }
 }

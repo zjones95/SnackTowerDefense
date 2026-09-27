@@ -26,6 +26,7 @@ public class MobDef
     public float dashEvery = 0f;     // seconds between dashes (0 = never)
     public bool longHair = false;    // procedural humanoid: long hair
     public bool instantLossOnLeak = false;   // leaking this mob ends the run outright
+    public bool invincible = false;  // Damage Test dummy: records damage but never dies
 }
 
 // The 35-wave roster. Waves live in TDBalance; this only describes the mobs.
@@ -69,6 +70,7 @@ public static class MobCatalog
         Make("Turnip", MobArchetype.Tank),
         Make("Papaya", MobArchetype.Tank),
         Make("GranolaMom", MobArchetype.Boss),        // 35 — final boss
+        Make("TestDummy", MobArchetype.Boss),         // end-of-run Damage Test only (issue #9)
     };
 
     private static Dictionary<string, MobDef> byId;
@@ -116,6 +118,9 @@ public static class MobCatalog
             case "Coconut": d.health = 700f; d.speed = 0.68f; d.slowResist = 0.5f; break;
             case "Dragonfruit": d.health = 620f; d.dashEvery = 4.5f; break;
             case "GranolaMom": d.health = 820f; d.slowResist = 0.5f; d.enrage = 0.6f; d.dashEvery = 6f; d.longHair = true; d.instantLossOnLeak = true; break;
+            // Damage Test target: huge health pool, no boss traits, cannot die and
+            // must not cost lives when it walks off the end of the path.
+            case "TestDummy": d.health = 1000000f; d.speed = 2.5f; d.leakDamage = 0; d.scale = 1.6f; d.invincible = true; break;
         }
         return d;
     }
@@ -123,6 +128,7 @@ public static class MobCatalog
     static string Name(string id)
     {
         if (id == "GranolaMom") return "Granola Mom";
+        if (id == "TestDummy") return "Test Dummy";
         return id;
     }
 
@@ -165,6 +171,7 @@ public static class MobCatalog
             case "Turnip": return new Color(0.84f, 0.80f, 0.72f);
             case "Papaya": return new Color(0.92f, 0.62f, 0.26f);
             case "GranolaMom": return new Color(0.72f, 0.58f, 0.42f);
+            case "TestDummy": return new Color(0.55f, 0.58f, 0.62f);   // neutral grey
             default: return new Color(0.8f, 0.8f, 0.8f);
         }
     }
