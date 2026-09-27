@@ -108,9 +108,10 @@ public static class TowerCatalog
 {
     public const int MaxTier = 7;
 
-    /// <summary>Highest source tier a 2:1 merge may consume. T3+T3 -> T4 is the
-    /// top merge; T4+ and up advance by cash ascension instead. See TierPlan.md.</summary>
-    public const int MaxMergeTier = 3;
+    /// <summary>Highest source tier a $10 2:1 merge may consume (T1-T5). T6+T6 is
+    /// the $200 fusion to a random T7. Cash ascension stays the single-tower
+    /// alternative at T4/T5. See TierPlan.md / issue #10.</summary>
+    public const int MaxMergeTier = 5;
 
     public const int BuildCost = 25;
 

@@ -609,7 +609,7 @@ public partial class TDGameManager : MonoBehaviour
         float my = Screen.height - Input.mousePosition.y;
         if (my < 84f) return true;                                    // top stats (top-left build buttons removed)
         if (my > Screen.height - ToolbarBottomMargin - ToolbarButtonH - ToolbarLegendH) return true;  // bottom legend + toolbar
-        if (Selected != null && mx < 460f && my < 446f) return true;  // selected-tower panel
+        if (Selected != null && mx < 460f && my < 474f) return true;  // selected-tower panel
         return false;
     }
 
@@ -1220,7 +1220,7 @@ public partial class TDGameManager : MonoBehaviour
         if (Selected != null)
         {
             TowerTierStats s = Selected.Stats;
-            GUI.Box(new Rect(12, 118, 440, 316), GUIContent.none);
+            GUI.Box(new Rect(12, 118, 440, 344), GUIContent.none);
             string info = Selected.DisplayName + "  -  Tier " + Selected.Tier + "\n";
             if (Selected.Type == TowerType.Gold)
                 info += "Gold +" + s.goldPerHit + " per hit    Rate " + s.fireInterval.ToString("0.00") + "s";
@@ -1321,33 +1321,38 @@ public partial class TDGameManager : MonoBehaviour
             }
             else
             {
+                // Merge and Ascend coexist from T4 up (merge is the cheap $10 path,
+                // ascension the single-tower cash path), so each gets its own slot.
+                bool drewAction = false;
                 if (canMerge)
                 {
                     bool canAfford = Money >= mergeCost;
                     GUI.enabled = canAfford;
                     string mergeLabel = (canFuse ? "Fuse (E)  $" : "Merge (E)  $") + mergeCost;
-                    if (GUI.Button(new Rect(20, 378, 150, 30), mergeLabel))
+                    if (GUI.Button(new Rect(20, 378, 190, 30), mergeLabel))
                         TryStartMerge();
                     GUI.enabled = true;
+                    drewAction = true;
                 }
-                else if (canAscend)
+                if (canAscend)
                 {
                     bool canAfford = Money >= ascendCost;
                     GUI.enabled = canAfford;
                     string upLabel = (Selected.Type == TowerType.Gold ? "Upgrade (U)  $" : "Ascend (U)  $") + ascendCost;
-                    if (GUI.Button(new Rect(20, 378, 150, 30), upLabel))
+                    if (GUI.Button(new Rect(218, 378, 190, 30), upLabel))
                         TryStartAscend();
                     GUI.enabled = true;
+                    drewAction = true;
                 }
-                else
+                if (!drewAction)
                 {
-                    GUI.Label(new Rect(20, 382, 150, 22), "Max tier",
+                    GUI.Label(new Rect(20, 382, 190, 22), "Max tier",
                         Style(13, TextAnchor.MiddleLeft, new Color(0.8f, 0.8f, 0.8f)));
                 }
 
-                if (canReRoll && GUI.Button(new Rect(180, 378, 130, 30), "Re-roll (R)"))
+                if (canReRoll && GUI.Button(new Rect(20, 412, 150, 30), "Re-roll (R)"))
                     TryStartReRoll();
-                if (GUI.Button(new Rect(320, 378, 120, 30), "Sell (X)  $" + sellValue))
+                if (GUI.Button(new Rect(180, 412, 160, 30), "Sell (X)  $" + sellValue))
                     TrySell();
             }
         }

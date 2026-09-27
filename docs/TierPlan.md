@@ -17,9 +17,10 @@ modifiers.** The original tier-6 ideas were scrapped.
 - **Tier 4** adds no new behaviour — a pure stat tier.
 - **Tier 5 / Tier 6** each add a unique modifier per tower type (below), and **T6 is
   cumulative** — a T6 tower also keeps its T5 trait.
-- **Economy — cash ascension.** 2:1 merging is allowed while the source tier is ≤ 3
-  (producing up to T4); **T4 → T5 and T5 → T6 are single-tower ascensions paid in
-  cash** (`$150` / `$300`). *(Issue #10 asks to allow merging at any tier again.)*
+- **Economy — merging and ascension both exist.** 2:1 merging is allowed at any
+  tier up to 5 (`$10`, random result: `T4+T4 → T5`, `T5+T5 → T6`); **T6+T6 → a
+  random T7** is the `$200` fusion. **Cash ascension** remains the single-tower
+  alternative at T4/T5 (`$150` / `$300`). *(Issue #10, option 3 — keep both.)*
 - **Gold tower:** pays `$1/$2/$3` per hit by tier (rate `5.0/4.0/3.2 s`), capped at 4,
   never merges, cash-upgraded `$50` / `$100` for T1→2 / T2→3, and excluded from the
   random pool.

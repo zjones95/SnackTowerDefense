@@ -23,7 +23,7 @@ Written so a **fresh session** can pick this project up fast. Read this first, t
 | Area | State |
 |---|---|
 | Single player | **35 waves**, one mob type per wave, a standalone boss every 5th (waves 5–35) |
-| Towers | 7 random-build types × **6 tiers** + **Gold** (3 tiers) + **4 Tier 7 fusion types** (#12). **T6+T6 → a random T7 for `$200`** on the merge key; T7 is terminal. 2:1 merge while source tier ≤ T3 (top merge **T3+T3 → T4**); cash **ascension** **T4→T5 `$150` / T5→T6 `$300`** with **U**. **T5/T6 modifiers implemented** and **T6 is cumulative with its T5 trait**. |
+| Towers | 7 random-build types × **6 tiers** + **Gold** (3 tiers) + **4 Tier 7 fusion types** (#12). **T6+T6 → a random T7 for `$200`** on the merge key; T7 is terminal. 2:1 merge at any tier up to T5 (`$10`; `T4+T4 → T5`, `T5+T5 → T6`); cash **ascension** **T4→T5 `$150` / T5→T6 `$300`** with **U**. **T5/T6 modifiers implemented** and **T6 is cumulative with its T5 trait**. |
 | Targeting | Per-tower mode in the selection panel: Default / Nearest / Farthest / Random / Highest health / Lowest health (`TowerTargeting`) |
 | Mobs | 35 fruits/veg; **34 modelled**, Granola Mom is the procedural humanoid |
 | Status FX | Floating bars **and** the boss bar show **burn (flame + `xN`)** and **slow (ice cube)** and **tar** icons (`MobStatusIcons`) |

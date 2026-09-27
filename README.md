@@ -21,12 +21,13 @@ tower/mob characters are modelled in Blender and imported as glTF (`.glb`).
   |---|---|
   | Starting money | `$100` |
   | Build a tower | `$25` (flat, never rises) |
-  | Merge two towers | `$10` (tiers 1-4 only) |
+  | Merge two towers | `$10` (tiers 1-5, random result) |
+  | Fuse two T6 towers | `$200` (random Tier 7) |
   | Ascend T4 → T5 | `$150` (single tower, no second consumed) |
   | Ascend T5 → T6 | `$300` (single tower, no second consumed) |
-  | Kill reward | `$3` |
-  | Round bonus | `15 + 5 x wave` |
-  | Starting lives | `20` |
+  | Kill reward | `$1` |
+  | Round bonus | `$50` (flat) |
+  | Starting lives | `10` |
 - **Difficulty** — chosen before a single-player run, or by the host in a
   multiplayer lobby: **Easy** (-25% mob health), **Normal**, **Hard** (+25%),
   **Insane** (+50%).
@@ -49,8 +50,9 @@ tower/mob characters are modelled in Blender and imported as glTF (`.glb`).
   entering build mode are mutually exclusive.
 - **Merging** — select a tower, press **E** (or the **Merge (E)** button), then
   click another tower of the **same tier** (any type). You pay `$10` and get a
-  **tier + 1** tower of a random type. Merging is allowed only while the source
-  tier is **≤ 3**, so **T3 + T3 → T4** is the top merge.
+  **tier + 1** tower of a random type. Merging works at **every tier up to T5**
+  (`T4 + T4 → T5`, `T5 + T5 → T6`), and **T6 + T6 → a random Tier 7** is the `$200`
+  fusion (Tier 7 is terminal).
 - **Ascending** — select a **tier 4 or 5** tower, press **U** (or the
   **Ascend (U)** button). You pay cash (`$150` for T4 → T5, `$300` for T5 → T6)
   and the tower is rebuilt **in place at tier + 1, same type**, still selected.
@@ -118,7 +120,7 @@ Defined in `Assets/Scripts/MobCatalog.cs`; models live in
 |---|---|
 | **B** / **Build (B)** button | Enter/leave build mode; the ghost shows where a random tower would go |
 | **G** / **Gold (G) n/4** button | Enter/leave Gold mode; the ghost places a Gold Coin (`$25`, max 4 per board) |
-| **E** / **Merge (E)** button | With a tier-1-3 tower selected: pick another tower of the **same tier** to combine into tier + 1 (`$10`; T3+T3 → T4 is the top merge) |
+| **E** / **Merge (E)** button | Pick another tower of the **same tier** to combine into tier + 1 (`$10`, random type) — works at any tier up to T5; **T6 + T6** fuses to a random Tier 7 for `$200` |
 | **U** / **Ascend (U)** button | With a **tier 4/5** tower selected: rebuild it in place at tier + 1, same type, for `$150` / `$300` — no second tower consumed |
 | **R** / **Re-roll (R)** button | With a tier-2+ tower selected: pick a tower **exactly one tier below** to consume and re-type the selected tower (no money) |
 | **Left-click** | In a build mode: place a tower (`$25`) on a green tile. Otherwise: select / deselect a tower (selected tile outlined in yellow) |
