@@ -11,6 +11,7 @@ public class Tower : MonoBehaviour
     public int CellX, CellY;
     public TowerTargeting Targeting = TowerTargeting.Default;
     public float DamageDone;   // total damage this tower has dealt (selection panel)
+    public int GoldEarned;   // total gold this tower has paid out (selection panel)
 
     private float cooldown;
     private Transform turret;
@@ -249,7 +250,7 @@ public class Tower : MonoBehaviour
         if (s.deadeyeRamp > 0f)
             deadeyeStacks = Mathf.Min(deadeyeStacks + 1, DeadeyeMaxStacks(s));
 
-        Tracer(from, hitPoint);
+        Tracer(from, hitPoint, new Color(0.30f, 1f, 0.35f), new Color(0.85f, 1f, 0.85f));
     }
 
     static int DeadeyeMaxStacks(TowerTierStats s)
@@ -366,7 +367,8 @@ public class Tower : MonoBehaviour
 
         // Draw each arc from its actual source (root draws from the muzzle).
         for (int i = 0; i < pts.Count; i++)
-            Tracer(parent[i] < 0 ? from : pts[parent[i]], pts[i]);
+            Tracer(parent[i] < 0 ? from : pts[parent[i]], pts[i],
+                   new Color(0.95f, 1f, 0.10f), new Color(1f, 1f, 0.80f));
     }
 
     // ---------------------------------------------------------- gumball slow
@@ -526,7 +528,7 @@ public class Tower : MonoBehaviour
 
     // A fast "bolt" of sour energy: a wide, flat ribbon that always faces the
     // camera, with a hot core down the middle.
-    void Tracer(Vector3 a, Vector3 b)
+    void Tracer(Vector3 a, Vector3 b, Color glow, Color core)
     {
         Vector3 dir = b - a;
         float len = dir.magnitude;
@@ -543,8 +545,8 @@ public class Tower : MonoBehaviour
 
         Quaternion rot = Quaternion.LookRotation(fwd, up);
 
-        BoltPart("BoltGlow", mid, rot, new Vector3(0.190f, 0.050f, len), new Color(0.95f, 1f, 0.10f));
-        BoltPart("BoltCore", mid, rot, new Vector3(0.075f, 0.022f, len * 1.01f), new Color(1f, 1f, 0.80f));
+        BoltPart("BoltGlow", mid, rot, new Vector3(0.190f, 0.050f, len), glow);
+        BoltPart("BoltCore", mid, rot, new Vector3(0.075f, 0.022f, len * 1.01f), core);
     }
 
     void BoltPart(string name, Vector3 pos, Quaternion rot, Vector3 scale, Color col)

@@ -145,7 +145,7 @@ public static class TowerCatalog
                 case TowerType.Splash: return "Fizz Ricochet - bursts bounce once and detonate again";
                 case TowerType.Slow: return "Candy Shell - gumballs deal impact damage";
                 case TowerType.Sniper: return "Powdered Sour - 30% crit for x2.5 that ignores armour";
-                case TowerType.Chain: return "Twin Lash - arcs branch to 2 more enemies, 5% chance to stun 1.5s";
+                case TowerType.Chain: return "Twin Lash - arcs branch to 2 more enemies, 10% chance to stun 1.5s";
                 case TowerType.Pierce: return "Wide Skewer - a wider line that skewers more enemies";
                 case TowerType.Poison: return "Extra Hot - poison stacks up to 3 times";
             }
@@ -224,8 +224,8 @@ public static class TowerCatalog
         d.tiers.Add(new TowerTierStats { damage = 7, range = 6.0f, fireInterval = 0.40f, chainCount = 4, chainRange = 4.5f });
         // T4 pure stats; T5 Twin Lash (branches 2); T6 Sticky Sour (full damage, slow 0.40 / 2.0, +1 jump).
         d.tiers.Add(new TowerTierStats { damage = 11, range = 6.8f, fireInterval = 0.36f, chainCount = 5, chainRange = 5.0f });
-        d.tiers.Add(new TowerTierStats { damage = 16, range = 7.6f, fireInterval = 0.34f, chainCount = 6, chainRange = 5.5f, chainBranches = 2, stunChance = 0.05f, stunDuration = 1.5f });
-        d.tiers.Add(new TowerTierStats { damage = 22, range = 8.4f, fireInterval = 0.32f, chainCount = 7, chainRange = 6.0f, chainFullDamage = true, slowFactor = 0.40f, slowDuration = 2.0f, chainBranches = 2, stunChance = 0.05f, stunDuration = 1.5f });
+        d.tiers.Add(new TowerTierStats { damage = 16, range = 7.6f, fireInterval = 0.34f, chainCount = 6, chainRange = 5.5f, chainBranches = 2, stunChance = 0.10f, stunDuration = 1.5f });
+        d.tiers.Add(new TowerTierStats { damage = 22, range = 8.4f, fireInterval = 0.32f, chainCount = 7, chainRange = 6.0f, chainFullDamage = true, slowFactor = 0.40f, slowDuration = 2.0f, chainBranches = 2, stunChance = 0.10f, stunDuration = 1.5f });
         defs[d.type] = d;
 
         d = new TowerDef();
@@ -245,10 +245,10 @@ public static class TowerCatalog
         d.tiers.Add(new TowerTierStats { damage = 2, range = 5.2f, fireInterval = 0.45f, projectileSpeed = 21f, poisonDps = 11f, poisonDuration = 3.5f });
         d.tiers.Add(new TowerTierStats { damage = 2, range = 6.0f, fireInterval = 0.40f, projectileSpeed = 22f, poisonDps = 18f, poisonDuration = 4f });
         // T4 pure stats; T5 Extra Hot (up to 3 poison stacks);
-        // T6 Ghost Pepper (death detonation: full DPS in 2.5 radius, re-applies poison).
+        // T6 Ghost Pepper (death detonation: 1.6x DPS in 3.0 radius, re-applies poison).
         d.tiers.Add(new TowerTierStats { damage = 3, range = 6.8f, fireInterval = 0.36f, projectileSpeed = 23f, poisonDps = 24f, poisonDuration = 4.5f });
         d.tiers.Add(new TowerTierStats { damage = 4, range = 7.6f, fireInterval = 0.34f, projectileSpeed = 24f, poisonDps = 33f, poisonDuration = 5.0f, poisonMaxStacks = 3 });
-        d.tiers.Add(new TowerTierStats { damage = 6, range = 8.4f, fireInterval = 0.32f, projectileSpeed = 25f, poisonDps = 45f, poisonDuration = 5.5f, poisonMaxStacks = 3, poisonDetonateRadius = 3.0f, poisonDetonateFraction = 2f });
+        d.tiers.Add(new TowerTierStats { damage = 6, range = 8.4f, fireInterval = 0.32f, projectileSpeed = 25f, poisonDps = 45f, poisonDuration = 5.5f, poisonMaxStacks = 3, poisonDetonateRadius = 3.0f, poisonDetonateFraction = 1.6f });
         defs[d.type] = d;
 
         // Gold is economy-only: no damage, a modest range, and a slow fire rate

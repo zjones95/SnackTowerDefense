@@ -119,7 +119,7 @@ public partial class TDGameManager
         List<string> t = new List<string>();
         if (d.regen > 0f) t.Add("regenerates " + d.regen.ToString("0.#") + "/s");
         if (d.armour > 0f) t.Add("armour " + d.armour.ToString("0.#"));
-        if (d.slowImmune) t.Add("immune to slow");
+        if (d.slowResist > 0f) t.Add("50% slow resist");
         if (d.enrage > 0f) t.Add("enrages");
         if (d.dashEvery > 0f) t.Add("dashes");
         return t.Count > 0 ? string.Join(", ", t.ToArray()) : "-";

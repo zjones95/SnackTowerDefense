@@ -90,14 +90,34 @@ if (-not $SkipBuild) {
 
     $log = Join-Path $env:TEMP 'opencode\webgl-build.log'
     New-Item -ItemType Directory -Force -Path (Split-Path $log) | Out-Null
+    Remove-Item $log -ErrorAction SilentlyContinue
     Write-Host "Building WebGL with $UnityPath" -ForegroundColor Cyan
     Write-Host "  log: $log" -ForegroundColor DarkGray
 
-    & $UnityPath -batchmode -projectPath $projectRoot -executeMethod WebGLBuild.Build -quit -logFile $log
-    $ok = (Test-Path $log) -and (Select-String -Path $log -Pattern 'WebGLBuild: BUILD OK' -Quiet)
-    if ($LASTEXITCODE -ne 0 -or -not $ok) {
-        throw "WebGL build failed (exit $LASTEXITCODE). See $log"
+    # Unity.exe on Windows can detach from the launching shell, so the process
+    # exit code is not reliable. Launch it, then poll the log for the build's
+    # own terminal line ("WebGLBuild: BUILD OK/FAILED").
+    $unityArgs = @('-batchmode', '-projectPath', $projectRoot,
+                   '-executeMethod', 'WebGLBuild.Build', '-quit', '-logFile', $log)
+    Start-Process -FilePath $UnityPath -ArgumentList $unityArgs | Out-Null
+
+    $deadline = (Get-Date).AddMinutes(45)
+    $ok = $false
+    while ((Get-Date) -lt $deadline)
+    {
+        if (Test-Path $log)
+        {
+            try
+            {
+                $tail = Get-Content $log -Tail 400 -ErrorAction Stop
+                if ($tail -match 'WebGLBuild: BUILD OK') { $ok = $true; break }
+                if ($tail -match 'WebGLBuild: BUILD FAILED') { break }
+            }
+            catch { }
+        }
+        Start-Sleep -Seconds 10
     }
+    if (-not $ok) { throw "WebGL build failed or timed out. See $log" }
 }
 
 if (-not (Test-Path (Join-Path $webglDir 'index.html'))) {

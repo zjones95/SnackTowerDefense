@@ -21,7 +21,7 @@ public class MobDef
     // ---- boss-only behaviours ----
     public float regen = 0f;         // health restored per second
     public float armour = 0f;        // flat damage removed from every hit
-    public bool slowImmune = false;
+    public float slowResist = 0f;   // 0 = none, 0.5 = half slow, 1 = immune
     public float enrage = 0f;        // extra speed fraction at zero health
     public float dashEvery = 0f;     // seconds between dashes (0 = never)
     public bool longHair = false;    // procedural humanoid: long hair
@@ -112,9 +112,9 @@ public static class MobCatalog
             case "Pumpkin": d.health = 500f; d.regen = 9f; break;
             case "Pineapple": d.health = 520f; d.armour = 4f; break;
             case "Durian": d.health = 540f; d.enrage = 0.85f; break;
-            case "Coconut": d.health = 700f; d.speed = 0.68f; d.slowImmune = true; break;
+            case "Coconut": d.health = 700f; d.speed = 0.68f; d.slowResist = 0.5f; break;
             case "Dragonfruit": d.health = 620f; d.dashEvery = 4.5f; break;
-            case "GranolaMom": d.health = 820f; d.slowImmune = true; d.enrage = 0.6f; d.dashEvery = 6f; d.longHair = true; break;
+            case "GranolaMom": d.health = 820f; d.slowResist = 0.5f; d.enrage = 0.6f; d.dashEvery = 6f; d.longHair = true; break;
         }
         return d;
     }

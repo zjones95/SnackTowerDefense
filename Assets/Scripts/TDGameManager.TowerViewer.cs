@@ -108,19 +108,24 @@ public partial class TDGameManager
         GUI.Label(new Rect(area.x - 40f, area.y + 5f * rowH + 6f, area.width + 80f, 46f), Blurb(def.type),
             Style(14, TextAnchor.UpperCenter, new Color(0.85f, 0.88f, 0.92f)));
 
-        // unique tier 5 / 6 modifiers
+        // unique tier 5 / 6 modifiers (word-wrapped, full text)
         string mod5 = TowerCatalog.ModifierText(def.type, 5);
         string mod6 = TowerCatalog.ModifierText(def.type, 6);
+        GUIStyle mod5Style = Style(14, TextAnchor.UpperCenter, new Color(0.72f, 0.86f, 1f));
+        mod5Style.wordWrap = true;
+        GUIStyle mod6Style = Style(14, TextAnchor.UpperCenter, new Color(1f, 0.82f, 0.45f));
+        mod6Style.wordWrap = true;
         float my0 = area.y + 5f * rowH + 54f;
         if (mod5 != null)
-            GUI.Label(new Rect(area.x - 40f, my0, area.width + 80f, 22f), "T5   " + mod5,
-                Style(14, TextAnchor.UpperCenter, new Color(0.72f, 0.86f, 1f)));
+            GUI.Label(new Rect(area.x - 40f, my0, area.width + 80f, 34f), "T5   " + mod5, mod5Style);
         if (mod6 != null)
-            GUI.Label(new Rect(area.x - 40f, my0 + 24f, area.width + 80f, 22f), "T6   " + mod6,
-                Style(14, TextAnchor.UpperCenter, new Color(1f, 0.82f, 0.45f)));
+            GUI.Label(new Rect(area.x - 40f, my0 + 36f, area.width + 80f, 34f), "T6   " + mod6, mod6Style);
         if (mod5 == null)
-            GUI.Label(new Rect(area.x - 40f, my0, area.width + 80f, 22f), "No tier 5/6 modifiers (max tier 3)",
-                Style(14, TextAnchor.UpperCenter, new Color(0.75f, 0.75f, 0.78f)));
+        {
+            GUIStyle noModStyle = Style(14, TextAnchor.UpperCenter, new Color(0.75f, 0.75f, 0.78f));
+            noModStyle.wordWrap = true;
+            GUI.Label(new Rect(area.x - 40f, my0, area.width + 80f, 34f), "No tier 5/6 modifiers (max tier 3)", noModStyle);
+        }
     }
 
     static string StatText(TowerType t, int row, TowerTierStats s)

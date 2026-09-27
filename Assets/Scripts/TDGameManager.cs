@@ -596,7 +596,7 @@ public partial class TDGameManager : MonoBehaviour
         float my = Screen.height - Input.mousePosition.y;
         if (my < 116f) return true;                                   // top stats + Build button
         if (my > Screen.height - 40f) return true;                    // bottom legend
-        if (Selected != null && mx < 400f && my < 350f) return true;  // selected-tower panel
+        if (Selected != null && mx < 460f && my < 446f) return true;  // selected-tower panel
         return false;
     }
 
@@ -1171,48 +1171,57 @@ public partial class TDGameManager : MonoBehaviour
         if (Selected != null)
         {
             TowerTierStats s = Selected.Stats;
-            GUI.Box(new Rect(12, 118, 380, 224), GUIContent.none);
+            GUI.Box(new Rect(12, 118, 440, 316), GUIContent.none);
             string info = Selected.DisplayName + "  -  Tier " + Selected.Tier + "\n";
             if (Selected.Type == TowerType.Gold)
                 info += "Gold +" + s.goldPerHit + " per hit    Rate " + s.fireInterval.ToString("0.00") + "s";
             else
                 info += "Damage " + s.damage + "    Rate " + s.fireInterval.ToString("0.00") + "s";
             info += "\nDamage done: " + Mathf.RoundToInt(Selected.DamageDone);
-            GUI.Label(new Rect(20, 122, 364, 58), info, Style(14, TextAnchor.UpperLeft, Color.white));
+            if (Selected.Type == TowerType.Gold)
+                info += "\nGold made: $" + Selected.GoldEarned;
+            GUI.Label(new Rect(20, 122, 412, 72), info, Style(14, TextAnchor.UpperLeft, Color.white));
 
-            // unique tier 5 / 6 modifiers for this tower type
+            // unique tier 5 / 6 modifiers for this tower type (word-wrapped, full text)
             string mod5 = TowerCatalog.ModifierText(Selected.Type, 5);
             string mod6 = TowerCatalog.ModifierText(Selected.Type, 6);
+            GUIStyle mod5Style = Style(12, TextAnchor.UpperLeft, new Color(0.72f, 0.86f, 1f));
+            mod5Style.wordWrap = true;
+            GUIStyle mod6Style = Style(12, TextAnchor.UpperLeft, new Color(1f, 0.82f, 0.45f));
+            mod6Style.wordWrap = true;
             if (mod5 != null)
-                GUI.Label(new Rect(20, 180, 364, 18), "T5: " + mod5,
-                    Style(12, TextAnchor.MiddleLeft, new Color(0.72f, 0.86f, 1f)));
+                GUI.Label(new Rect(20, 196, 412, 34), "T5: " + mod5, mod5Style);
             if (mod6 != null)
-                GUI.Label(new Rect(20, 198, 364, 18), "T6: " + mod6,
-                    Style(12, TextAnchor.MiddleLeft, new Color(1f, 0.82f, 0.45f)));
+                GUI.Label(new Rect(20, 230, 412, 34), "T6: " + mod6, mod6Style);
             if (mod5 == null)
-                GUI.Label(new Rect(20, 180, 364, 18), "No tier 5/6 modifiers (max tier 3)",
-                    Style(12, TextAnchor.MiddleLeft, new Color(0.75f, 0.75f, 0.78f)));
+            {
+                GUIStyle noModStyle = Style(12, TextAnchor.UpperLeft, new Color(0.75f, 0.75f, 0.78f));
+                noModStyle.wordWrap = true;
+                GUI.Label(new Rect(20, 196, 412, 34), "No tier 5/6 modifiers (max tier 3)", noModStyle);
+            }
 
-            // targeting mode
-            GUI.Label(new Rect(20, 220, 56, 20), "Target:",
+            // targeting mode: full names, 3 columns x 2 rows
+            GUI.Label(new Rect(20, 268, 120, 18), "Target:",
                 Style(12, TextAnchor.MiddleLeft, new Color(0.80f, 0.85f, 0.92f)));
             TowerTargeting[] tmodes = { TowerTargeting.Default, TowerTargeting.Nearest, TowerTargeting.Farthest,
                                         TowerTargeting.Random, TowerTargeting.HighestHealth, TowerTargeting.LowestHealth };
-            string[] tnames = { "Def", "Near", "Far", "Rnd", "High", "Low" };
+            string[] tnames = { "Default", "Nearest", "Farthest", "Random", "Highest health", "Lowest health" };
             for (int i = 0; i < tmodes.Length; i++)
             {
                 bool on = Selected.Targeting == tmodes[i];
                 Color oldBg = GUI.backgroundColor;
                 if (on) GUI.backgroundColor = new Color(1f, 0.9f, 0.45f);
-                if (GUI.Button(new Rect(78 + i * 51, 216, 48, 24), tnames[i]))
+                int col = i % 3, row = i / 3;
+                if (GUI.Button(new Rect(20 + col * 140, 288 + row * 28, 132, 26), tnames[i]))
                 {
                     if (TDAudio.Instance != null) TDAudio.Instance.Click();
                     Selected.SetTargeting(tmodes[i]);
                 }
                 GUI.backgroundColor = oldBg;
             }
-            GUI.Label(new Rect(20, 242, 364, 16), TargetingName(Selected.Targeting),
-                Style(12, TextAnchor.MiddleLeft, new Color(0.85f, 0.85f, 0.88f)));
+            GUIStyle targetStyle = Style(12, TextAnchor.UpperLeft, new Color(0.85f, 0.85f, 0.88f));
+            targetStyle.wordWrap = true;
+            GUI.Label(new Rect(20, 346, 412, 26), TargetingName(Selected.Targeting), targetStyle);
 
             bool canMerge = Selected.Type != TowerType.Gold && Selected.Tier <= TowerCatalog.MaxMergeTier;
             int ascendCost = UpgradeCost(Selected);   // Gold 1->2->3; others ascend 4->5->6
@@ -1221,10 +1230,10 @@ public partial class TDGameManager : MonoBehaviour
 
             if (merging)
             {
-                GUI.Label(new Rect(20, 262, 364, 20),
+                GUI.Label(new Rect(20, 376, 412, 20),
                     "Select a Tier " + Selected.Tier + " tower to merge with",
                     Style(13, TextAnchor.UpperLeft, new Color(1f, 0.9f, 0.4f)));
-                if (GUI.Button(new Rect(20, 286, 110, 26), "Cancel"))
+                if (GUI.Button(new Rect(20, 400, 110, 26), "Cancel"))
                 {
                     if (TDAudio.Instance != null) TDAudio.Instance.Click();
                     CancelMode();
@@ -1232,10 +1241,10 @@ public partial class TDGameManager : MonoBehaviour
             }
             else if (reRolling)
             {
-                GUI.Label(new Rect(20, 262, 364, 20),
+                GUI.Label(new Rect(20, 376, 412, 20),
                     "Select a Tier " + (Selected.Tier - 1) + " tower to re-roll with",
                     Style(13, TextAnchor.UpperLeft, new Color(1f, 0.9f, 0.4f)));
-                if (GUI.Button(new Rect(20, 286, 110, 26), "Cancel"))
+                if (GUI.Button(new Rect(20, 400, 110, 26), "Cancel"))
                 {
                     if (TDAudio.Instance != null) TDAudio.Instance.Click();
                     CancelMode();
@@ -1247,7 +1256,7 @@ public partial class TDGameManager : MonoBehaviour
                 {
                     bool canAfford = Money >= TDBalance.MergeCost;
                     GUI.enabled = canAfford;
-                    if (GUI.Button(new Rect(20, 264, 160, 30), "Merge (E)  $" + TDBalance.MergeCost))
+                    if (GUI.Button(new Rect(20, 378, 160, 30), "Merge (E)  $" + TDBalance.MergeCost))
                         TryStartMerge();
                     GUI.enabled = true;
                 }
@@ -1256,17 +1265,17 @@ public partial class TDGameManager : MonoBehaviour
                     bool canAfford = Money >= ascendCost;
                     GUI.enabled = canAfford;
                     string upLabel = (Selected.Type == TowerType.Gold ? "Upgrade (U)  $" : "Ascend (U)  $") + ascendCost;
-                    if (GUI.Button(new Rect(20, 264, 160, 30), upLabel))
+                    if (GUI.Button(new Rect(20, 378, 160, 30), upLabel))
                         TryStartAscend();
                     GUI.enabled = true;
                 }
                 else
                 {
-                    GUI.Label(new Rect(20, 268, 160, 22), "Max tier",
+                    GUI.Label(new Rect(20, 382, 160, 22), "Max tier",
                         Style(13, TextAnchor.MiddleLeft, new Color(0.8f, 0.8f, 0.8f)));
                 }
 
-                if (canReRoll && GUI.Button(new Rect(190, 264, 170, 30), "Re-roll (R)"))
+                if (canReRoll && GUI.Button(new Rect(190, 378, 170, 30), "Re-roll (R)"))
                     TryStartReRoll();
             }
         }
@@ -1307,7 +1316,7 @@ public partial class TDGameManager : MonoBehaviour
         List<string> tags = new List<string>();
         if (d.regen > 0f) tags.Add("Regenerates");
         if (d.armour > 0f) tags.Add("Armoured");
-        if (d.slowImmune) tags.Add("Immune to slow");
+        if (d.slowResist > 0f) tags.Add("Slow-resistant");
         if (d.enrage > 0f) tags.Add("Enrages");
         if (d.dashEvery > 0f) tags.Add("Dashes");
         if (tags.Count == 0)

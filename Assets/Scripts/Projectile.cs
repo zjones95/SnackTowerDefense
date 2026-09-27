@@ -119,7 +119,11 @@ public class Projectile : MonoBehaviour
             // tar is applied after this impact so the same gumball doesn't buff itself
             if (TarDamageBonus > 0f && Target != null) Target.ApplyTar(TarDamageBonus, TarLinger);
             // economy towers pay out only on a confirmed hit (the target still exists)
-            if (GoldPerHit > 0 && gm != null) gm.AwardMoney(GoldPerHit);
+            if (GoldPerHit > 0)
+            {
+                if (gm != null) gm.AwardMoney(GoldPerHit);
+                if (Source != null) Source.GoldEarned += GoldPerHit;
+            }
         }
 
         // ricochet to the nearest other enemy (continues even if the impact killed

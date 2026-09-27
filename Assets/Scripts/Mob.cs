@@ -166,16 +166,17 @@ public class Mob : MonoBehaviour
 
     public void ApplySlow(float removedFraction, float duration)
     {
-        if (Def.slowImmune) return;   // e.g. Coconut and the Granola Mom
-        float mul = 1f - Mathf.Clamp01(removedFraction);
+        if (Def.slowResist >= 1f) return;   // a fully slow-immune boss
+        float mul = 1f - Mathf.Clamp01(removedFraction * (1f - Def.slowResist));
         if (mul < speedMul) speedMul = mul;
         slowTimer = Mathf.Max(slowTimer, duration);
     }
 
-    /// <summary>Chain T5 "Twin Lash": briefly stops the mob. Slow-immune bosses resist.</summary>
+    /// <summary>Chain T5 "Twin Lash": briefly stops the mob. Stuns land on every
+    /// mob, including slow-resistant bosses.</summary>
     public void ApplyStun(float duration)
     {
-        if (duration <= 0f || Def.slowImmune) return;
+        if (duration <= 0f) return;
         stunTimer = Mathf.Max(stunTimer, duration);
     }
 
@@ -184,7 +185,7 @@ public class Mob : MonoBehaviour
     /// <paramref name="linger"/> seconds after the slow expires.</summary>
     public void ApplyTar(float bonus, float linger)
     {
-        if (bonus <= 0f || Def.slowImmune) return;
+        if (bonus <= 0f || Def.slowResist >= 1f) return;
         if (slowTimer <= 0f) return;   // tar only sticks when a slow actually lands
         tarBonus = Mathf.Max(tarBonus, bonus);
         tarTimer = Mathf.Max(tarTimer, slowTimer + Mathf.Max(0f, linger));
