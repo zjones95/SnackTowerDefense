@@ -147,7 +147,7 @@ public static class TowerCatalog
                 case TowerType.Sniper: return "Powdered Sour - 30% crit for x2.5 that ignores armour";
                 case TowerType.Chain: return "Twin Lash - arcs branch to 2 more enemies, 10% chance to stun 1.5s";
                 case TowerType.Pierce: return "Wide Skewer - a wider line that skewers more enemies";
-                case TowerType.Poison: return "Extra Hot - poison stacks up to 3 times";
+                case TowerType.Poison: return "Extra Hot - burn stacks up to 5 times";
             }
         }
         else if (tier == 6)
@@ -160,7 +160,7 @@ public static class TowerCatalog
                 case TowerType.Sniper: return "Deadeye - damage ramps on one target, plus T5 Powdered Sour crit";
                 case TowerType.Chain: return "Sticky Sour - full-damage jumps + slow, plus T5 Twin Lash branches and stun";
                 case TowerType.Pierce: return "Boomerang Skewer - returns and skewers again, plus T5 Wide Skewer";
-                case TowerType.Poison: return "Ghost Pepper - death explosion, plus T5 Extra Hot stacking";
+                case TowerType.Poison: return "Ghost Pepper - burn death explosion, plus T5 Extra Hot stacking";
             }
         }
         return null;
@@ -173,13 +173,14 @@ public static class TowerCatalog
 
         TowerDef d = new TowerDef();
         d.type = TowerType.SingleShot; d.displayName = "Popcorn Bucket"; d.color = new Color(0.95f, 0.80f, 0.30f);
-        d.tiers.Add(new TowerTierStats { damage = 3, range = 4.5f, fireInterval = 0.40f, projectileSpeed = 22f });
-        d.tiers.Add(new TowerTierStats { damage = 6, range = 5.5f, fireInterval = 0.325f, projectileSpeed = 24f });
-        d.tiers.Add(new TowerTierStats { damage = 12, range = 6.5f, fireInterval = 0.25f, projectileSpeed = 26f });
+        // +25% damage buff across tiers (2026-09-27).
+        d.tiers.Add(new TowerTierStats { damage = 4, range = 4.5f, fireInterval = 0.40f, projectileSpeed = 22f });
+        d.tiers.Add(new TowerTierStats { damage = 8, range = 5.5f, fireInterval = 0.325f, projectileSpeed = 24f });
+        d.tiers.Add(new TowerTierStats { damage = 15, range = 6.5f, fireInterval = 0.25f, projectileSpeed = 26f });
         // T4 pure stats; T5 Ricochet Pop (bounce 2 / 2.5); T6 Kettle Burst (3 pellets + mini-splash).
-        d.tiers.Add(new TowerTierStats { damage = 16, range = 7.5f, fireInterval = 0.22f, projectileSpeed = 27f });
-        d.tiers.Add(new TowerTierStats { damage = 24, range = 8.5f, fireInterval = 0.20f, projectileSpeed = 28f, bounceCount = 2, bounceRange = 2.5f });
-        d.tiers.Add(new TowerTierStats { damage = 21, range = 9.5f, fireInterval = 0.20f, projectileSpeed = 29f, multiShot = 3, impactSplash = 1.3f, bounceCount = 2, bounceRange = 2.5f });
+        d.tiers.Add(new TowerTierStats { damage = 20, range = 7.5f, fireInterval = 0.22f, projectileSpeed = 27f });
+        d.tiers.Add(new TowerTierStats { damage = 30, range = 8.5f, fireInterval = 0.20f, projectileSpeed = 28f, bounceCount = 2, bounceRange = 2.5f });
+        d.tiers.Add(new TowerTierStats { damage = 26, range = 9.5f, fireInterval = 0.20f, projectileSpeed = 29f, multiShot = 3, impactSplash = 1.3f, bounceCount = 2, bounceRange = 2.5f });
         defs[d.type] = d;
 
         d = new TowerDef();
@@ -240,15 +241,16 @@ public static class TowerCatalog
         defs[d.type] = d;
 
         d = new TowerDef();
-        d.type = TowerType.Poison; d.displayName = "Spicy Chips"; d.color = new Color(0.50f, 0.90f, 0.30f);
-        d.tiers.Add(new TowerTierStats { damage = 1, range = 4.5f, fireInterval = 0.50f, projectileSpeed = 20f, poisonDps = 6f, poisonDuration = 3f });
-        d.tiers.Add(new TowerTierStats { damage = 2, range = 5.2f, fireInterval = 0.45f, projectileSpeed = 21f, poisonDps = 11f, poisonDuration = 3.5f });
-        d.tiers.Add(new TowerTierStats { damage = 2, range = 6.0f, fireInterval = 0.40f, projectileSpeed = 22f, poisonDps = 18f, poisonDuration = 4f });
-        // T4 pure stats; T5 Extra Hot (up to 3 poison stacks);
-        // T6 Ghost Pepper (death detonation: 1.6x DPS in 3.0 radius, re-applies poison).
-        d.tiers.Add(new TowerTierStats { damage = 3, range = 6.8f, fireInterval = 0.36f, projectileSpeed = 23f, poisonDps = 24f, poisonDuration = 4.5f });
-        d.tiers.Add(new TowerTierStats { damage = 4, range = 7.6f, fireInterval = 0.34f, projectileSpeed = 24f, poisonDps = 33f, poisonDuration = 5.0f, poisonMaxStacks = 3 });
-        d.tiers.Add(new TowerTierStats { damage = 6, range = 8.4f, fireInterval = 0.32f, projectileSpeed = 25f, poisonDps = 45f, poisonDuration = 5.5f, poisonMaxStacks = 3, poisonDetonateRadius = 3.0f, poisonDetonateFraction = 1.6f });
+        d.type = TowerType.Poison; d.displayName = "Spicy Chips"; d.color = new Color(0.95f, 0.34f, 0.18f);   // burn red (was poison green)
+        // Burn (damage-over-time): every tier stacks now — base 2x, T5/T6 5x.
+        d.tiers.Add(new TowerTierStats { damage = 1, range = 4.5f, fireInterval = 0.50f, projectileSpeed = 20f, poisonDps = 6f, poisonDuration = 3f, poisonMaxStacks = 2 });
+        d.tiers.Add(new TowerTierStats { damage = 2, range = 5.2f, fireInterval = 0.45f, projectileSpeed = 21f, poisonDps = 11f, poisonDuration = 3.5f, poisonMaxStacks = 2 });
+        d.tiers.Add(new TowerTierStats { damage = 2, range = 6.0f, fireInterval = 0.40f, projectileSpeed = 22f, poisonDps = 18f, poisonDuration = 4f, poisonMaxStacks = 2 });
+        // T4 pure stats; T5 Extra Hot (up to 5 burn stacks);
+        // T6 Ghost Pepper (death detonation: 0.4x DPS in 3.0 radius, re-applies burn).
+        d.tiers.Add(new TowerTierStats { damage = 3, range = 6.8f, fireInterval = 0.36f, projectileSpeed = 23f, poisonDps = 24f, poisonDuration = 4.5f, poisonMaxStacks = 2 });
+        d.tiers.Add(new TowerTierStats { damage = 4, range = 7.6f, fireInterval = 0.34f, projectileSpeed = 24f, poisonDps = 33f, poisonDuration = 5.0f, poisonMaxStacks = 5 });
+        d.tiers.Add(new TowerTierStats { damage = 6, range = 8.4f, fireInterval = 0.32f, projectileSpeed = 25f, poisonDps = 45f, poisonDuration = 5.5f, poisonMaxStacks = 5, poisonDetonateRadius = 3.0f, poisonDetonateFraction = 0.4f });
         defs[d.type] = d;
 
         // Gold is economy-only: no damage, a modest range, and a slow fire rate

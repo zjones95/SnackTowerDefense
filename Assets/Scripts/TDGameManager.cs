@@ -431,7 +431,8 @@ public partial class TDGameManager : MonoBehaviour
     public void OnMobLeaked(Mob mob)
     {
         Mobs.Remove(mob);
-        Lives -= mob.Def.leakDamage;
+        // Flagged bosses (Granola Mom) end the run outright if they leak.
+        Lives -= mob.Def.instantLossOnLeak ? Lives : mob.Def.leakDamage;
         if (Lives <= 0)
         {
             Lives = 0;
@@ -1462,7 +1463,7 @@ public partial class TDGameManager : MonoBehaviour
 
         if (poisoned)
         {
-            GUI.DrawTexture(new Rect(x, top, size, size), TDTextures.IconPoison(), ScaleMode.ScaleToFit, true);
+            GUI.DrawTexture(new Rect(x, top, size, size), TDTextures.IconBurn(), ScaleMode.ScaleToFit, true);
             if (stacks > 0)
                 GUI.Label(new Rect(x + size - 2f, top - 16f, 44f, 18f), "x" + stacks,
                     Style(13, TextAnchor.LowerLeft, new Color(0.62f, 1f, 0.55f)));

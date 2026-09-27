@@ -276,7 +276,7 @@ public class Mob : MonoBehaviour
         if (hpFill == null) return;
         float f = Mathf.Clamp01(Health / MaxHealth);
         hpFill.localScale = new Vector3(barWidth * f, hpFill.localScale.y, hpFill.localScale.z);
-        hpFill.localPosition = new Vector3(-(barWidth * (1f - f)) * 0.5f, hpFill.localPosition.y, hpFill.localPosition.z);
+        hpFill.localPosition = new Vector3((barWidth * (1f - f)) * 0.5f, hpFill.localPosition.y, hpFill.localPosition.z);
     }
 
     void Die()
@@ -301,7 +301,7 @@ public class Mob : MonoBehaviour
         var mobs = game != null ? game.Mobs : null;
         if (mobs == null) return;
 
-        SplashFX.Spawn(transform.position + Vector3.up * 0.4f, poisonDetonateRadius, new Color(0.55f, 0.95f, 0.25f));
+        SplashFX.Spawn(transform.position + Vector3.up * 0.4f, poisonDetonateRadius, new Color(1f, 0.45f, 0.10f));
 
         // Snapshot the catch first: TakeDamage/ApplyPoison can kill and mutate
         // the live mob list while we iterate.

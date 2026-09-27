@@ -12,7 +12,7 @@ public enum Difficulty { Easy, Normal, Hard, Insane }
 public static class TDBalance
 {
     public const int StartMoney = 100;
-    public const int StartLives = 20;
+    public const int StartLives = 10;
     public const float PrepDuration = 10f;
     public const int TotalWaves = 35;
 

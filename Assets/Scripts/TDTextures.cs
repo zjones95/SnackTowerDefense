@@ -196,18 +196,20 @@ public static class TDTextures
     }
 
     // ------------------------------------------------------ mob status icons
-    static Texture2D iconPoison, iconSlow, iconTar;
+    static Texture2D iconBurn, iconSlow, iconTar;
 
-    /// <summary>Green poison droplet on a transparent background.</summary>
-    public static Texture2D IconPoison()
+    /// <summary>Orange burn flame on a transparent background — the
+    /// damage-over-time status (replaced the green poison droplet).</summary>
+    public static Texture2D IconBurn()
     {
-        if (iconPoison != null) return iconPoison;
+        if (iconBurn != null) return iconBurn;
         int S = 64;
         Texture2D t = New(S);
         t.wrapMode = TextureWrapMode.Clamp;   // a single icon, not a tiling texture
-        Color body = new Color(0.32f, 0.82f, 0.22f);
-        Color edge = new Color(0.08f, 0.36f, 0.10f);
-        Color gloss = new Color(0.84f, 1.00f, 0.78f);
+        Color body = new Color(1.00f, 0.42f, 0.06f);   // orange flame
+        Color edge = new Color(0.55f, 0.10f, 0.02f);   // deep red rim
+        Color hot  = new Color(1.00f, 0.80f, 0.18f);   // yellow-hot upper flame
+        Color core = new Color(1.00f, 0.96f, 0.62f);   // pale inner core
 
         for (int y = 0; y < S; y++)
         {
@@ -216,8 +218,9 @@ public static class TDTextures
                 float u = (x + 0.5f) / S * 2f - 1f;   // -1 .. 1, y up
                 float v = (y + 0.5f) / S * 2f - 1f;
 
-                // Teardrop: a round base with a tapered point above it.
-                const float cy = -0.26f, r = 0.58f, top = 0.86f;
+                // Flame: a round base with a tapered point, pinched at the waist
+                // so the silhouette reads as fire rather than a teardrop.
+                const float cy = -0.30f, r = 0.56f, top = 0.92f;
                 float inside;
                 if (v <= cy)
                 {
@@ -226,7 +229,8 @@ public static class TDTextures
                 }
                 else
                 {
-                    float halfW = r * Mathf.Clamp01((top - v) / (top - cy));
+                    float taper = Mathf.Clamp01((top - v) / (top - cy));
+                    float halfW = r * taper * (0.72f + 0.28f * taper);   // pinched upward
                     inside = Mathf.Min(halfW - Mathf.Abs(u), top - v);
                 }
                 float cov = Mathf.Clamp01(inside * S * 0.5f + 0.5f);   // ~1px anti-alias
@@ -234,17 +238,17 @@ public static class TDTextures
 
                 float rim = Mathf.Clamp01(inside / 0.14f);             // darken near the edge
                 Color c = Color.Lerp(edge, body, rim);
-                c = Color.Lerp(c, gloss, Mathf.Clamp01((v + 0.30f) / 0.55f) * 0.30f);   // light from above
+                c = Color.Lerp(c, hot, Mathf.Clamp01((inside + 0.06f) / 0.52f) * 0.85f);   // hotter toward the centre
 
-                float gx = u + 0.22f, gy = v - 0.02f;                  // glossy highlight
-                float gl = Mathf.Clamp01(1f - Mathf.Sqrt(gx * gx + gy * gy) / 0.20f);
-                c = Color.Lerp(c, gloss, gl * 0.75f);
+                float gx = u, gy = v + 0.24f;                          // pale core low in the flame
+                float gl = Mathf.Clamp01(1f - Mathf.Sqrt(gx * gx + gy * gy) / 0.26f);
+                c = Color.Lerp(c, core, gl * 0.70f);
                 t.SetPixel(x, y, new Color(c.r, c.g, c.b, cov));
             }
         }
         t.Apply();
         t.filterMode = FilterMode.Bilinear;
-        iconPoison = t;
+        iconBurn = t;
         return t;
     }
 
