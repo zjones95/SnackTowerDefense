@@ -167,20 +167,23 @@ The main menu now splits into **Single Player** and **Multiplayer**.
 - **Lobby** — lists up to 8 players (host included), shows the code/address with a
   **Copy** button, and only the host can press **Start**. The host may start at any
   time, with fewer than 8 players.
-- The **skip-wave key was removed**; waves will advance when the last player finishes.
+- The **skip-wave key was removed**; waves are now **independent per board** (see Phase 2).
 - Esc/Back leaves the lobby; in a match, Esc opens the pause menu, where **Quit to
   Main Menu** leaves the session.
 
-**Phase 2 (done): per-player boards + shared waves.**
+**Phase 2 (done): per-player boards + independent waves.**
 
 - One board per player, laid out side by side. Other boards show a nameplate with
   the player's name, lives and status (their current wave / `cleared` / `out`).
-- The **host owns the wave clock**: every board gets a 10s prep, then the wave goes
-  live; the next wave begins once the **last** non-eliminated board clears.
+- Waves are **independent per board** (#7): each board gets a 10s prep on its
+  opening wave, then clearing your wave starts your next one immediately — you never
+  wait for another player.
 - Money and lives are **per-player**. At 0 lives you're **out** — your board stops
-  and the match continues; victory is shared when the survivors clear all 35
-  waves, and defeat when every board is out.
-- The skip-wave key was removed.
+  and the match continues; the match is won the moment **any** board clears all 35
+  waves (shared victory), and defeat is called when every board is out.
+- A **collapsible scoreboard** (top-right) shows each player's wave, lives, gold
+  generated and tower value; a **relay chat** (**T** to open) lets the lobby talk.
+- A **version gate** refuses mismatched builds (`<scheme>+<git sha>`) before joining.
 
 **Phase 3 (done): live synchronised boards.**
 
@@ -194,8 +197,11 @@ The main menu now splits into **Single Player** and **Multiplayer**.
   own. While spectating you are read-only — build/merge only works on your board.
 - Remote boards show the other player's mobs (health bars included), towers with
   tier labels, and projectiles, smoothly interpolated.
-- The match ends with a **scoreboard** (wave, lives, money per player); the host
-  can start another match from the lobby.
+- A **collapsible scoreboard** (top-right) tracks wave, lives, gold generated and
+  tower value per player; a **relay chat** (**T**) is available during a match, and a
+  **version gate** refuses mismatched builds before joining.
+- The match ends with a shared **scoreboard**; the host can start another match from
+  the lobby.
 
 Built on **Netcode for GameObjects**, host-authoritative with owner-simulated boards.
 

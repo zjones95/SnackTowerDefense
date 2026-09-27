@@ -23,19 +23,19 @@ Written so a **fresh session** can pick this project up fast. Read this first, t
 | Area | State |
 |---|---|
 | Single player | **35 waves**, one mob type per wave, a standalone boss every 5th (waves 5–35) |
-| Towers | 7 random-build types × **6 tiers** + **Gold** (3 tiers). 2:1 merge while source tier ≤ T3 (top merge **T3+T3 → T4**); then cash **ascension** **T4→T5 `$150` / T5→T6 `$300`** with **U**. Tier 4 is stats-only. **T5/T6 modifiers are implemented** (all 7 types) and **T6 is cumulative with its T5 trait**. |
+| Towers | 7 random-build types × **6 tiers** + **Gold** (3 tiers) + **4 Tier 7 fusion types** (#12). **T6+T6 → a random T7 for `$200`** on the merge key; T7 is terminal. 2:1 merge while source tier ≤ T3 (top merge **T3+T3 → T4**); cash **ascension** **T4→T5 `$150` / T5→T6 `$300`** with **U**. **T5/T6 modifiers implemented** and **T6 is cumulative with its T5 trait**. |
 | Targeting | Per-tower mode in the selection panel: Default / Nearest / Farthest / Random / Highest health / Lowest health (`TowerTargeting`) |
 | Mobs | 35 fruits/veg; **34 modelled**, Granola Mom is the procedural humanoid |
-| Status FX | Floating bars **and** the boss bar show **poison (droplet + `xN`)** and **slow (ice cube)** icons (`MobStatusIcons`); the tar icon is issue **#19** |
-| Metrics | Per-tower **Damage done** (selection panel; poison DoT is *not* attributed — issue **#4**), collective **Gold Generated** (HUD top-right); per-gold-tower gold is issue **#16** |
+| Status FX | Floating bars **and** the boss bar show **burn (flame + `xN`)** and **slow (ice cube)** and **tar** icons (`MobStatusIcons`) |
+| Metrics | Per-tower **Damage done** (selection panel; DoT + detonations are attributed) and per-Gold-tower **Gold made**; collective **Gold Generated** (HUD top-right) |
 | Gold tower | Hotkey **G**, cap **4**, pays **$1/$2/$3** per hit, cash-upgrade T1→2 **$50** / T2→3 **$100**, never merges, excluded from the random pool |
 | Difficulty | Easy/Normal/Hard/Insane (−25% → +50% mob HP), single player + lobby — **untested** |
 | Viewers | **Tower Viewer** and **Mob Viewer** on the main menu |
 | Audio | fully procedural SFX + a **deep-house** looping track (122 BPM, 8 bars); `M` toggles mute |
 | Menus | Orbiting board backdrop, construction-paper buttons, **Settings** (music/SFX), in-game **pause** menu |
-| Multiplayer | Lobby (8 players), one board each, **Unity Relay (UGS)** so 6-char codes work over the internet; live board sync (status icons included), scoreboard. Shared wave clock — *independent* waves are issue **#7** |
+| Multiplayer | Lobby (8 players), one board each, **Unity Relay (UGS)**; **independent per-board waves** (#7), live board sync (~15 Hz), collapsible scoreboard, relay chat (**T**), version gate (#30) |
 | WebGL | `WebGLBuild.Build` → `build/WebGL`; live at <https://zjones95.github.io/SnackTowerDefense/>; publish with `tools\publish-webgl.ps1` → `webgl` branch (**licence-free**); share zip `C:\Users\Desktop\SnackTowerDefense-WebGL.zip` |
-| CI | Both GameCI workflows **fail on Unity licence activation (HTTP 401)** — see *CI / licence* below |
+| CI | `unity-ci.yml` now **passes** (the Unity credentials were corrected); the WebGL deploy is licence-free (see below) |
 
 ## Verified vs not
 
@@ -130,13 +130,18 @@ checked (`len 15.74 s, peak 0.92, rms 0.21, bad 0`).
   (the old code passed the raw UDP port and failed).
 - `Application.runInBackground = true` + `Time.maximumDeltaTime = 1f` (a backgrounded
   host keeps simulating; WebGL background tabs are still browser-throttled).
-- `MatchSync.Advance()` sets the local board's wave number (`MatchWaveStart`) before
-  `BeginWaveFromMatch()` — fixes the host replaying wave 1.
+- `MatchSync` is a per-board **state relay** (not a wave clock): each peer advances
+  its own wave on clear (independent waves, #7). Any board clearing all 35 waves is a
+  shared victory.
 - `RemoteBoard` rebuilds a tower when its **type or tier** changes (merge/re-roll).
 - `BoardSnapshot.MobSnap` carries `Status` / `Stacks` (status icons). **Changing the
-  wire format requires bumping `NetConfig.GameVersion`** — both peers must match.
-- Wave timing: only the **opening** wave has a prep timer; later waves start as soon as
-  every board clears (until #7 makes them independent).
+  wire format requires bumping `NetConfig.GameVersion`** — both peers must match. The
+  join handshake refuses mismatches (#30); the version is `<scheme>+<git sha>` stamped
+  by `Assets/Editor/BuildVersion.cs`.
+- Spectate snapshots stream at ~15 Hz (#15); `RemoteBoard` interpolates frame-rate
+  independently.
+- Chat relay lives in `Net/ChatSync.cs`; in-match overlays (collapsible scoreboard at
+  top-right, chat log lower-left) are drawn from `TDGameManager.Multiplayer.cs`.
 
 ## How to work here
 

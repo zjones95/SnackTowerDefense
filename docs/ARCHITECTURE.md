@@ -61,12 +61,16 @@ MainMenu ─┬─ DifficultySelect ── StartingRun ── Playing ─┬─ 
 | `TDAudio.cs` / `TDSynth.cs` | Procedural SFX + the looping music track |
 | `TowerViewer.cs` / `MobViewer.cs` | Off-screen turntables rendered to a RenderTexture |
 | `Net/NetworkSession.cs` | NGO `NetworkManager`, host/join/leave, lobby roster |
-| `Net/MatchSync.cs` | Host wave clock + per-board state; difficulty |
-| `Net/SpectateSync.cs` | Board snapshot streaming (host fan-out) |
+| `Net/MatchSync.cs` | Per-board state relay + independent waves; difficulty |
+| `Net/SpectateSync.cs` | Board snapshot streaming (host fan-out, ~15 Hz) |
 | `Net/BoardSnapshot.cs` | Compact quantised board state |
 | `Net/BoardLayout.cs` | Where each player's board sits in the world |
+| `Net/ChatSync.cs` | Relay chat + typing flag |
 | `RemoteBoard.cs` | Renders another player's board from snapshots |
+| `PizzaZone.cs` | Pizza Oven's persistent ground hazard |
+| `TDGameManager.DamageTest.cs` | Solo Damage Test scenario (invincible dummy) |
 | `Assets/Editor/WebGLBuild.cs` | WebGL build entry point (`-executeMethod WebGLBuild.Build`) |
+| `Assets/Editor/BuildVersion.cs` | Stamps `<scheme>+<git sha>` before builds (version gate) |
 | `Assets/Plugins/WebGL/WebGLClipboard.jslib` | Browser clipboard bridge for the multiplayer **Copy** button |
 | `Assets/Resources/Snack/Fx.shader` | Unlit alpha-blend shader for runtime FX/icons (build-safe) |
 
@@ -116,13 +120,16 @@ Esc in a run opens the pause menu (`TDGameManager.Settings.cs`), which freezes
 
 **Multiplayer** — host-authoritative state, per-board simulation. Each peer simulates
 its **own** board and streams a `BoardSnapshot` to the host; the host fans each board
-out to the others over **unreliable sequenced** delivery. The host owns the shared wave
-clock (`MatchSync`) and advances when every non-eliminated board reports `cleared`
-(issue #7 wants independent boards). Connections go through **Unity Relay (UGS)** —
-`NetworkSession` picks the allocation endpoint by connection type (`dtls` desktop,
-`wss` WebGL) and uses anonymous auth. Snapshots carry each mob's **status**
-(`Status`/`Stacks`) so remote boards show the poison/slow icons too. Changing the
-snapshot format means bumping `NetConfig.GameVersion`.
+out to the others over **unreliable sequenced** delivery (~15 Hz). Waves are
+**independent per board** (#7): clearing your wave starts your next immediately, and
+`MatchSync` is a per-board state relay rather than a shared clock. Connections go
+through **Unity Relay (UGS)** — `NetworkSession` picks the allocation endpoint by
+connection type (`dtls` desktop, `wss` WebGL) and uses anonymous auth, and the join
+handshake refuses mismatched `NetConfig.GameVersion`s (#30). Snapshots carry each mob's
+**status** (`Status`/`Stacks`) so remote boards show the burn/slow/tar icons too;
+changing the snapshot format means bumping `NetConfig.GameVersion`. In-match overlays
+(collapsible scoreboard, relay chat) are drawn from `TDGameManager.Multiplayer.cs`
+backed by `Net/ChatSync.cs`.
 
 ## Conventions
 
