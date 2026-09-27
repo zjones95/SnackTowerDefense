@@ -5,11 +5,22 @@ using Unity.Netcode;
 using UnityEngine;
 
 /// <summary>
-/// Host-authoritative match state for multiplayer: the shared wave clock and
-/// every board's lives/money/wave/cleared/eliminated.
+/// Per-board STATE RELAY for multiplayer (issue #7).
 ///
-/// The host owns the wave; clients simulate their own board and report state.
-/// A wave advances once every non-eliminated board has cleared it.
+/// INDEPENDENT WAVES: every peer owns its own wave number and runs waves exactly
+/// like single player -- clearing your wave starts your next one immediately.
+/// There is no shared wave clock, so one slow board can no longer stall the rest.
+///
+/// MatchSync does NOT decide when a wave starts. It only relays each board's
+/// state (name / wave / lives / money / gold generated / tower value / cleared /
+/// eliminated) so the scoreboard stays accurate:
+///     client -> host : "td.state"  (on change, plus a periodic keep-alive)
+///     host   -> all  : "td.boards" (the full roster)
+///
+/// WIN CONDITION: the match is won as a group the instant ANY board clears all
+/// <see cref="TDBalance.TotalWaves"/> waves. Elimination still only ends that
+/// player's own board -- they keep spectating. If every board is eventually
+/// eliminated the host ends the match as a defeat (nobody can win any more).
 /// </summary>
 public class MatchSync : MonoBehaviour
 {
@@ -22,6 +33,8 @@ public class MatchSync : MonoBehaviour
         public int Lives;
         public int Money;
         public int Wave;
+        public int GoldGenerated;   // total money the local Gold towers made
+        public int TowerValue;      // total invested cost of the local board's towers
         public bool Cleared;
         public bool Eliminated;
         public bool HasStatus;   // false until we've heard from this board
@@ -34,13 +47,16 @@ public class MatchSync : MonoBehaviour
     }
 
     public readonly List<BoardState> Boards = new List<BoardState>();
-    public int Wave { get; private set; }
-    public bool Prep { get; private set; }
     public bool Over { get; private set; }
     public bool Victory { get; private set; }
 
+    /// <summary>This peer's own wave number (independent of the other boards).</summary>
+    public int LocalWave { get; private set; }
+
     private bool host;
-    private float prepTimer;
+    private bool localPrep;          // opening prep only; later waves start at once
+    private float localPrepTimer;
+    private bool localEliminated;
     private float sendTimer;
     private float pruneTimer;
 
@@ -63,8 +79,11 @@ public class MatchSync : MonoBehaviour
     {
         host = NetworkSession.Instance != null && NetworkSession.Instance.IsHost;
 
-        Over = false; Victory = false; Prep = true;
-        Wave = 1; prepTimer = TDBalance.PrepDuration;
+        Over = false; Victory = false;
+        LocalWave = 1;
+        localPrep = true;
+        localPrepTimer = TDBalance.PrepDuration;
+        localEliminated = false;
         sendTimer = 0f; pruneTimer = 0f;
 
         Boards.Clear();
@@ -80,6 +99,8 @@ public class MatchSync : MonoBehaviour
                     Lives = TDBalance.StartLives,
                     Money = TDBalance.StartMoney,
                     Wave = 1,
+                    GoldGenerated = 0,
+                    TowerValue = 0,
                     Cleared = false,
                     Eliminated = false,
                     HasStatus = false
@@ -90,14 +111,12 @@ public class MatchSync : MonoBehaviour
         NetworkSession.RegisterNamed(Msg.State, OnStateMessage);
         NetworkSession.RegisterNamed(Msg.Boards, OnBoardsMessage);
 
-        if (host)
-        {
-            MarkLocalBoard();
-            Broadcast();
-        }
+        MarkLocalBoard();
+        if (host) Broadcast();
 
+        // Opening wave: each peer runs its own prep, then starts wave 1 itself.
         if (TDGameManager.Instance != null)
-            TDGameManager.Instance.MatchWaveStart(Wave, TDBalance.PrepDuration);
+            TDGameManager.Instance.MatchWaveStart(LocalWave, TDBalance.PrepDuration);
     }
 
     // ---------------------------------------------------------------- update
@@ -107,61 +126,254 @@ public class MatchSync : MonoBehaviour
 
         if (host)
         {
-            if (Over) return;
-
             pruneTimer -= Time.deltaTime;
             if (pruneTimer <= 0f) { pruneTimer = 1f; PruneDisconnected(); }
+        }
 
-            if (Prep)
-            {
-                prepTimer -= Time.deltaTime;
-                if (prepTimer <= 0f)
-                {
-                    Prep = false;
-                    Broadcast();
-                    if (TDGameManager.Instance != null) TDGameManager.Instance.BeginWaveFromMatch();
-                }
-            }
-            else
-            {
-                if (AllEliminated()) EndMatch(false);
-                else if (AllAliveCleared()) Advance();
-            }
-        }
-        else
+        if (Over) return;
+
+        // Every peer runs its own opening prep, then begins its first wave.
+        if (localPrep)
         {
-            // clients report their board periodically as well as on change
-            sendTimer -= Time.deltaTime;
-            if (sendTimer <= 0f) { sendTimer = 0.5f; SendLocalState(); }
+            localPrepTimer -= Time.deltaTime;
+            if (localPrepTimer <= 0f)
+            {
+                localPrep = false;
+                BeginLocalWave(LocalWave);
+            }
         }
+
+        // Keep the scoreboard fresh even while nothing changes.
+        sendTimer -= Time.deltaTime;
+        if (sendTimer <= 0f) { sendTimer = 0.5f; SendLocalState(); }
     }
 
-    void Advance()
+    // -------------------------------------------------------- local wave flow
+    void BeginLocalWave(int wave)
     {
-        if (Wave >= TDBalance.TotalWaves) { EndMatch(true); return; }
+        if (Over || localEliminated) return;
+        LocalWave = wave;
+        if (TDGameManager.Instance != null) TDGameManager.Instance.BeginWaveFromMatch();
+        PublishLocal();
+    }
 
-        Wave++;
-        Prep = false;   // after the opening wave, start the moment every board is clear
-        for (int i = 0; i < Boards.Count; i++)
+    /// <summary>Advances this board past the wave it just cleared. No other
+    /// board is consulted -- waves are independent.</summary>
+    void AdvanceLocal(int clearedWave)
+    {
+        if (clearedWave >= TDBalance.TotalWaves)
         {
-            Boards[i].Cleared = false;
-            Boards[i].Wave = Wave;
+            // Cleared every wave: that is the whole group's victory.
+            LocalWave = clearedWave;
+            EndMatch(true);
+            return;
         }
-        Broadcast();
+
+        LocalWave = clearedWave + 1;
+        localPrep = false;
         if (TDGameManager.Instance != null)
         {
-            // Set the local board's wave number before starting it, then begin at once.
-            TDGameManager.Instance.MatchWaveStart(Wave, 0f);
+            // Same as single player: the next wave starts the moment the last
+            // mob dies, with no prep.
+            TDGameManager.Instance.MatchWaveStart(LocalWave, 0f);
             TDGameManager.Instance.BeginWaveFromMatch();
         }
     }
 
     void EndMatch(bool victory)
     {
+        if (Over) return;
         Over = true;
         Victory = victory;
-        Broadcast();
+        PublishLocal();   // relay our final row, then the result
         if (TDGameManager.Instance != null) TDGameManager.Instance.OnMatchOver(victory);
+    }
+
+    // ------------------------------------------------------------ reporting
+    /// <summary>Called by the local board whenever its state changes (clear,
+    /// life lost, elimination). A clear advances this board immediately.
+    /// GoldGenerated / TowerValue default to the live local board; a caller can
+    /// pass explicit values but normally need not.</summary>
+    public void ReportLocal(int lives, int money, int wave, bool cleared, bool eliminated,
+                            int goldGenerated = -1, int towerValue = -1)
+    {
+        if (cleared && !eliminated && !localEliminated)
+        {
+            AdvanceLocal(wave);
+        }
+        else
+        {
+            LocalWave = wave;
+            if (eliminated) { localEliminated = true; localPrep = false; }
+        }
+
+        if (!Over) PublishLocal(goldGenerated, towerValue);
+    }
+
+    /// <summary>Refreshes this peer's scoreboard row and relays it.</summary>
+    void PublishLocal(int goldGenerated = -1, int towerValue = -1)
+    {
+        TDGameManager gm = TDGameManager.Instance;
+        int lives = gm != null ? gm.Lives : 0;
+        int money = gm != null ? gm.Money : 0;
+        int wave = gm != null ? gm.Wave : LocalWave;
+        bool cleared = gm != null && gm.Cleared;
+        bool eliminated = gm != null && gm.Eliminated;
+        int gold = goldGenerated >= 0 ? goldGenerated : (gm != null ? gm.GoldGenerated : 0);
+        int tower = towerValue >= 0 ? towerValue : (gm != null ? gm.LocalTowerValue() : 0);
+        LocalWave = wave;
+
+        ApplyLocalRow(lives, money, wave, cleared, eliminated, gold, tower);
+
+        if (host)
+        {
+            CheckMatchEnd();
+            Broadcast();
+        }
+        else
+        {
+            SendState(lives, money, wave, cleared, eliminated, gold, tower);
+        }
+    }
+
+    void SendLocalState()
+    {
+        // Identical to a change report; the keep-alive just refreshes the row.
+        PublishLocal();
+    }
+
+    void ApplyLocalRow(int lives, int money, int wave, bool cleared, bool eliminated,
+                       int goldGenerated, int towerValue)
+    {
+        BoardState b = LocalBoard();
+        if (b == null)
+        {
+            b = new BoardState { ClientId = NetworkSession.LocalClientId, Name = "Player" };
+            Boards.Add(b);
+        }
+        b.Lives = lives; b.Money = money; b.Wave = wave;
+        b.GoldGenerated = goldGenerated; b.TowerValue = towerValue;
+        b.Cleared = cleared; b.Eliminated = eliminated; b.HasStatus = true;
+    }
+
+    void MarkLocalBoard()
+    {
+        TDGameManager gm = TDGameManager.Instance;
+        int wave = gm != null ? gm.Wave : LocalWave;
+        LocalWave = wave;
+        ApplyLocalRow(gm != null ? gm.Lives : TDBalance.StartLives,
+                      gm != null ? gm.Money : TDBalance.StartMoney,
+                      wave,
+                      gm != null && gm.Cleared,
+                      gm != null && gm.Eliminated,
+                      gm != null ? gm.GoldGenerated : 0,
+                      gm != null ? gm.LocalTowerValue() : 0);
+    }
+
+    BoardState LocalBoard()
+    {
+        ulong id = NetworkSession.LocalClientId;
+        for (int i = 0; i < Boards.Count; i++)
+            if (Boards[i].ClientId == id) return Boards[i];
+        return null;
+    }
+
+    static void SendState(int lives, int money, int wave, bool cleared, bool eliminated,
+                          int goldGenerated, int towerValue)
+    {
+        using var w = new FastBufferWriter(48, Allocator.Temp);
+        w.WriteValueSafe(lives);
+        w.WriteValueSafe(money);
+        w.WriteValueSafe(wave);
+        w.WriteValueSafe(goldGenerated);
+        w.WriteValueSafe(towerValue);
+        w.WriteValueSafe(cleared);
+        w.WriteValueSafe(eliminated);
+        NetworkSession.SendNamedToServer(Msg.State, w);
+    }
+
+    void OnStateMessage(ulong sender, FastBufferReader reader)
+    {
+        if (!host || Over) return;
+        reader.ReadValueSafe(out int lives);
+        reader.ReadValueSafe(out int money);
+        reader.ReadValueSafe(out int wave);
+        reader.ReadValueSafe(out int goldGenerated);
+        reader.ReadValueSafe(out int towerValue);
+        reader.ReadValueSafe(out bool cleared);
+        reader.ReadValueSafe(out bool eliminated);
+
+        BoardState b = BoardFor(sender);
+        if (b == null)
+        {
+            b = new BoardState { ClientId = sender, Name = "Player " + sender };
+            Boards.Add(b);
+        }
+        b.Lives = lives; b.Money = money; b.Wave = wave;
+        b.GoldGenerated = goldGenerated; b.TowerValue = towerValue;
+        b.Cleared = cleared; b.Eliminated = eliminated; b.HasStatus = true;
+
+        CheckMatchEnd();
+        Broadcast();
+    }
+
+    void OnBoardsMessage(ulong sender, FastBufferReader reader)
+    {
+        if (host) return;
+
+        reader.ReadValueSafe(out bool over);
+        reader.ReadValueSafe(out bool victory);
+        reader.ReadValueSafe(out int count);
+
+        Boards.Clear();
+        for (int i = 0; i < count; i++)
+        {
+            reader.ReadValueSafe(out ulong id);
+            reader.ReadValueSafe(out string bname);
+            reader.ReadValueSafe(out int lives);
+            reader.ReadValueSafe(out int money);
+            reader.ReadValueSafe(out int bwave);
+            reader.ReadValueSafe(out int goldGenerated);
+            reader.ReadValueSafe(out int towerValue);
+            reader.ReadValueSafe(out bool cleared);
+            reader.ReadValueSafe(out bool eliminated);
+            Boards.Add(new BoardState
+            {
+                ClientId = id, Name = bname, Lives = lives, Money = money, Wave = bwave,
+                GoldGenerated = goldGenerated, TowerValue = towerValue,
+                Cleared = cleared, Eliminated = eliminated, HasStatus = true
+            });
+        }
+
+        // The host's copy of our own row is up to one report interval old, so
+        // keep this peer's row live from the local board.
+        MarkLocalBoard();
+
+        if (over && !Over)
+        {
+            Over = true; Victory = victory;
+            if (TDGameManager.Instance != null) TDGameManager.Instance.OnMatchOver(victory);
+        }
+    }
+
+    // -------------------------------------------------------------- match end
+    void CheckMatchEnd()
+    {
+        if (Over) return;
+
+        // Shared victory: any single board clearing all waves wins it for all.
+        for (int i = 0; i < Boards.Count; i++)
+        {
+            BoardState b = Boards[i];
+            if (!b.Eliminated && b.Cleared && b.Wave >= TDBalance.TotalWaves)
+            {
+                EndMatch(true);
+                return;
+            }
+        }
+
+        // Nobody can win once every board is out.
+        if (AllEliminated()) EndMatch(false);
     }
 
     bool AllEliminated()
@@ -170,19 +382,6 @@ public class MatchSync : MonoBehaviour
         for (int i = 0; i < Boards.Count; i++)
             if (!Boards[i].Eliminated) return false;
         return true;
-    }
-
-    bool AllAliveCleared()
-    {
-        bool anyAlive = false;
-        for (int i = 0; i < Boards.Count; i++)
-        {
-            BoardState b = Boards[i];
-            if (b.Eliminated) continue;
-            anyAlive = true;
-            if (!b.Cleared) return false;
-        }
-        return anyAlive;
     }
 
     void PruneDisconnected()
@@ -196,148 +395,14 @@ public class MatchSync : MonoBehaviour
                 changed = true;
             }
         }
-        if (changed) Broadcast();
+        if (changed) { CheckMatchEnd(); Broadcast(); }
     }
 
-    // -------------------------------------------------------------- reporting
-    /// <summary>Called by the local board whenever its state changes.</summary>
-    public void ReportLocal(int lives, int money, int wave, bool cleared, bool eliminated)
-    {
-        if (host)
-        {
-            BoardState b = LocalBoard();
-            if (b != null)
-            {
-                b.Lives = lives; b.Money = money; b.Wave = wave;
-                b.Cleared = cleared; b.Eliminated = eliminated; b.HasStatus = true;
-            }
-            Broadcast();
-        }
-        else
-        {
-            SendState(lives, money, wave, cleared, eliminated);
-        }
-    }
-
-    void MarkLocalBoard()
-    {
-        BoardState b = LocalBoard();
-        if (b == null) return;
-        var gm = TDGameManager.Instance;
-        b.Lives = TDBalance.StartLives;
-        b.Money = TDBalance.StartMoney;
-        b.Wave = 1;
-        b.Cleared = false;
-        b.Eliminated = false;
-        b.HasStatus = true;
-        if (gm != null) { b.Lives = gm.Lives; b.Money = gm.Money; }
-    }
-
-    BoardState LocalBoard()
-    {
-        ulong id = NetworkSession.LocalClientId;
-        for (int i = 0; i < Boards.Count; i++)
-            if (Boards[i].ClientId == id) return Boards[i];
-        return null;
-    }
-
-    void SendLocalState()
-    {
-        var gm = TDGameManager.Instance;
-        if (gm == null) return;
-        SendState(gm.Lives, gm.Money, gm.Wave, gm.Cleared, gm.Eliminated);
-    }
-
-    static void SendState(int lives, int money, int wave, bool cleared, bool eliminated)
-    {
-        using var w = new FastBufferWriter(32, Allocator.Temp);
-        w.WriteValueSafe(lives);
-        w.WriteValueSafe(money);
-        w.WriteValueSafe(wave);
-        w.WriteValueSafe(cleared);
-        w.WriteValueSafe(eliminated);
-        NetworkSession.SendNamedToServer(Msg.State, w);
-    }
-
-    void OnStateMessage(ulong sender, FastBufferReader reader)
-    {
-        if (!host) return;
-        reader.ReadValueSafe(out int lives);
-        reader.ReadValueSafe(out int money);
-        reader.ReadValueSafe(out int wave);
-        reader.ReadValueSafe(out bool cleared);
-        reader.ReadValueSafe(out bool eliminated);
-
-        BoardState b = BoardFor(sender);
-        if (b == null)
-        {
-            b = new BoardState { ClientId = sender, Name = "Player " + sender };
-            Boards.Add(b);
-        }
-        b.Lives = lives; b.Money = money; b.Wave = wave;
-        b.Cleared = cleared; b.Eliminated = eliminated; b.HasStatus = true;
-        Broadcast();
-    }
-
-    void OnBoardsMessage(ulong sender, FastBufferReader reader)
-    {
-        if (host) return;
-
-        reader.ReadValueSafe(out int wave);
-        reader.ReadValueSafe(out bool prep);
-        reader.ReadValueSafe(out bool over);
-        reader.ReadValueSafe(out bool victory);
-        reader.ReadValueSafe(out int count);
-
-        Boards.Clear();
-        for (int i = 0; i < count; i++)
-        {
-            reader.ReadValueSafe(out ulong id);
-            reader.ReadValueSafe(out string bname);
-            reader.ReadValueSafe(out int lives);
-            reader.ReadValueSafe(out int money);
-            reader.ReadValueSafe(out int bwave);
-            reader.ReadValueSafe(out bool cleared);
-            reader.ReadValueSafe(out bool eliminated);
-            Boards.Add(new BoardState
-            {
-                ClientId = id, Name = bname, Lives = lives, Money = money, Wave = bwave,
-                Cleared = cleared, Eliminated = eliminated, HasStatus = true
-            });
-        }
-
-        int prevWave = Wave;
-        bool prevPrep = Prep;
-        Wave = wave; Prep = prep;
-
-        if (over && !Over)
-        {
-            Over = true; Victory = victory;
-            if (TDGameManager.Instance != null) TDGameManager.Instance.OnMatchOver(victory);
-            return;
-        }
-
-        if (wave != prevWave)
-        {
-            if (TDGameManager.Instance != null)
-            {
-                // Opening wave: honour the prep timer. Later waves: begin at once.
-                TDGameManager.Instance.MatchWaveStart(wave, prep ? TDBalance.PrepDuration : 0f);
-                if (!prep) TDGameManager.Instance.BeginWaveFromMatch();
-            }
-        }
-        else if (prevPrep && !prep)
-        {
-            if (TDGameManager.Instance != null) TDGameManager.Instance.BeginWaveFromMatch();
-        }
-    }
-
+    // ------------------------------------------------------------------ wire
     void Broadcast()
     {
         if (!host) return;
-        using var w = new FastBufferWriter(16 + NetConfig.MaxPlayers * 72, Allocator.Temp);
-        w.WriteValueSafe(Wave);
-        w.WriteValueSafe(Prep);
+        using var w = new FastBufferWriter(16 + NetConfig.MaxPlayers * 80, Allocator.Temp);
         w.WriteValueSafe(Over);
         w.WriteValueSafe(Victory);
         w.WriteValueSafe(Boards.Count);
@@ -349,6 +414,8 @@ public class MatchSync : MonoBehaviour
             w.WriteValueSafe(b.Lives);
             w.WriteValueSafe(b.Money);
             w.WriteValueSafe(b.Wave);
+            w.WriteValueSafe(b.GoldGenerated);
+            w.WriteValueSafe(b.TowerValue);
             w.WriteValueSafe(b.Cleared);
             w.WriteValueSafe(b.Eliminated);
         }

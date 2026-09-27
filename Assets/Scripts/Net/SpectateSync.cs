@@ -21,7 +21,21 @@ public class SpectateSync : MonoBehaviour
         public const string Relay = "td.relay";  // host -> everyone else
     }
 
-    const float SnapshotInterval = 0.12f;   // ~8 Hz
+    // Issue #15: raised from 0.12 s (~8 Hz) to 0.066 s (~15 Hz) for smoother
+    // remote motion.
+    //
+    // Rough bandwidth at a large wave (30 mobs, 25 towers, 15 projectiles):
+    //   mobs   30 x 10 B = 300 B
+    //   towers 25 x  7 B = 175 B
+    //   projs  15 x 10 B = 150 B
+    //   ~0.6 KB packed + headers, so ~5 KB/s at 8 Hz -> ~9.5 KB/s at 15 Hz
+    //   per board (plus the same again when the host relays it).
+    //
+    // Mobs are sampled every tick; towers/projectiles could go on alternate
+    // ticks, but BoardSnapshot.Read/Capture clears every list and RemoteBoard
+    // deletes anything missing from a snapshot, so an omitted list would wipe
+    // remote towers/projectiles. The wire format is therefore left unchanged.
+    const float SnapshotInterval = 0.066f;
 
     private bool host;
     private float timer;
@@ -29,6 +43,13 @@ public class SpectateSync : MonoBehaviour
     private readonly BoardSnapshot local = new BoardSnapshot();
     private readonly BoardSnapshot incoming = new BoardSnapshot();
     private readonly List<ulong> targets = new List<ulong>();
+
+    // One writer, reset and refilled each snapshot, instead of allocating a
+    // native buffer every tick. Persistent so it survives frames; freed in
+    // OnDestroy. SendNamedMessage serialises the buffer before returning, so
+    // reusing it after the call is safe.
+    private FastBufferWriter writer;
+    private bool writerReady;
 
     public static SpectateSync Ensure()
     {
@@ -45,13 +66,28 @@ public class SpectateSync : MonoBehaviour
         Instance = this;
     }
 
+    void OnDestroy()
+    {
+        if (!writerReady) return;
+        writer.Dispose();
+        writerReady = false;
+    }
+
     public void Begin()
     {
         host = NetworkSession.Instance != null && NetworkSession.Instance.IsHost;
         timer = 0f;
+        EnsureWriter();
 
         NetworkSession.RegisterNamed(Msg.Snap, OnSnap);
         NetworkSession.RegisterNamed(Msg.Relay, OnRelay);
+    }
+
+    void EnsureWriter()
+    {
+        if (writerReady) return;
+        writer = new FastBufferWriter(2056, Allocator.Persistent);
+        writerReady = true;
     }
 
     void Update()
@@ -71,9 +107,10 @@ public class SpectateSync : MonoBehaviour
         }
         else
         {
-            using var w = new FastBufferWriter(2048, Allocator.Temp);
-            local.Write(w);
-            NetworkSession.SendNamedToServer(Msg.Snap, w, NetworkDelivery.UnreliableSequenced);
+            EnsureWriter();
+            writer.Truncate(0);
+            local.Write(writer);
+            NetworkSession.SendNamedToServer(Msg.Snap, writer, NetworkDelivery.UnreliableSequenced);
         }
     }
 
@@ -96,11 +133,12 @@ public class SpectateSync : MonoBehaviour
         NetworkSession.FillRelayTargets(targets, boardId);
         if (targets.Count == 0) return;
 
-        using var w = new FastBufferWriter(2056, Allocator.Temp);
-        w.WriteValueSafe(boardId);
-        snap.Write(w);
+        EnsureWriter();
+        writer.Truncate(0);
+        writer.WriteValueSafe(boardId);
+        snap.Write(writer);
 
-        NetworkSession.SendNamedToClients(Msg.Relay, targets, w, NetworkDelivery.UnreliableSequenced);
+        NetworkSession.SendNamedToClients(Msg.Relay, targets, writer, NetworkDelivery.UnreliableSequenced);
     }
 
     void OnRelay(ulong sender, FastBufferReader reader)

@@ -64,9 +64,10 @@ public class NetworkSession : MonoBehaviour
     public event Action MatchStarted;
     public event Action LobbyChanged;
 
-    // Match messages are forwarded to whoever registers (MatchSync), looked up
-    // at delivery time so registration order doesn't matter.
-    static readonly string[] matchNames = { "td.state", "td.boards", "td.snap", "td.relay" };
+    // Match/chat messages are forwarded to whoever registers (MatchSync,
+    // SpectateSync, ChatSync), looked up at delivery time so registration order
+    // doesn't matter.
+    static readonly string[] matchNames = { "td.state", "td.boards", "td.snap", "td.relay", "td.chat", "td.chatall" };
     static readonly Dictionary<string, Action<ulong, FastBufferReader>> named =
         new Dictionary<string, Action<ulong, FastBufferReader>>();
 
@@ -230,7 +231,7 @@ public class NetworkSession : MonoBehaviour
         Error = ""; Address = ""; AddressIsRelay = false;
         leaving = false;
         EnsureManager();
-        Manager.NetworkConfig.ConnectionData = Encoding.UTF8.GetBytes(localName);
+        Manager.NetworkConfig.ConnectionData = Encoding.UTF8.GetBytes(ConnectionPayload(localName));
 
         bool started;
         if (await TryRelayHost())
@@ -298,7 +299,7 @@ public class NetworkSession : MonoBehaviour
         Error = ""; Address = ""; AddressIsRelay = false;
         leaving = false;
         EnsureManager();
-        Manager.NetworkConfig.ConnectionData = Encoding.UTF8.GetBytes(localName);
+        Manager.NetworkConfig.ConnectionData = Encoding.UTF8.GetBytes(ConnectionPayload(localName));
 
         target = (target ?? "").Trim();
         bool looksLikeCode = target.Length == NetConfig.RelayCodeLength
@@ -455,10 +456,26 @@ public class NetworkSession : MonoBehaviour
         response.CreatePlayerObject = false;
         response.Pending = false;
 
-        string name = "Player";
+        // Payload is "<version>\n<name>". Refuse a protocol mismatch here, in
+        // the connection handshake, so a stale client never reaches the lobby.
+        string payload = "";
         if (request.Payload != null && request.Payload.Length > 0)
-            name = SanitizeName(Encoding.UTF8.GetString(request.Payload));
-        namesByClient[request.ClientNetworkId] = name;
+            payload = Encoding.UTF8.GetString(request.Payload);
+        int newline = payload.IndexOf('\n');
+        string version = newline >= 0 ? payload.Substring(0, newline).Trim() : "";
+        string name = newline >= 0 ? payload.Substring(newline + 1) : payload;
+
+        if (version != NetConfig.GameVersion)
+        {
+            response.Approved = false;
+            response.Reason = "Version mismatch: host " + NetConfig.GameVersion +
+                              ", you " + (string.IsNullOrEmpty(version) ? "unknown" : version) +
+                              " - both players must update";
+            Debug.Log("[net] refused connection " + request.ClientNetworkId + ": " + response.Reason);
+            return;
+        }
+
+        namesByClient[request.ClientNetworkId] = SanitizeName(name);
     }
 
     void OnClientConnected(ulong id)
@@ -504,7 +521,10 @@ public class NetworkSession : MonoBehaviour
         }
         else if (id == Manager.LocalClientId)
         {
-            Error = "Disconnected from host.";
+            // A refused join (e.g. version mismatch) supplies a reason; surface
+            // it instead of the generic disconnect text.
+            string reason = Manager != null ? Manager.DisconnectReason : null;
+            Error = string.IsNullOrEmpty(reason) ? "Disconnected from host." : reason;
             pendingLeave = true;
         }
     }
@@ -578,6 +598,14 @@ public class NetworkSession : MonoBehaviour
         if (string.IsNullOrEmpty(n)) n = "Player";
         if (n.Length > 24) n = n.Substring(0, 24);
         return n;
+    }
+
+    /// <summary>Connection approval payload: protocol version on the first
+    /// line, display name after it. The host rejects a version mismatch, so
+    /// mismatched builds never get into a lobby together.</summary>
+    static string ConnectionPayload(string name)
+    {
+        return NetConfig.GameVersion + "\n" + name;
     }
 
     static bool TryParseAddress(string target, out string ip, out ushort port)

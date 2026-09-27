@@ -212,9 +212,9 @@ public partial class TDGameManager : MonoBehaviour
         Vector3 right = cam.transform.right; right.y = 0f;
         right = right.sqrMagnitude < 0.0001f ? Vector3.right : right.normalized;
 
-        // pan with WASD / arrows
-        float h = Input.GetAxisRaw("Horizontal");
-        float v = Input.GetAxisRaw("Vertical");
+        // pan with WASD / arrows (ignored while chatting)
+        float h = ChatSync.IsTyping ? 0f : Input.GetAxisRaw("Horizontal");
+        float v = ChatSync.IsTyping ? 0f : Input.GetAxisRaw("Vertical");
         if (Mathf.Abs(h) > 0.01f || Mathf.Abs(v) > 0.01f)
         {
             float speed = 16f * (camDist / 32f);
@@ -377,7 +377,8 @@ public partial class TDGameManager : MonoBehaviour
 
         if (mpActive)
         {
-            // Hold here until every other board clears; the host advances.
+            // Waves are independent per board now: report the clear and let our
+            // own MatchSync start the next wave; no other board is waited on.
             cleared = true;
             Round = RoundState.Preparing;
             prepTimer = 0f;
@@ -484,7 +485,7 @@ public partial class TDGameManager : MonoBehaviour
             return;
         }
 
-        if (Input.GetKeyDown(KeyCode.Escape))
+        if (Input.GetKeyDown(KeyCode.Escape) && !ChatSync.IsTyping)
         {
             // Esc first cancels an active build/merge/re-roll mode, then pauses.
             if (building || goldBuilding || merging || reRolling) CancelMode();
@@ -684,6 +685,7 @@ public partial class TDGameManager : MonoBehaviour
     // --------------------------------------------------------- action modes
     void HandleHotkeys()
     {
+        if (ChatSync.IsTyping) return;   // letters belong to the chat input
         if (Input.GetKeyDown(KeyCode.B)) ToggleBuildMode();
         if (Input.GetKeyDown(KeyCode.G)) ToggleGoldBuild();
         if (Input.GetKeyDown(KeyCode.E)) TryStartMerge();

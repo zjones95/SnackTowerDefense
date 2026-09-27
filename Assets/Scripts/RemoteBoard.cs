@@ -282,8 +282,9 @@ public class RemoteBoard : MonoBehaviour
         if (nameplate != null && Camera.main != null)
             nameplate.rotation = Camera.main.transform.rotation;
 
-        // smooth remote mobs toward their latest snapshot position
-        float k = 10f * Time.deltaTime;
+        // Smooth remote mobs toward their latest snapshot position. The factor is
+        // frame-rate independent and tuned for the ~15 Hz spectate snapshot rate.
+        float k = 1f - Mathf.Exp(-14f * Time.deltaTime);
         foreach (var kv in mobs)
         {
             RemoteMob rm = kv.Value;

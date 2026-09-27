@@ -15,6 +15,7 @@ public partial class TDGameManager
     private string mpError = "";
     private bool mpActive;          // local player is in a multiplayer match
     private int mpPlayerCount = 1;
+    private bool mpScoreboardCollapsed = true;   // top-right scoreboard tab state
 
     // match state (multiplayer only)
     private bool cleared;           // local board has cleared the current wave
@@ -30,6 +31,17 @@ public partial class TDGameManager
     public bool Cleared => cleared;
     public bool Eliminated => eliminated;
     public bool ViewingOwnBoard => !mpActive || viewSlot == mySlot;
+    public bool Paused => paused;
+
+    /// <summary>Total money invested in every tower still on this board. Relayed
+    /// as the scoreboard's Tower Value column (see MatchSync.BoardState).</summary>
+    public int LocalTowerValue()
+    {
+        int total = 0;
+        foreach (Tower t in AllTowers)
+            if (t != null) total += t.InvestedCost;
+        return total;
+    }
 
     /// <summary>The remote board shown on a spectate slot, if one exists for it.</summary>
     RemoteBoard BoardForSlot(int slot)
@@ -54,6 +66,7 @@ public partial class TDGameManager
     {
         NetworkSession ns = NetworkSession.Instance;
         if (ns == null) return;
+        if (ChatSync.IsTyping) return;   // digits/H are chat text right now
 
         int count = Mathf.Max(1, slotCount);
         for (int i = 0; i < count && i < 9; i++)
@@ -93,6 +106,8 @@ public partial class TDGameManager
         ns.MatchStarted -= OnMatchStarted;
         ns.MatchStarted += OnMatchStarted;
 
+        if (ChatSync.Instance != null) ChatSync.Instance.Close();
+        mpScoreboardCollapsed = true;
         mpName = PlayerPrefs.GetString(PlayerNameKey, "");
         if (string.IsNullOrEmpty(mpName)) mpName = "Player" + Random.Range(100, 999);
         mpJoinInput = "";
@@ -110,7 +125,9 @@ public partial class TDGameManager
             NetworkSession.Instance.MatchStarted -= OnMatchStarted;
             NetworkSession.Instance.Leave();
         }
+        if (ChatSync.Instance != null) ChatSync.Instance.Close();
         mpActive = false;
+        mpScoreboardCollapsed = true;
         mpScreen = MpScreen.Menu;
         settingsOpen = false;
         RestoreTimeScale();
@@ -144,6 +161,7 @@ public partial class TDGameManager
         BuildRemoteBoards(ns, slot, count);
         MatchSync.Ensure().BeginMatch();
         SpectateSync.Ensure().Begin();
+        ChatSync.Ensure().Begin();
         message = "Multiplayer: " + count + " player(s)";
         messageTimer = 2.5f;
     }
@@ -162,7 +180,9 @@ public partial class TDGameManager
     }
 
     // ------------------------------------------------------------- match flow
-    /// <summary>Called when the match moves to a (new) wave.</summary>
+    /// <summary>Called when this board moves to a (new) wave. Waves are
+    /// independent per peer, so this is driven by our own MatchSync, not a
+    /// shared host clock.</summary>
     public void MatchWaveStart(int wave, float prepSeconds)
     {
         if (!mpActive) return;
@@ -172,7 +192,7 @@ public partial class TDGameManager
         prepTimer = prepSeconds;
     }
 
-    /// <summary>Called when the match says the wave is live.</summary>
+    /// <summary>Called after the local prep when our wave goes live.</summary>
     public void BeginWaveFromMatch()
     {
         if (!mpActive || eliminated) return;
@@ -183,6 +203,7 @@ public partial class TDGameManager
     public void OnMatchOver(bool victory)
     {
         if (!mpActive) return;
+        if (ChatSync.Instance != null) ChatSync.Instance.Close();
         RestoreTimeScale();
         State = victory ? GameState.Victory : GameState.GameOver;
     }
@@ -190,7 +211,7 @@ public partial class TDGameManager
     void EliminateLocal()
     {
         eliminated = true;
-        cleared = true;   // an out board no longer holds up the wave
+        cleared = true;   // stops this board; it no longer matters to any clock
         Round = RoundState.Preparing;
         prepTimer = 0f;
 
@@ -199,7 +220,7 @@ public partial class TDGameManager
         Mobs.Clear();
         spawnQueue.Clear();
 
-        message = "Your board is out - waiting for the others";
+        message = "Your board is out - spectating";
         messageTimer = 3f;
         if (MatchSync.Instance != null)
             MatchSync.Instance.ReportLocal(Lives, Money, Wave, true, true);
@@ -230,6 +251,8 @@ public partial class TDGameManager
         eliminated = false;
         viewSlot = mySlot;
         viewOffset = Vector3.zero;
+        mpScoreboardCollapsed = true;
+        if (ChatSync.Instance != null) ChatSync.Instance.Close();
         mpScreen = MpScreen.Lobby;
         State = GameState.MultiplayerMenu;
     }
@@ -251,6 +274,137 @@ public partial class TDGameManager
                           (b.Eliminated ? "    OUT" : "");
             GUI.Label(new Rect(Screen.width * 0.5f - 280f, y + i * 22f, 560f, 20f), line,
                 Style(15, TextAnchor.MiddleLeft, b.Eliminated ? new Color(0.8f, 0.65f, 0.65f) : Color.white));
+        }
+    }
+
+    // ------------------------------------------------- in-match MP overlays
+    /// <summary>Draws the live multiplayer overlays. Called from ChatSync's
+    /// OnGUI so all in-match IMGUI stays in this partial class (the game's own
+    /// OnGUI is in TDGameManager.cs and only draws the HUD/end screens).</summary>
+    public void DrawMpOverlays()
+    {
+        if (!mpActive) return;
+        DrawMpScoreboard();
+        DrawMpChat();
+    }
+
+    /// <summary>Collapsible scoreboard docked top-right: a small tab when
+    /// collapsed, the full per-board roster when expanded. Sits below the
+    /// top-right stats and clear of the centred boss bar (y ~ 44).</summary>
+    void DrawMpScoreboard()
+    {
+        if (State != GameState.Playing || paused) return;
+        MatchSync ms = MatchSync.Instance;
+        if (ms == null) return;
+
+        const float w = 306f;
+        const float tabW = 96f;
+        float x0 = Screen.width - w - 8f;
+        float y = 112f;
+
+        if (mpScoreboardCollapsed)
+        {
+            if (GUI.Button(new Rect(x0 + w - tabW, y, tabW, 24f), "Scores >", PaperButton(14)))
+            {
+                Click();
+                mpScoreboardCollapsed = false;
+            }
+            return;
+        }
+
+        int rows = ms.Boards.Count;
+        float panelH = 30f + rows * 20f;
+
+        Color old = GUI.color;
+        GUI.color = new Color(0.04f, 0.05f, 0.08f, 0.82f);
+        GUI.DrawTexture(new Rect(x0 - 6f, y - 8f, w + 12f, panelH + 12f), Texture2D.whiteTexture);
+        GUI.color = old;
+
+        if (GUI.Button(new Rect(x0 + w - tabW, y, tabW, 24f), "Scores v", PaperButton(14)))
+        {
+            Click();
+            mpScoreboardCollapsed = true;
+            return;
+        }
+
+        GUIStyle hdr = Style(11, TextAnchor.MiddleLeft, new Color(0.62f, 0.68f, 0.76f));
+        GUI.Label(new Rect(x0 + 6f, y + 4f, 98f, 18f), "Name", hdr);
+        GUI.Label(new Rect(x0 + 106f, y + 4f, 30f, 18f), "Wv", hdr);
+        GUI.Label(new Rect(x0 + 138f, y + 4f, 40f, 18f), "Lives", hdr);
+        GUI.Label(new Rect(x0 + 180f, y + 4f, 62f, 18f), "Gold", hdr);
+        GUI.Label(new Rect(x0 + 244f, y + 4f, 56f, 18f), "Tower", hdr);
+
+        ulong me = NetworkSession.LocalClientId;
+        for (int i = 0; i < rows; i++)
+        {
+            MatchSync.BoardState b = ms.Boards[i];
+            float ry = y + 26f + i * 20f;
+            bool mine = b.ClientId == me;
+            string nm = string.IsNullOrEmpty(b.Name) ? ("Player " + b.ClientId) : b.Name;
+            if (mine) nm += " (you)";
+            if (b.Eliminated) nm = "OUT " + nm;
+
+            Color c = b.Eliminated ? new Color(0.8f, 0.62f, 0.62f)
+                    : mine ? new Color(1f, 0.9f, 0.5f)
+                    : new Color(0.88f, 0.92f, 1f);
+            GUIStyle st = Style(12, TextAnchor.MiddleLeft, c);
+            GUI.Label(new Rect(x0 + 6f, ry, 98f, 18f), nm, st);
+            GUI.Label(new Rect(x0 + 106f, ry, 30f, 18f), b.Wave.ToString(), st);
+            GUI.Label(new Rect(x0 + 138f, ry, 40f, 18f), b.Lives.ToString(), st);
+            GUI.Label(new Rect(x0 + 180f, ry, 62f, 18f), "$" + b.GoldGenerated, st);
+            GUI.Label(new Rect(x0 + 244f, ry, 56f, 18f), "$" + b.TowerValue, st);
+        }
+    }
+
+    /// <summary>Lower-left chat log and input line (issue #27). Shows the last
+    /// few lines whenever a match is live; the input row appears while typing.</summary>
+    void DrawMpChat()
+    {
+        if (State != GameState.Playing || paused) return;
+        ChatSync chat = ChatSync.Instance;
+        if (chat == null) return;
+
+        const float x = 10f;
+        const float w = 372f;
+        const float lineH = 17f;
+
+        int count = Mathf.Min(ChatSync.VisibleLines, chat.Lines.Count);
+        if (count == 0 && !chat.Open) return;
+
+        float inputBottom = Screen.height - 74f;   // just above the toolbar
+        float logBottom = chat.Open ? inputBottom - 24f : inputBottom;
+        float logTop = logBottom - count * lineH;
+
+        float top = (chat.Open ? logTop - 18f : logTop) - 5f;
+        Color old = GUI.color;
+        GUI.color = new Color(0f, 0f, 0f, 0.45f);
+        GUI.DrawTexture(new Rect(x - 6f, top, w + 12f, (inputBottom + 5f) - top), Texture2D.whiteTexture);
+        GUI.color = old;
+
+        int first = chat.Lines.Count - count;
+        for (int i = 0; i < count; i++)
+        {
+            ChatSync.Line ln = chat.Lines[first + i];
+            float ly = logTop + i * lineH;
+            if (ln.System)
+                GUI.Label(new Rect(x, ly, w, lineH), ln.Text,
+                    Style(12, TextAnchor.MiddleLeft, new Color(1f, 0.85f, 0.4f)));
+            else
+                GUI.Label(new Rect(x, ly, w, lineH), "<" + ln.Name + "> " + ln.Text,
+                    Style(12, TextAnchor.MiddleLeft, new Color(0.9f, 0.95f, 1f)));
+        }
+
+        if (chat.Open)
+        {
+            GUI.Label(new Rect(x, logTop - 17f, w, 16f), "Enter: send    Esc: cancel",
+                Style(11, TextAnchor.MiddleLeft, new Color(0.72f, 0.75f, 0.8f)));
+            GUI.Label(new Rect(x, inputBottom - 20f, w, 20f), "Say: " + chat.Buffer + "_",
+                Style(13, TextAnchor.MiddleLeft, new Color(0.7f, 1f, 0.7f)));
+        }
+        else
+        {
+            GUI.Label(new Rect(x, inputBottom - 16f, w, 16f), "T: chat",
+                Style(11, TextAnchor.MiddleLeft, new Color(0.7f, 0.73f, 0.78f)));
         }
     }
 
@@ -315,6 +469,10 @@ public partial class TDGameManager
         if (!string.IsNullOrEmpty(mpError))
             GUI.Label(new Rect(0, Screen.height - 78f, Screen.width, 28), mpError,
                 Style(16, TextAnchor.MiddleCenter, new Color(1f, 0.52f, 0.46f)));
+
+        // Build version (and commit) so players can check they match before joining.
+        GUI.Label(new Rect(10f, Screen.height - 24f, 420f, 20f), "v" + NetConfig.FullVersion,
+            Style(12, TextAnchor.LowerLeft, new Color(0.55f, 0.58f, 0.62f)));
 
         if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Escape)
             MpBack();
