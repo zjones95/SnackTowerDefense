@@ -34,7 +34,7 @@ Written so a **fresh session** can pick this project up fast. Read this first, t
 | Audio | fully procedural SFX + a **deep-house** looping track (122 BPM, 8 bars); `M` toggles mute |
 | Menus | Orbiting board backdrop, construction-paper buttons, **Settings** (music/SFX), in-game **pause** menu |
 | Multiplayer | Lobby (8 players), one board each, **Unity Relay (UGS)** so 6-char codes work over the internet; live board sync (status icons included), scoreboard. Shared wave clock — *independent* waves are issue **#7** |
-| WebGL | `WebGLBuild.Build` → `build/WebGL`; share zip `C:\Users\Desktop\SnackTowerDefense-WebGL.zip`; workflow `.github/workflows/webgl-pages.yml` |
+| WebGL | `WebGLBuild.Build` → `build/WebGL`; live at <https://zjones95.github.io/SnackTowerDefense/>; publish with `tools\publish-webgl.ps1` → `webgl` branch (**licence-free**); share zip `C:\Users\Desktop\SnackTowerDefense-WebGL.zip` |
 | CI | Both GameCI workflows **fail on Unity licence activation (HTTP 401)** — see *CI / licence* below |
 
 ## Verified vs not
@@ -88,20 +88,37 @@ checked (`len 15.74 s, peak 0.92, rms 0.21, bad 0`).
 
 ## CI / licence / deploy
 
-- `.github/workflows/unity-ci.yml` (StandaloneLinux64) and
-  `.github/workflows/webgl-pages.yml` (WebGL → GitHub Pages) both use **GameCI** and
-  **currently fail**: Unity licence activation returns **HTTP 401**.
-- Secrets present: `UNITY_EMAIL`, `UNITY_PASSWORD`, `UNITY_LICENSE` (a valid, **unbound
-  Unity Personal** ULF); no `UNITY_SERIAL`.
-- Likely cause: stale credentials, or **2FA** on the Unity account (CI password login
-  can't satisfy 2FA).
-- Fixes: correct the credentials / disable 2FA; **or** delete the two credential
-  secrets to use the ULF alone; **or** add `UNITY_SERIAL` (paid seat).
-- **Fallback (recommended for a hobby project):** build WebGL **locally** and deploy
-  `build/WebGL` (Netlify/itch.io, or push it to a `gh-pages` branch) — no licence in CI.
-- Local build commands (editor **closed**): compile `-executeMethod CICompileCheck.EnsureBootScene`;
-  Windows player `-executeMethod CICompileCheck.Build` with env `CI_BUILD_TARGET=StandaloneWindows64`;
-  WebGL `-executeMethod WebGLBuild.Build`.
+- **WebGL → GitHub Pages is settled and needs no Unity licence** (it is unaffected by
+  the CI problem below). The site <https://zjones95.github.io/SnackTowerDefense/> is
+  served straight from the **`webgl`** branch (**Settings → Pages → Deploy from a
+  branch → `webgl` / root**). Refresh it after gameplay/art changes:
+
+  ```powershell
+  powershell -ExecutionPolicy Bypass -File tools\publish-webgl.ps1
+  ```
+
+  It builds WebGL locally (`WebGLBuild.Build` → `build/WebGL`) and force-pushes a
+  single-commit `webgl` branch; pass `-SkipBuild` to publish an existing build. No
+  licence, no Actions minutes, no `UNITY_*` secrets.
+- `.github/workflows/unity-ci.yml` (StandaloneLinux64) still uses **GameCI** and
+  **fails**: Unity activation returns **HTTP 401**
+
+  ```
+  UnityConnectLoginRequest: Failed to login ... HTTP error code 401
+  [Licensing::Module] Error: Failed to activate ULF license
+  ```
+
+  That is Unity rejecting the stored `UNITY_EMAIL`/`UNITY_PASSWORD` — stale
+  credentials or **2FA** — not a code/config problem.
+- Secrets present: `UNITY_EMAIL`, `UNITY_PASSWORD`, `UNITY_LICENSE` (a valid,
+  **unbound** Unity Personal ULF); no `UNITY_SERIAL`.
+- Fixes (all require the Unity account holder): correct the credentials / disable
+  2FA; **or** delete the two credential secrets so the ULF is used alone; **or** add
+  `UNITY_SERIAL` (paid seat).
+- Local build commands (editor **closed**): compile `-executeMethod
+  CICompileCheck.EnsureBootScene`; Windows player `-executeMethod
+  CICompileCheck.Build` with env `CI_BUILD_TARGET=StandaloneWindows64`; WebGL
+  `-executeMethod WebGLBuild.Build`.
 
 ## Multiplayer specifics (for a fresh context)
 

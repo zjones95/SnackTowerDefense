@@ -241,6 +241,8 @@ Assets/
     Net/                  Multiplayer (NetworkSession, MatchSync, SpectateSync, …)
     RemoteBoard.cs
   Models/                 Original glTF sources (mirrored into Resources)
+tools/
+  publish-webgl.ps1       Build WebGL locally and publish it to the `webgl` branch
 ```
 
 **No authored scene is required.** The game boots itself with
@@ -278,19 +280,27 @@ Unity -batchmode -quit -projectPath . -executeMethod CICompileCheck.Build -logFi
 
 ## Web preview (shareable link)
 
-`.github/workflows/webgl-pages.yml` builds a **WebGL** player on every push to
-`main` and publishes it to **GitHub Pages** (Actions → the run's summary shows the
-URL, e.g. `https://<user>.github.io/SnackTowerDefense/`).
+**Play it:** <https://zjones95.github.io/SnackTowerDefense/>
 
-- It uses the same Unity license secrets as the CI build above.
-- Enable it once under **Settings → Pages → Build and deployment → Source: GitHub
-  Actions**. GitHub Pages on a **private** repo needs **GitHub Pro/Team/Enterprise**;
-  on a free plan, make the repo public or host the build elsewhere (itch.io,
-  Netlify, Cloudflare Pages).
+The player is built **locally** — where a Unity licence already exists — and
+published to **GitHub Pages** from the **`webgl`** branch, so the deploy needs
+**no Unity licence in CI**:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\publish-webgl.ps1
+```
+
+That builds WebGL (`WebGLBuild.Build`, output in `build/WebGL/`) and force-pushes
+a single-commit `webgl` branch. GitHub Pages is configured as **Deploy from a
+branch → `webgl` / (root)** and republishes automatically; add `-SkipBuild` to
+publish the existing `build/WebGL` without rebuilding.
+
 - The project uses gzip + the JS decompression fallback, so the output runs on any
   static host with no special server headers.
-
-Build it locally with `-executeMethod WebGLBuild.Build` (output in `build/WebGL/`).
+- Browser builds are **single-player only** (Unity Netcode needs UDP sockets).
+- To host elsewhere instead (itch.io, Netlify, Cloudflare Pages), upload the
+  contents of `build/WebGL/` — or the shareable zip at
+  `C:\Users\Desktop\SnackTowerDefense-WebGL.zip`.
 
 ## Models
 

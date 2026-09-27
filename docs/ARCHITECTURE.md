@@ -214,10 +214,14 @@ Driven through the Blender MCP (`tools["blender"]`).
 
 ## Repo & CI
 
-- Branch `main`, remote `github.com/zjones95/SnackTowerDefense` (private).
+- Branch `main`, remote `github.com/zjones95/SnackTowerDefense` (public). A second,
+  throwaway branch **`webgl`** holds the prebuilt WebGL player that GitHub Pages
+  serves.
 - `.gitignore` excludes `Library/`, `Temp/`, `Logs/`, `UserSettings/`, `build/`.
   `.gitattributes` keeps Unity YAML/binaries byte-stable (`core.autocrlf=true`).
-- `.github/workflows/unity-ci.yml` builds StandaloneLinux64 via GameCI;
-  `.github/workflows/webgl-pages.yml` builds WebGL and deploys it to GitHub Pages.
-  Both **require a Unity licence** (`UNITY_LICENSE` / credentials) and **currently fail
-  on activation (HTTP 401)** — see the *CI / licence* section in `docs/HANDOFF.md`.
+- `.github/workflows/unity-ci.yml` builds StandaloneLinux64 via GameCI. It
+  **currently fails on Unity activation (HTTP 401)** — a credentials/2FA problem on
+  the Unity account, see the *CI / licence* section in `docs/HANDOFF.md`.
+- **The WebGL deploy is licence-free**: `tools/publish-webgl.ps1` builds locally and
+  force-pushes a single-commit `webgl` branch, which **GitHub Pages** serves directly
+  (Deploy from a branch). No Unity, no `UNITY_*` secrets, and no Actions in the loop.

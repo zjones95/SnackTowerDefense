@@ -46,3 +46,9 @@
 *.apk       binary
 *.aab       binary
 *.unitypackage binary
+
+# Unity WebGL player output (prebuilt player lives on the `webgl` branch)
+*.unityweb  binary
+*.wasm      binary
+*.data      binary
+*.mem       binary
