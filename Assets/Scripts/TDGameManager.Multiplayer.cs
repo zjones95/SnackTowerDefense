@@ -99,6 +99,20 @@ public partial class TDGameManager
         }
     }
 
+    /// <summary>Replays another board's cosmetic FX (splash bursts, tracer bolts)
+    /// on its RemoteBoard. Events are board-local; the board adds its offset.</summary>
+    public void ApplyRemoteFx(ulong boardId, List<FxEvent> events)
+    {
+        for (int i = 0; i < remoteBoards.Count; i++)
+        {
+            if (remoteBoards[i] != null && remoteBoards[i].ClientId == boardId)
+            {
+                remoteBoards[i].ReplayFx(events);
+                return;
+            }
+        }
+    }
+
     // ------------------------------------------------------------------ flow
     void EnterMultiplayer()
     {
@@ -162,6 +176,7 @@ public partial class TDGameManager
         MatchSync.Ensure().BeginMatch();
         SpectateSync.Ensure().Begin();
         ChatSync.Ensure().Begin();
+        FxSync.Ensure().Begin();
         message = "Multiplayer: " + count + " player(s)";
         messageTimer = 2.5f;
     }

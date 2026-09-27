@@ -12,24 +12,18 @@ public class BoardSnapshot
     public struct MobSnap { public ushort Id; public byte Type; public short X; public short Z; public byte Hp; public byte Status; public byte Stacks; }
     public struct TowerSnap { public byte Type; public byte Tier; public short Cx; public short Cy; public byte Yaw; }
     public struct ProjSnap { public int Id; public byte Type; public short X; public short Y; public short Z; }
-    // Transient cosmetic event (splash burst / tracer bolt). X/Y/Z = position (or
-    // tracer start), EX/EY/EZ = tracer end, A/B = colours, Radius = splash radius.
-    public struct FxSnap { public byte Kind; public short X, Y, Z; public short EX, EY, EZ; public short Radius; public byte R, G, B; public byte R2, G2, B2; }
 
     public readonly List<MobSnap> Mobs = new List<MobSnap>();
     public readonly List<TowerSnap> Towers = new List<TowerSnap>();
     public readonly List<ProjSnap> Projs = new List<ProjSnap>();
-    public readonly List<FxSnap> Fxs = new List<FxSnap>();
-    private readonly List<FxEvent> fxBuf = new List<FxEvent>();
 
     public static short Enc(float v) { return (short)Mathf.Clamp(Mathf.Round(v * 100f), -32000f, 32000f); }
     public static float Dec(short v) { return v / 100f; }
     public static float YawDeg(byte b) { return b / 255f * 360f; }
-    static byte Col(float v) { return (byte)Mathf.Clamp(Mathf.RoundToInt(v * 255f), 0, 255); }
 
     public void Capture()
     {
-        Mobs.Clear(); Towers.Clear(); Projs.Clear(); Fxs.Clear();
+        Mobs.Clear(); Towers.Clear(); Projs.Clear();
         TDGameManager gm = TDGameManager.Instance;
         if (gm == null) return;
         Vector3 off = gm.BoardOffset;
@@ -100,24 +94,6 @@ public class BoardSnapshot
                 });
             }
         }
-
-        // transient cosmetic events queued since the last snapshot
-        FxEvents.Drain(fxBuf);
-        for (int i = 0; i < fxBuf.Count; i++)
-        {
-            FxEvent e = fxBuf[i];
-            Vector3 a = e.From - off;
-            Vector3 b = e.To - off;
-            Fxs.Add(new FxSnap
-            {
-                Kind = (byte)e.Kind,
-                X = Enc(a.x), Y = Enc(a.y), Z = Enc(a.z),
-                EX = Enc(b.x), EY = Enc(b.y), EZ = Enc(b.z),
-                Radius = (short)Mathf.Clamp(Mathf.RoundToInt(e.Radius * 100f), 0, 32000),
-                R = Col(e.A.r), G = Col(e.A.g), B = Col(e.A.b),
-                R2 = Col(e.B.r), G2 = Col(e.B.g), B2 = Col(e.B.b)
-            });
-        }
     }
 
     public void Write(FastBufferWriter w)
@@ -156,23 +132,11 @@ public class BoardSnapshot
             w.WriteValueSafe(p.Y);
             w.WriteValueSafe(p.Z);
         }
-
-        w.WriteValueSafe((ushort)Fxs.Count);
-        for (int i = 0; i < Fxs.Count; i++)
-        {
-            FxSnap f = Fxs[i];
-            w.WriteValueSafe(f.Kind);
-            w.WriteValueSafe(f.X); w.WriteValueSafe(f.Y); w.WriteValueSafe(f.Z);
-            w.WriteValueSafe(f.EX); w.WriteValueSafe(f.EY); w.WriteValueSafe(f.EZ);
-            w.WriteValueSafe(f.Radius);
-            w.WriteValueSafe(f.R); w.WriteValueSafe(f.G); w.WriteValueSafe(f.B);
-            w.WriteValueSafe(f.R2); w.WriteValueSafe(f.G2); w.WriteValueSafe(f.B2);
-        }
     }
 
     public void Read(FastBufferReader r)
     {
-        Mobs.Clear(); Towers.Clear(); Projs.Clear(); Fxs.Clear();
+        Mobs.Clear(); Towers.Clear(); Projs.Clear();
 
         r.ReadValueSafe(out ushort mc);
         for (int i = 0; i < mc; i++)
@@ -210,19 +174,6 @@ public class BoardSnapshot
             r.ReadValueSafe(out p.Y);
             r.ReadValueSafe(out p.Z);
             Projs.Add(p);
-        }
-
-        r.ReadValueSafe(out ushort fc);
-        for (int i = 0; i < fc; i++)
-        {
-            FxSnap f;
-            r.ReadValueSafe(out f.Kind);
-            r.ReadValueSafe(out f.X); r.ReadValueSafe(out f.Y); r.ReadValueSafe(out f.Z);
-            r.ReadValueSafe(out f.EX); r.ReadValueSafe(out f.EY); r.ReadValueSafe(out f.EZ);
-            r.ReadValueSafe(out f.Radius);
-            r.ReadValueSafe(out f.R); r.ReadValueSafe(out f.G); r.ReadValueSafe(out f.B);
-            r.ReadValueSafe(out f.R2); r.ReadValueSafe(out f.G2); r.ReadValueSafe(out f.B2);
-            Fxs.Add(f);
         }
     }
 }

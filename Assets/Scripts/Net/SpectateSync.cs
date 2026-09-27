@@ -29,8 +29,7 @@ public class SpectateSync : MonoBehaviour
     //   towers 25 x  7 B = 175 B
     //   projs  15 x 10 B = 150 B
     //   ~0.6 KB packed + headers, so ~5 KB/s at 8 Hz -> ~12.7 KB/s at 20 Hz
-    //   per board (plus the same again when the host relays it). Transient FX
-    //   events add a few tens of bytes only when something actually fires.
+    //   per board (plus the same again when the host relays it).
     const float SnapshotInterval = 0.05f;
 
     private bool host;

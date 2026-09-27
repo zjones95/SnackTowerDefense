@@ -129,7 +129,38 @@ handshake refuses mismatched `NetConfig.GameVersion`s (#30). Snapshots carry eac
 **status** (`Status`/`Stacks`) so remote boards show the burn/slow/tar icons too;
 changing the snapshot format means bumping `NetConfig.GameVersion`. In-match overlays
 (collapsible scoreboard, relay chat) are drawn from `TDGameManager.Multiplayer.cs`
-backed by `Net/ChatSync.cs`.
+backed by `Net/ChatSync.cs` (chat) and `Net/FxSync.cs` (cosmetic FX).
+
+## Network protocol (wire format)
+
+All multiplayer traffic rides Netcode for GameObjects **named messages**. Board
+positions are **board-local** and quantised to centimetres; each receiver adds its own
+`BoardOffset`. Anything that is a self-contained full state or a transient cosmetic
+uses **unreliable-sequenced**, so a dropped packet costs one stale frame or one missed
+sparkle — never a stall or a desync.
+
+| Message | Direction | Payload |
+|---|---|---|
+| `td.snap` | owner → host | `BoardSnapshot` (mobs, towers, projectiles), ~20 Hz |
+| `td.relay` | host → clients | boardId + `BoardSnapshot` |
+| `td.fx` | owner → host | FX batch (splash bursts, tracer bolts) |
+| `td.fxall` | host → clients | boardId + FX batch |
+| `td.state` | client → host | per-board state (name/wave/lives/money/gold/tower value/cleared/eliminated) |
+| `td.boards` | host → all | full per-board state roster |
+| `td.chat` | client → host | chat line |
+| `td.chatall` | host → all | sender name + chat line |
+| `td.hello` / `td.lobby` / `td.start` | session | handshake / lobby roster / match start |
+
+**`BoardSnapshot` layout** (`Net/BoardSnapshot.cs`):
+- `MobSnap { ushort Id; byte Type; short X, Z; byte Hp, Status, Stacks }` — `Status` bits: 0 slowed/stunned, 1 stunned, 2 tar.
+- `TowerSnap { byte Type, Tier; short Cx, Cy; byte Yaw }` — `Yaw` is 0-255 mapped to 0-360°.
+- `ProjSnap { int Id; byte Type; short X, Y, Z }` — `Type` is the firing `TowerType`, so the remote picks the right model.
+- `short` fields are centimetres (`Enc`/`Dec`), clamped to ±320 m.
+
+**Rules**
+- **Any change to `BoardSnapshot` (or the lobby/match state) bumps `NetConfig.GameVersion`.**
+- **Cosmetic FX lives on a separate message** (`FxSync`) with its own format — it can change or be dropped/throttled without touching the sim version or risking a desync.
+- The join handshake compares `NetConfig.FullVersion` (`<scheme>+<git sha>`); peers on different builds/commits are refused at connection approval.
 
 ## Conventions
 

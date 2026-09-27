@@ -140,7 +140,6 @@ public class RemoteBoard : MonoBehaviour
         SyncMobs(s);
         SyncTowers(s);
         SyncProjectiles(s);
-        ReplayFx(s);
     }
 
     /// <summary>The boss currently on this board (if any), for the on-screen boss bar.</summary>
@@ -322,21 +321,14 @@ public class RemoteBoard : MonoBehaviour
     }
 
     /// <summary>Replays the owner's transient cosmetic events (splash bursts,
-    /// tracer bolts) at the matching board-local positions.</summary>
-    void ReplayFx(BoardSnapshot s)
+    /// tracer bolts), received board-local, at this board's world offset.</summary>
+    public void ReplayFx(List<FxEvent> events)
     {
-        for (int i = 0; i < s.Fxs.Count; i++)
+        for (int i = 0; i < events.Count; i++)
         {
-            BoardSnapshot.FxSnap f = s.Fxs[i];
-            FxEvent e = new FxEvent
-            {
-                Kind = (FxKind)f.Kind,
-                From = BoardOffset + new Vector3(BoardSnapshot.Dec(f.X), BoardSnapshot.Dec(f.Y), BoardSnapshot.Dec(f.Z)),
-                To = BoardOffset + new Vector3(BoardSnapshot.Dec(f.EX), BoardSnapshot.Dec(f.EY), BoardSnapshot.Dec(f.EZ)),
-                Radius = f.Radius / 100f,
-                A = new Color(f.R / 255f, f.G / 255f, f.B / 255f),
-                B = new Color(f.R2 / 255f, f.G2 / 255f, f.B2 / 255f)
-            };
+            FxEvent e = events[i];
+            e.From += BoardOffset;
+            e.To += BoardOffset;
             FxEvents.Play(e);
         }
     }
