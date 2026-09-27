@@ -264,6 +264,22 @@ To reproduce the CI build locally:
 Unity -batchmode -quit -projectPath . -executeMethod CICompileCheck.Build -logFile -
 ```
 
+## Web preview (shareable link)
+
+`.github/workflows/webgl-pages.yml` builds a **WebGL** player on every push to
+`main` and publishes it to **GitHub Pages** (Actions → the run's summary shows the
+URL, e.g. `https://<user>.github.io/SnackTowerDefense/`).
+
+- It uses the same Unity license secrets as the CI build above.
+- Enable it once under **Settings → Pages → Build and deployment → Source: GitHub
+  Actions**. GitHub Pages on a **private** repo needs **GitHub Pro/Team/Enterprise**;
+  on a free plan, make the repo public or host the build elsewhere (itch.io,
+  Netlify, Cloudflare Pages).
+- The project uses gzip + the JS decompression fallback, so the output runs on any
+  static host with no special server headers.
+
+Build it locally with `-executeMethod WebGLBuild.Build` (output in `build/WebGL/`).
+
 ## Models
 
 Tower and mob models were authored in Blender as actual food objects and exported

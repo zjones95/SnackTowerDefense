@@ -1,0 +1,101 @@
+name: WebGL → GitHub Pages
+
+# Builds the WebGL player with GameCI and publishes it to GitHub Pages, so a
+# shareable link is always up to date.
+#
+# Requirements:
+#   - Repository secrets UNITY_LICENSE (or UNITY_EMAIL + UNITY_PASSWORD + UNITY_SERIAL)
+#     so the Unity editor can activate in CI. Same secrets as unity-ci.yml.
+#   - Pages enabled for this repository: Settings → Pages → Build and deployment
+#     → Source: GitHub Actions. NOTE: GitHub Pages on a *private* repo needs
+#     GitHub Pro/Team/Enterprise; on a free plan, make the repo public or swap
+#     the deploy job for a different host (see README / the summary).
+#
+# The project's Player Settings use gzip + the JS decompression fallback
+# (webGLDecompressionFallback = 1), so the output runs on any static host with
+# no special headers.
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'Assets/**'
+      - 'Packages/**'
+      - 'ProjectSettings/**'
+      - '.github/workflows/webgl-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One Pages deployment at a time; newer pushes cancel in-flight ones.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build WebGL
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      # The GameCI Unity editor image is several GB; reclaim space first.
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: false
+          docker-images: false
+          swap-storage: false
+
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-WebGL-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Library-WebGL-${{ runner.os }}-
+            Library-${{ runner.os }}-
+
+      - name: Build WebGL
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          targetPlatform: WebGL
+          # Unity writes cache/settings files during a build; don't fail on that.
+          allowDirtyBuild: true
+          # Don't let CI rewrite the project's version.
+          versioning: None
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/WebGL
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
