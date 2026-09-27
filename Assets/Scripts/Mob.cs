@@ -30,6 +30,10 @@ public class Mob : MonoBehaviour
     private float poisonDetonateRadius;
     private float poisonDetonateFraction;
 
+    // Dipped (Fondue T7): concurrent damage-taken stacks, each with its own timer.
+    private class DipStack { public float bonus; public float timer; }
+    private readonly List<DipStack> dipStacks = new List<DipStack>();
+
     private Transform hpRoot;
     private Transform hpFill;
     private float barWidth = 0.9f;
@@ -50,6 +54,9 @@ public class Mob : MonoBehaviour
 
     /// <summary>Number of concurrent poison stacks currently on the mob.</summary>
     public int PoisonStacks => poisonStacks.Count;
+
+    /// <summary>Number of concurrent "Dipped" stacks currently on the mob.</summary>
+    public int DipStacks => dipStacks.Count;
 
     public void Init(MobDef def, List<Vector3> waypoints, TDGameManager g, float healthMult, float speedMult)
     {
@@ -138,6 +145,13 @@ public class Mob : MonoBehaviour
 
             for (int i = poisonStacks.Count - 1; i >= 0; i--)
                 if ((poisonStacks[i].timer -= Time.deltaTime) <= 0f) poisonStacks.RemoveAt(i);
+        }
+
+        // Dipped (Fondue T7) just times out; the bonus is read in TakeDamage.
+        if (dipStacks.Count > 0)
+        {
+            for (int i = dipStacks.Count - 1; i >= 0; i--)
+                if ((dipStacks[i].timer -= Time.deltaTime) <= 0f) dipStacks.RemoveAt(i);
         }
 
         if (stunTimer > 0f) stunTimer -= Time.deltaTime;   // Chain T5 stun: stand still
@@ -248,6 +262,44 @@ public class Mob : MonoBehaviour
         return sum;
     }
 
+    /// <summary>Fondue T7 "Dipped": up to <paramref name="maxStacks"/> concurrent
+    /// damage-taken bonuses, each with its own duration. A maxStacks of 0/1 keeps
+    /// the legacy single-stack behaviour. Does not scale with source stats: the
+    /// applied bonus is whatever the tier configured.</summary>
+    public void ApplyDipped(float bonus, float duration, int maxStacks)
+    {
+        if (bonus <= 0f || duration <= 0f) return;
+
+        if (maxStacks <= 1)
+        {
+            if (dipStacks.Count == 0) dipStacks.Add(new DipStack());
+            DipStack s = dipStacks[0];
+            if (bonus > s.bonus) s.bonus = bonus;
+            s.timer = Mathf.Max(s.timer, duration);
+            return;
+        }
+
+        if (dipStacks.Count < maxStacks)
+        {
+            dipStacks.Add(new DipStack { bonus = bonus, timer = duration });
+            return;
+        }
+
+        // Full: refresh whichever stack is closest to expiring.
+        int oldest = 0;
+        for (int i = 1; i < dipStacks.Count; i++)
+            if (dipStacks[i].timer < dipStacks[oldest].timer) oldest = i;
+        dipStacks[oldest].bonus = Mathf.Max(dipStacks[oldest].bonus, bonus);
+        dipStacks[oldest].timer = Mathf.Max(dipStacks[oldest].timer, duration);
+    }
+
+    float DipTotal()
+    {
+        float sum = 0f;
+        for (int i = 0; i < dipStacks.Count; i++) sum += dipStacks[i].bonus;
+        return sum;
+    }
+
     public void TakeDamage(float dmg)
     {
         TakeDamage(dmg, false);
@@ -263,6 +315,7 @@ public class Mob : MonoBehaviour
     {
         if (dmg <= 0f || Health <= 0f) return;
         if (tarBonus > 0f && tarTimer > 0f) dmg *= 1f + tarBonus;   // tar hits every source
+        if (dipStacks.Count > 0) dmg *= 1f + DipTotal();            // Fondue T7: dipped enemies take more
         if (!ignoreArmour)
             dmg = Mathf.Max(0f, dmg - Def.armour);   // armoured bosses shrug off flat damage
         if (dmg <= 0f) return;

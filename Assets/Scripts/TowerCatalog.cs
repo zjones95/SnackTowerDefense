@@ -63,6 +63,22 @@ public class TowerTierStats
     // Splash
     public float splashSlowFactor = 0f;    // slow applied to everything caught in the splash
     public float splashSlowDuration = 0f;
+
+    // ---- tier 7 fusion schema (created only by fusing two T6 towers) ----
+    // Defaults are neutral so every other tier is unaffected.
+
+    // Fondue Fountain
+    public float dippedBonus = 0f;         // damage-taken bonus per "Dipped" stack
+    public float dippedDuration = 0f;
+    public int dippedMaxStacks = 0;        // 0/1 = no stacking
+
+    // Boba Blaster
+    public float rateMinInterval = 0f;     // fastest fire interval once spun up
+    public float spinUpTime = 0f;          // seconds held on one target to spin up
+
+    // Pizza Oven
+    public float zoneDps = 0f;             // persistent ground zone damage per second
+    public float zoneDuration = 0f;        // zone radius reuses splashRadius
 }
 
 [System.Serializable]
@@ -287,25 +303,25 @@ public static class TowerCatalog
         d = new TowerDef();
         d.type = TowerType.FondueFountain; d.displayName = "Fondue Fountain"; d.color = new Color(0.70f, 0.40f, 0.18f);
         for (int i = 0; i < TowerCatalog.MaxTier - 1; i++) d.tiers.Add(new TowerTierStats());
-        d.tiers.Add(new TowerTierStats { damage = 100, range = 10.5f, fireInterval = 0.45f, projectileSpeed = 26f });
+        d.tiers.Add(new TowerTierStats { damage = 100, range = 10.5f, fireInterval = 0.45f, projectileSpeed = 26f, dippedBonus = 0.12f, dippedDuration = 4f, dippedMaxStacks = 5 });
         defs[d.type] = d;
 
         d = new TowerDef();
         d.type = TowerType.IceCreamTruck; d.displayName = "Ice Cream Truck"; d.color = new Color(0.98f, 0.72f, 0.80f);
         for (int i = 0; i < TowerCatalog.MaxTier - 1; i++) d.tiers.Add(new TowerTierStats());
-        d.tiers.Add(new TowerTierStats { damage = 60, range = 9f, fireInterval = 0.55f, projectileSpeed = 22f, splashRadius = 4.8f });
+        d.tiers.Add(new TowerTierStats { damage = 60, range = 9f, fireInterval = 0.55f, projectileSpeed = 22f, splashRadius = 4.8f, stunChance = 0.20f, stunDuration = 1.2f });
         defs[d.type] = d;
 
         d = new TowerDef();
         d.type = TowerType.BobaBlaster; d.displayName = "Boba Blaster"; d.color = new Color(0.72f, 0.55f, 0.35f);
         for (int i = 0; i < TowerCatalog.MaxTier - 1; i++) d.tiers.Add(new TowerTierStats());
-        d.tiers.Add(new TowerTierStats { damage = 40, range = 9f, fireInterval = 0.30f, projectileSpeed = 30f });
+        d.tiers.Add(new TowerTierStats { damage = 40, range = 9f, fireInterval = 0.30f, projectileSpeed = 30f, rateMinInterval = 0.10f, spinUpTime = 2.5f });
         defs[d.type] = d;
 
         d = new TowerDef();
         d.type = TowerType.PizzaOven; d.displayName = "Pizza Oven"; d.color = new Color(0.90f, 0.45f, 0.22f);
         for (int i = 0; i < TowerCatalog.MaxTier - 1; i++) d.tiers.Add(new TowerTierStats());
-        d.tiers.Add(new TowerTierStats { damage = 50, range = 10f, fireInterval = 2.0f, projectileSpeed = 18f, splashRadius = 2.5f });
+        d.tiers.Add(new TowerTierStats { damage = 50, range = 10f, fireInterval = 2.0f, projectileSpeed = 18f, splashRadius = 2.5f, zoneDps = 120f, zoneDuration = 5f });
         defs[d.type] = d;
     }
 }

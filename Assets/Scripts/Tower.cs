@@ -26,6 +26,10 @@ public class Tower : MonoBehaviour
     private Mob deadeyeTarget;
     private int deadeyeStacks;
 
+    // Boba T7 "Bobarista": the fire rate ramps up while one target is held.
+    private Mob bobaTarget;
+    private float bobaSpin;
+
     // where shots leave the model: half its height, just clear of its body
     private float muzzleY = 0.6f;
     private float muzzleForward = 0.5f;
@@ -170,6 +174,14 @@ public class Tower : MonoBehaviour
             deadeyeStacks = 0;
         }
 
+        // Bobarista (Boba T7) spins up while it holds one target, and resets the
+        // moment that target changes or is lost.
+        if (Type == TowerType.BobaBlaster && s.rateMinInterval > 0f && s.spinUpTime > 0f)
+        {
+            if (target != bobaTarget) { bobaTarget = target; bobaSpin = 0f; }
+            else bobaSpin += Time.deltaTime;
+        }
+
         cooldown -= Time.deltaTime;
         if (cooldown > 0f) return;
 
@@ -180,7 +192,11 @@ public class Tower : MonoBehaviour
         }
 
         if (target == null) return;
-        cooldown = s.fireInterval;
+        // Bobarista ramps the interval from fireInterval down to rateMinInterval.
+        float interval = s.fireInterval;
+        if (Type == TowerType.BobaBlaster && s.rateMinInterval > 0f && s.spinUpTime > 0f)
+            interval = Mathf.Lerp(s.fireInterval, s.rateMinInterval, Mathf.Clamp01(bobaSpin / s.spinUpTime));
+        cooldown = interval;
         if (TDAudio.Instance != null) TDAudio.Instance.Shot(Type);
 
         Vector3 muzzle = Muzzle();
@@ -195,6 +211,9 @@ public class Tower : MonoBehaviour
                 break;
             case TowerType.Chain:
                 FireChain(muzzle, target, s);
+                break;
+            case TowerType.PizzaOven:
+                FirePizza(target, s);
                 break;
             default:
                 // SingleShot T6 "Kettle Burst" fires a volley at several targets.
@@ -372,6 +391,28 @@ public class Tower : MonoBehaviour
                    new Color(0.95f, 1f, 0.10f), new Color(1f, 1f, 0.80f));
     }
 
+    /// <summary>Pizza Oven T7 "Pizza Delivery": a direct hit that leaves a
+    /// persistent damaging cheese zone at the impact point.</summary>
+    void FirePizza(Mob target, TowerTierStats s)
+    {
+        if (target == null) return;
+
+        target.TakeDamage(s.damage);
+        AddDamage(s.damage);
+
+        GameObject go = new GameObject("PizzaZone");
+        go.transform.position = target.transform.position;
+
+        Transform parent = TDGameManager.Instance != null ? TDGameManager.Instance.ProjectilesRoot : null;
+        if (parent != null) go.transform.SetParent(parent, true);
+
+        PizzaZone z = go.AddComponent<PizzaZone>();
+        z.Source = this;
+        z.Radius = s.splashRadius;
+        z.Dps = s.zoneDps;
+        z.Duration = s.zoneDuration;
+    }
+
     // ---------------------------------------------------------- gumball slow
     static readonly Color[] GumColours =
     {
@@ -497,6 +538,11 @@ public class Tower : MonoBehaviour
         p.PoisonMaxStacks = s.poisonMaxStacks;
         p.PoisonDetonateRadius = s.poisonDetonateRadius;
         p.PoisonDetonateFraction = s.poisonDetonateFraction;
+        p.DippedBonus = s.dippedBonus;
+        p.DippedDuration = s.dippedDuration;
+        p.DippedMaxStacks = s.dippedMaxStacks;
+        p.StunChance = s.stunChance;
+        p.StunDuration = s.stunDuration;
         p.SplashSlowFactor = s.splashSlowFactor;
         p.SplashSlowDuration = s.splashSlowDuration;
         p.GoldPerHit = s.goldPerHit;

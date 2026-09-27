@@ -14,6 +14,11 @@ public class Projectile : MonoBehaviour
     public int PoisonMaxStacks = 0;            // Poison T5: concurrent stacks
     public float PoisonDetonateRadius = 0f;    // Poison T6: on-death detonation
     public float PoisonDetonateFraction = 0f;
+    public float DippedBonus = 0f;             // Fondue T7: damage-taken stacks on hit
+    public float DippedDuration = 0f;
+    public int DippedMaxStacks = 0;
+    public float StunChance = 0f;              // Ice Cream T7: splash chance to stun
+    public float StunDuration = 0f;
     public float SlowFactor = 0f;
     public float SlowDuration = 0f;
     public float SplashSlowFactor = 0f;        // Splash T6: slow applied to everything caught
@@ -104,6 +109,8 @@ public class Projectile : MonoBehaviour
                         if (SplashSlowFactor > 0f) m.ApplySlow(SplashSlowFactor, SplashSlowDuration);
                         m.TakeDamage(Damage);
                         if (Source != null) Source.AddDamage(Damage);
+                        // Ice Cream T7 "Brain Freeze": the splash can briefly stun.
+                        if (StunChance > 0f && Random.value < StunChance) m.ApplyStun(StunDuration);
                     }
                 }
             }
@@ -118,6 +125,9 @@ public class Projectile : MonoBehaviour
             if (Source != null) Source.AddDamage(Damage);
             // tar is applied after this impact so the same gumball doesn't buff itself
             if (TarDamageBonus > 0f && Target != null) Target.ApplyTar(TarDamageBonus, TarLinger);
+            // Fondue T7 "Dipped": stacks a damage-taken bonus after the hit lands.
+            if (DippedBonus > 0f && Target != null)
+                Target.ApplyDipped(DippedBonus, DippedDuration, DippedMaxStacks);
             // economy towers pay out only on a confirmed hit (the target still exists)
             if (GoldPerHit > 0)
             {
