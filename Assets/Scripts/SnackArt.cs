@@ -89,6 +89,36 @@ public static class SnackArt
                 TDVisuals.Cyl(turret, "Coin3", new Vector3(0.02f, 0.22f, 0.02f), 0.28f, 0.08f, accent);
                 TDVisuals.Sphere(turret, "Gem", new Vector3(0f, 0.31f, 0f), 0.16f, TDVisuals.Mat(new Color(1f, 0.95f, 0.55f), 0.3f, 0.85f));
                 break;
+
+            // ---- Tier 7 fusion towers (procedural stand-ins until a .glb exists) ----
+            case TowerType.FondueFountain: // tiered chocolate fountain
+                TDVisuals.Cyl(root, "Base", new Vector3(0f, 0.10f, 0f), 0.46f, 0.20f, dark);
+                TDVisuals.Cyl(root, "Tier1", new Vector3(0f, 0.30f, 0f), 0.40f, 0.14f, accent);
+                TDVisuals.Cyl(root, "Tier2", new Vector3(0f, 0.50f, 0f), 0.30f, 0.12f, accent);
+                TDVisuals.Cyl(root, "Tier3", new Vector3(0f, 0.68f, 0f), 0.20f, 0.12f, accent);
+                TDVisuals.Sphere(turret, "Crown", new Vector3(0f, 0.04f, 0f), 0.22f, TDVisuals.Mat(new Color(0.55f, 0.30f, 0.14f), 0.2f, 0.6f));
+                break;
+
+            case TowerType.IceCreamTruck: // box truck with a cone on top
+                TDVisuals.Box(root, "Body", new Vector3(0f, 0.34f, 0f), new Vector3(0.62f, 0.42f, 0.86f), light);
+                TDVisuals.Box(root, "Cab", new Vector3(0f, 0.26f, 0.40f), new Vector3(0.56f, 0.30f, 0.30f), accent);
+                TDVisuals.Cyl(turret, "Cone", new Vector3(0f, 0.06f, 0f), 0.16f, 0.34f, TDVisuals.Mat(new Color(0.86f, 0.66f, 0.40f), 0f, 0.4f));
+                TDVisuals.Sphere(turret, "Scoop", new Vector3(0f, 0.24f, 0f), 0.26f, TDVisuals.Mat(new Color(1f, 0.80f, 0.88f), 0f, 0.6f));
+                break;
+
+            case TowerType.BobaBlaster: // boba cup with a fat straw
+                TDVisuals.Cyl(root, "Cup", new Vector3(0f, 0.34f, 0f), 0.38f, 0.66f, TDVisuals.Mat(new Color(0.95f, 0.93f, 0.88f), 0f, 0.5f));
+                TDVisuals.Cyl(root, "Band", new Vector3(0f, 0.50f, 0f), 0.39f, 0.12f, accent);
+                TDVisuals.Cyl(turret, "Straw", new Vector3(0f, 0.10f, 0f), 0.07f, 0.60f, accent);
+                TDVisuals.Sphere(turret, "Pearl", new Vector3(0f, 0.30f, 0f), 0.12f, dark);
+                break;
+
+            case TowerType.PizzaOven: // oven box with a spinning pizza
+                TDVisuals.Box(root, "Oven", new Vector3(0f, 0.30f, 0f), new Vector3(0.70f, 0.50f, 0.70f), TDVisuals.Mat(new Color(0.45f, 0.28f, 0.20f), 0f, 0.4f));
+                TDVisuals.Box(root, "Mouth", new Vector3(0f, 0.30f, 0.36f), new Vector3(0.40f, 0.26f, 0.06f), dark);
+                TDVisuals.Cyl(turret, "Pizza", new Vector3(0f, 0.05f, 0f), 0.34f, 0.06f, TDVisuals.Mat(new Color(0.95f, 0.75f, 0.35f), 0f, 0.4f));
+                TDVisuals.Cyl(turret, "Sauce", new Vector3(0f, 0.09f, 0f), 0.28f, 0.04f, red);
+                break;
         }
 
         for (int i = 0; i < tier; i++)

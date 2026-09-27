@@ -8,7 +8,7 @@ public static class NetConfig
     public const ushort DefaultPort = 7777;
 
     /// <summary>Bumped when the protocol changes; mismatched builds are refused.</summary>
-    public const string GameVersion = "0.2.0";
+    public const string GameVersion = "0.3.0";
 
     /// <summary>Relay join codes are 6 characters; direct targets look like "1.2.3.4:7777".</summary>
     public const int RelayCodeLength = 6;

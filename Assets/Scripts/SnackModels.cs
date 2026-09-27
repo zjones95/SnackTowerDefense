@@ -34,6 +34,10 @@ public static class SnackModels
             case TowerType.Pierce: return "Skewer";
             case TowerType.Poison: return "SpicyChips";
             case TowerType.Gold: return "Gold";
+            case TowerType.FondueFountain: return "Fondue";
+            case TowerType.IceCreamTruck: return "IceCreamTruck";
+            case TowerType.BobaBlaster: return "Boba";
+            case TowerType.PizzaOven: return "PizzaOven";
             default: return "Popcorn";
         }
     }

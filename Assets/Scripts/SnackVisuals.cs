@@ -10,7 +10,7 @@ public static class TowerVisual
     /// <summary>Visual size per tier. Tier 1 starts deliberately small and each
     /// step grows the tower, but the top tiers are damped so a ~1-unit model
     /// doesn't clip its neighbours on a 2-unit tile (see docs/TierPlan.md).</summary>
-    static readonly float[] TierScales = { 0.78f, 1.00f, 1.22f, 1.34f, 1.44f, 1.54f };
+    static readonly float[] TierScales = { 0.78f, 1.00f, 1.22f, 1.34f, 1.44f, 1.54f, 1.66f };
 
     public static float TierScale(int tier)
     {
@@ -63,7 +63,8 @@ public static class TowerVisual
     }
 
     /// <summary>Tier palette — the same colours for every tower type. Tiers 4-6
-    /// deliberately avoid gold, which is reserved for the Gold tower.</summary>
+    /// deliberately avoid gold, which is reserved for the Gold tower; tier 7 is
+    /// the fusion gold used to mark the unique T6+T6 result.</summary>
     public static readonly Color[] TierColours =
     {
         new Color(0.80f, 0.82f, 0.86f),  // 1 - grey
@@ -71,7 +72,8 @@ public static class TowerVisual
         new Color(0.30f, 0.92f, 0.42f),  // 3 - green
         new Color(0.85f, 0.45f, 0.25f),  // 4 - bronze
         new Color(0.95f, 0.30f, 0.85f),  // 5 - magenta
-        new Color(0.25f, 0.95f, 1.00f)   // 6 - cyan
+        new Color(0.25f, 0.95f, 1.00f),  // 6 - cyan
+        new Color(1.00f, 0.92f, 0.55f)   // 7 - fusion gold
     };
 
     public static Color TierColour(int tier)

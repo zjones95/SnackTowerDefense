@@ -739,18 +739,19 @@ public partial class TDGameManager : MonoBehaviour
         if (!ViewingOwnBoard) return;
         if (Selected == null) { message = "Select a tower first"; messageTimer = 1.5f; return; }
         if (Selected.Type == TowerType.Gold) { message = "Gold towers upgrade with U, not merge"; messageTimer = 2f; return; }
-        if (Selected.Tier > TowerCatalog.MaxMergeTier)
+        if (!CanMergeTier(Selected.Tier))
         {
-            int cost = TDBalance.AscendCost(Selected.Tier);
-            message = cost > 0
-                ? "Tier " + Selected.Tier + " ascends with U ($" + cost + ")"
+            int up = TDBalance.AscendCost(Selected.Tier);
+            message = up > 0
+                ? "Tier " + Selected.Tier + " ascends with U ($" + up + ")"
                 : "Max tier reached";
             messageTimer = 1.8f;
             return;
         }
-        if (Money < TDBalance.MergeCost)
+        int cost = MergeCostFor(Selected.Tier);
+        if (Money < cost)
         {
-            message = "Not enough money to merge ($" + TDBalance.MergeCost + ")";
+            message = "Not enough money to merge ($" + cost + ")";
             messageTimer = 1.8f;
             return;
         }
@@ -759,8 +760,23 @@ public partial class TDGameManager : MonoBehaviour
         goldBuilding = false;
         merging = true;
         reRolling = false;
-        message = "Select another Tier " + Selected.Tier + " tower";
+        message = Selected.Tier == TowerCatalog.MaxTier - 1
+            ? "Select another Tier 6 tower to fuse into a Tier 7"
+            : "Select another Tier " + Selected.Tier + " tower";
         messageTimer = 2.5f;
+    }
+
+    /// <summary>A 2:1 merge is allowed at tiers 1-3 (cheap), and at T6 where it
+    /// becomes the T6+T6 -> T7 fusion. T7 is terminal.</summary>
+    static bool CanMergeTier(int tier)
+    {
+        return tier <= TowerCatalog.MaxMergeTier || tier == TowerCatalog.MaxTier - 1;
+    }
+
+    /// <summary>Money for a merge at this tier: the cheap cost below T4, else the fusion cost.</summary>
+    static int MergeCostFor(int tier)
+    {
+        return tier == TowerCatalog.MaxTier - 1 ? TDBalance.FuseCost : TDBalance.MergeCost;
     }
 
     /// <summary>Cash ascension (hotkey U): upgrades the selected tier 4/5 tower in
@@ -779,6 +795,7 @@ public partial class TDGameManager : MonoBehaviour
         if (!ViewingOwnBoard) return;
         if (Selected == null) { message = "Select a tower first"; messageTimer = 1.5f; return; }
         if (Selected.Tier < 2) { message = "A Tier 1 tower can't re-roll"; messageTimer = 1.8f; return; }
+        if (Selected.Tier >= TowerCatalog.MaxTier) { message = "Tier 7 towers can't re-roll"; messageTimer = 1.8f; return; }
         if (TDAudio.Instance != null) TDAudio.Instance.Click();
         building = false;
         goldBuilding = false;
@@ -862,33 +879,39 @@ public partial class TDGameManager : MonoBehaviour
     bool TryMerge(Tower a, Tower b)
     {
         if (a == null || b == null || a == b) return false;
-        // 2:1 merging only consumes tiers up to MaxMergeTier (T3+T3 -> T4 is the top);
-        // tiers 4+ advance by cash ascension, not by consuming another tower.
-        if (a.Tier != b.Tier || a.Tier > TowerCatalog.MaxMergeTier) return false;
+        if (a.Tier != b.Tier) return false;
+        // 2:1 merging consumes tiers up to MaxMergeTier (T3+T3 -> T4 is the top);
+        // at T6 the same action becomes the T6+T6 -> random T7 fusion. T7 is terminal.
+        bool fuse = a.Tier == TowerCatalog.MaxTier - 1;
+        if (!fuse && a.Tier > TowerCatalog.MaxMergeTier) return false;
+        if (a.Tier >= TowerCatalog.MaxTier) return false;
         if (a.Type == TowerType.Gold || b.Type == TowerType.Gold) return false;   // Gold upgrades with cash
 
-        if (Money < TDBalance.MergeCost)
+        int cost = fuse ? TDBalance.FuseCost : TDBalance.MergeCost;
+        if (Money < cost)
         {
-            message = "Not enough money to merge ($" + TDBalance.MergeCost + ")";
+            message = "Not enough money to merge ($" + cost + ")";
             messageTimer = 1.8f;
             return false;
         }
-        Money -= TDBalance.MergeCost;
+        Money -= cost;
 
         int cx = a.CellX, cy = a.CellY;
-        int invested = a.InvestedCost + b.InvestedCost + TDBalance.MergeCost;
+        int invested = a.InvestedCost + b.InvestedCost + cost;
         towers.Remove(map.Idx(a.CellX, a.CellY));
         towers.Remove(map.Idx(b.CellX, b.CellY));
         a.SetSelected(false);
         Destroy(a.gameObject);
         Destroy(b.gameObject);
 
-        TowerType result = TowerCatalog.RandomType();
+        TowerType result = fuse ? TowerCatalog.RandomT7Type() : TowerCatalog.RandomType();
         Tower nt = CreateTower(cx, cy, result, a.Tier + 1);
         nt.InvestedCost = invested;
         SetSelected(nt);
         if (TDAudio.Instance != null) TDAudio.Instance.Merge();
-        message = "Merged into " + nt.DisplayName + " (Tier " + nt.Tier + ")  -$" + TDBalance.MergeCost;
+        message = fuse
+            ? "Fused into " + nt.DisplayName + " (Tier 7)  -$" + cost
+            : "Merged into " + nt.DisplayName + " (Tier " + nt.Tier + ")  -$" + cost;
         messageTimer = 2f;
         return true;
     }
@@ -916,6 +939,7 @@ public partial class TDGameManager : MonoBehaviour
         {
             if (t.Type == TowerType.Gold) message = "Gold is max tier (Tier 3)";
             else if (t.Tier >= TowerCatalog.MaxTier) message = "Already max tier";
+            else if (t.Tier == TowerCatalog.MaxTier - 1) message = "Tier 6 fuses with E (merge two T6s)";
             else message = "Merge to Tier 4, then ascend with U";
             messageTimer = 1.8f;
             return false;
@@ -954,13 +978,13 @@ public partial class TDGameManager : MonoBehaviour
     /// <summary>
     /// Re-rolls tower A into a different random type, consuming tower B (exactly
     /// one tier below) instead of money. A keeps its tier, cell and selection.
-    /// Written so it stays correct if MaxTier grows: a Tier N tower consumes a
-    /// Tier N-1 tower, and a max-tier tower is allowed to re-roll.
+    /// Tier 7 fusion towers cannot re-roll - there is no random base type to
+    /// produce at tier 7 - so the cap is MaxTier.
     /// </summary>
     bool TryReRoll(Tower a, Tower b)
     {
         if (a == null || b == null || a == b) return false;
-        if (a.Tier < 2 || b.Tier != a.Tier - 1) return false;
+        if (a.Tier < 2 || a.Tier >= TowerCatalog.MaxTier || b.Tier != a.Tier - 1) return false;
 
         int cx = a.CellX, cy = a.CellY;
         int tier = a.Tier;
@@ -1196,22 +1220,32 @@ public partial class TDGameManager : MonoBehaviour
                 info += "\nGold made: $" + Selected.GoldEarned;
             GUI.Label(new Rect(20, 122, 412, 72), info, Style(14, TextAnchor.UpperLeft, Color.white));
 
-            // unique tier 5 / 6 modifiers for this tower type (word-wrapped, full text)
+            // unique tier 5/6 modifiers, or the tier 7 fusion tag (word-wrapped)
             string mod5 = TowerCatalog.ModifierText(Selected.Type, 5);
             string mod6 = TowerCatalog.ModifierText(Selected.Type, 6);
-            GUIStyle mod5Style = Style(12, TextAnchor.UpperLeft, new Color(0.72f, 0.86f, 1f));
-            mod5Style.wordWrap = true;
-            GUIStyle mod6Style = Style(12, TextAnchor.UpperLeft, new Color(1f, 0.82f, 0.45f));
-            mod6Style.wordWrap = true;
-            if (mod5 != null)
-                GUI.Label(new Rect(20, 196, 412, 34), "T5: " + mod5, mod5Style);
-            if (mod6 != null)
-                GUI.Label(new Rect(20, 230, 412, 34), "T6: " + mod6, mod6Style);
-            if (mod5 == null)
+            string mod7 = TowerCatalog.ModifierText(Selected.Type, 7);
+            if (mod7 != null)
             {
-                GUIStyle noModStyle = Style(12, TextAnchor.UpperLeft, new Color(0.75f, 0.75f, 0.78f));
-                noModStyle.wordWrap = true;
-                GUI.Label(new Rect(20, 196, 412, 34), "No tier 5/6 modifiers (max tier 3)", noModStyle);
+                GUIStyle mod7Style = Style(12, TextAnchor.UpperLeft, new Color(1f, 0.92f, 0.55f));
+                mod7Style.wordWrap = true;
+                GUI.Label(new Rect(20, 196, 412, 34), "T7: " + mod7, mod7Style);
+            }
+            else
+            {
+                GUIStyle mod5Style = Style(12, TextAnchor.UpperLeft, new Color(0.72f, 0.86f, 1f));
+                mod5Style.wordWrap = true;
+                GUIStyle mod6Style = Style(12, TextAnchor.UpperLeft, new Color(1f, 0.82f, 0.45f));
+                mod6Style.wordWrap = true;
+                if (mod5 != null)
+                    GUI.Label(new Rect(20, 196, 412, 34), "T5: " + mod5, mod5Style);
+                if (mod6 != null)
+                    GUI.Label(new Rect(20, 230, 412, 34), "T6: " + mod6, mod6Style);
+                if (mod5 == null)
+                {
+                    GUIStyle noModStyle = Style(12, TextAnchor.UpperLeft, new Color(0.75f, 0.75f, 0.78f));
+                    noModStyle.wordWrap = true;
+                    GUI.Label(new Rect(20, 196, 412, 34), "No tier 5/6 modifiers (max tier 3)", noModStyle);
+                }
             }
 
             // targeting mode: full names, 3 columns x 2 rows
@@ -1237,16 +1271,21 @@ public partial class TDGameManager : MonoBehaviour
             targetStyle.wordWrap = true;
             GUI.Label(new Rect(20, 346, 412, 26), TargetingName(Selected.Targeting), targetStyle);
 
-            bool canMerge = Selected.Type != TowerType.Gold && Selected.Tier <= TowerCatalog.MaxMergeTier;
+            bool canFuse = Selected.Type != TowerType.Gold && Selected.Tier == TowerCatalog.MaxTier - 1;
+            bool canMerge = Selected.Type != TowerType.Gold &&
+                            (Selected.Tier <= TowerCatalog.MaxMergeTier || canFuse);
+            int mergeCost = canFuse ? TDBalance.FuseCost : TDBalance.MergeCost;
             int ascendCost = UpgradeCost(Selected);   // Gold 1->2->3; others ascend 4->5->6
             bool canAscend = ascendCost > 0;
-            bool canReRoll = Selected.Tier >= 2;   // a lower tier exists (max tier allowed)
+            bool canReRoll = Selected.Tier >= 2 && Selected.Tier < TowerCatalog.MaxTier;   // T7 is terminal
             int sellValue = Mathf.FloorToInt(TDBalance.SellRefund * Selected.InvestedCost);
 
             if (merging)
             {
                 GUI.Label(new Rect(20, 376, 412, 20),
-                    "Select a Tier " + Selected.Tier + " tower to merge with",
+                    Selected.Tier == TowerCatalog.MaxTier - 1
+                        ? "Select another Tier 6 tower to fuse with"
+                        : "Select a Tier " + Selected.Tier + " tower to merge with",
                     Style(13, TextAnchor.UpperLeft, new Color(1f, 0.9f, 0.4f)));
                 if (GUI.Button(new Rect(20, 400, 110, 26), "Cancel"))
                 {
@@ -1273,9 +1312,10 @@ public partial class TDGameManager : MonoBehaviour
             {
                 if (canMerge)
                 {
-                    bool canAfford = Money >= TDBalance.MergeCost;
+                    bool canAfford = Money >= mergeCost;
                     GUI.enabled = canAfford;
-                    if (GUI.Button(new Rect(20, 378, 150, 30), "Merge (E)  $" + TDBalance.MergeCost))
+                    string mergeLabel = (canFuse ? "Fuse (E)  $" : "Merge (E)  $") + mergeCost;
+                    if (GUI.Button(new Rect(20, 378, 150, 30), mergeLabel))
                         TryStartMerge();
                     GUI.enabled = true;
                 }
@@ -1304,7 +1344,7 @@ public partial class TDGameManager : MonoBehaviour
         // ---- bottom toolbar: build slots (room for future options) + controls legend ----
         float legendY = Screen.height - ToolbarBottomMargin - ToolbarButtonH - ToolbarLegendH;
         GUI.Label(new Rect(0, legendY, Screen.width, ToolbarLegendH),
-            "B: Build ($" + TDBalance.BuildCost + ")   |   G: Gold ($" + TDBalance.BuildCost + ", max " + TowerCatalog.MaxGoldTowers + ")   |   E: Merge ($" + TDBalance.MergeCost + ")   |   U: Ascend ($" + TDBalance.AscendCost4to5 + "/$" + TDBalance.AscendCost5to6 + "), Gold ($" + TDBalance.GoldUpgrade1to2 + "/$" + TDBalance.GoldUpgrade2to3 + ")   |   R: Re-roll   |   X: Sell (50%)   |   Left-click: place / select   |   Right-click: cancel   |   WASD: move   |   Middle-drag: rotate   |   Scroll: zoom   |   M: music   |   Esc: menu",
+            "B: Build ($" + TDBalance.BuildCost + ")   |   G: Gold ($" + TDBalance.BuildCost + ", max " + TowerCatalog.MaxGoldTowers + ")   |   E: Merge ($" + TDBalance.MergeCost + "), T6 fuse ($" + TDBalance.FuseCost + ")   |   U: Ascend ($" + TDBalance.AscendCost4to5 + "/$" + TDBalance.AscendCost5to6 + "), Gold ($" + TDBalance.GoldUpgrade1to2 + "/$" + TDBalance.GoldUpgrade2to3 + ")   |   R: Re-roll   |   X: Sell (50%)   |   Left-click: place / select   |   Right-click: cancel   |   WASD: move   |   Middle-drag: rotate   |   Scroll: zoom   |   M: music   |   Esc: menu",
             Style(13, TextAnchor.MiddleCenter, new Color(0.8f, 0.8f, 0.8f)));
 
         if (ViewingOwnBoard)

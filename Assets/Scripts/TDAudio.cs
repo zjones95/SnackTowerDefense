@@ -74,8 +74,13 @@ public class TDAudio : MonoBehaviour
             TDSynth.Shot(2), // Sniper
             TDSynth.Shot(2), // Chain
             TDSynth.Shot(0), // Pierce
-            TDSynth.Shot(3), // Poison
-            TDSynth.Shot(2)  // Gold
+            TDSynth.Shot(3), // Poison (burn)
+            TDSynth.Shot(2), // Gold
+            // Tier 7 fusion towers (T6+T6)
+            TDSynth.Shot(1), // FondueFountain
+            TDSynth.Shot(3), // IceCreamTruck
+            TDSynth.Shot(0), // BobaBlaster
+            TDSynth.Shot(1)  // PizzaOven
         };
         death = TDSynth.Death();
         leak = TDSynth.Leak();

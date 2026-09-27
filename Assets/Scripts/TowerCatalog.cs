@@ -3,7 +3,7 @@ using UnityEngine;
 
 // NOTE: append new types to the END only — TowerType is serialised as a byte in
 // BoardSnapshot, so existing ordinals must never shift (network compatibility).
-public enum TowerType { SingleShot, Splash, Slow, Sniper, Chain, Pierce, Poison, Gold }
+public enum TowerType { SingleShot, Splash, Slow, Sniper, Chain, Pierce, Poison, Gold, FondueFountain, IceCreamTruck, BobaBlaster, PizzaOven }
 
 [System.Serializable]
 public class TowerTierStats
@@ -75,6 +75,7 @@ public class TowerDef
 
     public TowerTierStats Stats(int tier)
     {
+        if (tiers.Count == 0) return new TowerTierStats();   // T7-only types are registered lazily
         return tiers[Mathf.Clamp(tier - 1, 0, tiers.Count - 1)];
     }
 }
@@ -89,7 +90,7 @@ public class TowerDef
 //    to make the run harder.
 public static class TowerCatalog
 {
-    public const int MaxTier = 6;
+    public const int MaxTier = 7;
 
     /// <summary>Highest source tier a 2:1 merge may consume. T3+T3 -> T4 is the
     /// top merge; T4+ and up advance by cash ascension instead. See TierPlan.md.</summary>
@@ -102,7 +103,8 @@ public static class TowerCatalog
 
     private static Dictionary<TowerType, TowerDef> defs;
 
-    /// <summary>Every tower type, including Gold (used by galleries).</summary>
+    /// <summary>Every buildable tower type, including Gold (used by galleries).
+    /// The Tier 7 fusion types live in <see cref="T7Types"/>.</summary>
     public static readonly TowerType[] AllTypes =
     {
         TowerType.SingleShot, TowerType.Splash, TowerType.Slow, TowerType.Sniper,
@@ -118,6 +120,20 @@ public static class TowerCatalog
     };
 
     public static TowerType RandomType() { return RandomTypes[Random.Range(0, RandomTypes.Length)]; }
+
+    /// <summary>The Tier 7 fusion results. A T6+T6 merge picks one of these at random.</summary>
+    public static readonly TowerType[] T7Types =
+    {
+        TowerType.FondueFountain, TowerType.IceCreamTruck, TowerType.BobaBlaster, TowerType.PizzaOven
+    };
+
+    public static TowerType RandomT7Type() { return T7Types[Random.Range(0, T7Types.Length)]; }
+
+    public static bool IsT7Type(TowerType t)
+    {
+        for (int i = 0; i < T7Types.Length; i++) if (T7Types[i] == t) return true;
+        return false;
+    }
 
     /// <summary>Random type that is guaranteed to differ from <paramref name="exclude"/>
     /// (used by re-roll so the result is visibly a change).</summary>
@@ -136,6 +152,7 @@ public static class TowerCatalog
     public static string ModifierText(TowerType t, int tier)
     {
         if (t == TowerType.Gold) return null;
+        if (tier == 7) return IsT7Type(t) ? "Tier 7 fusion tower" : null;
 
         if (tier == 5)
         {
@@ -261,6 +278,34 @@ public static class TowerCatalog
         d.tiers.Add(new TowerTierStats { damage = 0, range = 4.5f, fireInterval = 5.0f, projectileSpeed = 20f, goldPerHit = 1 });
         d.tiers.Add(new TowerTierStats { damage = 0, range = 5.2f, fireInterval = 4.0f, projectileSpeed = 22f, goldPerHit = 2 });
         d.tiers.Add(new TowerTierStats { damage = 0, range = 6.0f, fireInterval = 3.2f, projectileSpeed = 24f, goldPerHit = 3 });
+        defs[d.type] = d;
+
+        // --- Tier 7 fusion towers ---
+        // Created only by fusing two T6 towers (TDBalance.FuseCost). They exist
+        // solely at tier 7, so tiers 1-6 are placeholders that keep TowerDef.Stats
+        // index math simple; each tower's unique behaviour lands in its own ticket.
+        d = new TowerDef();
+        d.type = TowerType.FondueFountain; d.displayName = "Fondue Fountain"; d.color = new Color(0.70f, 0.40f, 0.18f);
+        for (int i = 0; i < TowerCatalog.MaxTier - 1; i++) d.tiers.Add(new TowerTierStats());
+        d.tiers.Add(new TowerTierStats { damage = 100, range = 10.5f, fireInterval = 0.45f, projectileSpeed = 26f });
+        defs[d.type] = d;
+
+        d = new TowerDef();
+        d.type = TowerType.IceCreamTruck; d.displayName = "Ice Cream Truck"; d.color = new Color(0.98f, 0.72f, 0.80f);
+        for (int i = 0; i < TowerCatalog.MaxTier - 1; i++) d.tiers.Add(new TowerTierStats());
+        d.tiers.Add(new TowerTierStats { damage = 60, range = 9f, fireInterval = 0.55f, projectileSpeed = 22f, splashRadius = 4.8f });
+        defs[d.type] = d;
+
+        d = new TowerDef();
+        d.type = TowerType.BobaBlaster; d.displayName = "Boba Blaster"; d.color = new Color(0.72f, 0.55f, 0.35f);
+        for (int i = 0; i < TowerCatalog.MaxTier - 1; i++) d.tiers.Add(new TowerTierStats());
+        d.tiers.Add(new TowerTierStats { damage = 40, range = 9f, fireInterval = 0.30f, projectileSpeed = 30f });
+        defs[d.type] = d;
+
+        d = new TowerDef();
+        d.type = TowerType.PizzaOven; d.displayName = "Pizza Oven"; d.color = new Color(0.90f, 0.45f, 0.22f);
+        for (int i = 0; i < TowerCatalog.MaxTier - 1; i++) d.tiers.Add(new TowerTierStats());
+        d.tiers.Add(new TowerTierStats { damage = 50, range = 10f, fireInterval = 2.0f, projectileSpeed = 18f, splashRadius = 2.5f });
         defs[d.type] = d;
     }
 }
