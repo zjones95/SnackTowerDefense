@@ -4,6 +4,7 @@ public class Projectile : MonoBehaviour
 {
     public Mob Target;
     public Tower Source;   // tower credited with the damage (for its Damage Done metric)
+    public TowerType Type; // which tower fired this (for remote visual type)
     public float Speed = 22f;
     public float Damage = 10f;
     public float SplashRadius = 0f;

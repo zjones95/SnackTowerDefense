@@ -314,6 +314,7 @@ public class Tower : MonoBehaviour
 
         PierceProjectile p = go.AddComponent<PierceProjectile>();
         p.Source = this;
+        p.Type = Type;
         p.Dir = dir;
         p.Speed = 9f;                      // slow: it visibly walks to the enemy
         p.Damage = s.damage;
@@ -487,6 +488,7 @@ public class Tower : MonoBehaviour
 
         Projectile p = go.AddComponent<Projectile>();
         p.Source = this;
+        p.Type = Type;
         p.Target = target;
         p.Speed = 14f;
         p.Damage = s.damage;               // Candy Shell (T5/T6): gumballs hit for real
@@ -526,6 +528,7 @@ public class Tower : MonoBehaviour
 
         Projectile p = go.AddComponent<Projectile>();
         p.Source = this;
+        p.Type = Type;
         p.Target = target;
         p.Speed = s.projectileSpeed;
         p.Damage = s.damage;
@@ -581,6 +584,8 @@ public class Tower : MonoBehaviour
         Vector3 dir = b - a;
         float len = dir.magnitude;
         if (len < 0.01f) return;
+
+        FxEvents.Tracer(a, b, glow, core);   // mirror the bolt on remote boards
 
         Vector3 mid = a + dir * 0.5f;
         Vector3 fwd = dir / len;

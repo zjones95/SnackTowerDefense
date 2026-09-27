@@ -21,21 +21,17 @@ public class SpectateSync : MonoBehaviour
         public const string Relay = "td.relay";  // host -> everyone else
     }
 
-    // Issue #15: raised from 0.12 s (~8 Hz) to 0.066 s (~15 Hz) for smoother
-    // remote motion.
+    // Issue #15: raised from 0.12 s (~8 Hz) to 0.05 s (~20 Hz) for smoother
+    // remote motion and to catch short-lived projectiles.
     //
     // Rough bandwidth at a large wave (30 mobs, 25 towers, 15 projectiles):
     //   mobs   30 x 10 B = 300 B
     //   towers 25 x  7 B = 175 B
     //   projs  15 x 10 B = 150 B
-    //   ~0.6 KB packed + headers, so ~5 KB/s at 8 Hz -> ~9.5 KB/s at 15 Hz
-    //   per board (plus the same again when the host relays it).
-    //
-    // Mobs are sampled every tick; towers/projectiles could go on alternate
-    // ticks, but BoardSnapshot.Read/Capture clears every list and RemoteBoard
-    // deletes anything missing from a snapshot, so an omitted list would wipe
-    // remote towers/projectiles. The wire format is therefore left unchanged.
-    const float SnapshotInterval = 0.066f;
+    //   ~0.6 KB packed + headers, so ~5 KB/s at 8 Hz -> ~12.7 KB/s at 20 Hz
+    //   per board (plus the same again when the host relays it). Transient FX
+    //   events add a few tens of bytes only when something actually fires.
+    const float SnapshotInterval = 0.05f;
 
     private bool host;
     private float timer;

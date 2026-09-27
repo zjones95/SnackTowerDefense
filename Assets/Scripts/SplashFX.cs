@@ -20,6 +20,18 @@ public class SplashFX : MonoBehaviour
 
     public static void Spawn(Vector3 pos, float radius, Color color)
     {
+        Create(pos, radius, color);
+        FxEvents.Splash(pos, radius, color);   // mirror on remote boards
+    }
+
+    /// <summary>Replays a remote splash locally (does not re-queue it).</summary>
+    public static void PlayRemote(Vector3 pos, float radius, Color color)
+    {
+        Create(pos, radius, color);
+    }
+
+    static void Create(Vector3 pos, float radius, Color color)
+    {
         GameObject go = new GameObject("SplashFX");
         go.transform.position = pos;
         SplashFX fx = go.AddComponent<SplashFX>();

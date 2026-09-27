@@ -14,6 +14,7 @@ public class PierceProjectile : MonoBehaviour
     public float Speed = 9f;
     public float Damage = 10f;
     public Tower Source;   // tower credited with the damage
+    public TowerType Type; // which tower fired this (for remote visual type)
     public float Width = 1.2f;
     public int MaxHits = 3;
     public float MaxDistance = 7f;

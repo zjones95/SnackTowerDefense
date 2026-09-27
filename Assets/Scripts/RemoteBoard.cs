@@ -43,6 +43,7 @@ public class RemoteBoard : MonoBehaviour
     {
         public GameObject Go;
         public Vector3 Target;
+        public byte Type;
     }
 
     private readonly Dictionary<ushort, RemoteMob> mobs = new Dictionary<ushort, RemoteMob>();
@@ -139,6 +140,7 @@ public class RemoteBoard : MonoBehaviour
         SyncMobs(s);
         SyncTowers(s);
         SyncProjectiles(s);
+        ReplayFx(s);
     }
 
     /// <summary>The boss currently on this board (if any), for the on-screen boss bar.</summary>
@@ -303,7 +305,7 @@ public class RemoteBoard : MonoBehaviour
                 }
                 go.transform.SetParent(liveRoot, false);
                 go.transform.position = target;
-                rp = new RemoteProj { Go = go, Target = target };
+                rp = new RemoteProj { Go = go, Target = target, Type = ps.Type };
                 projs[ps.Id] = rp;
             }
             rp.Target = target;
@@ -316,6 +318,26 @@ public class RemoteBoard : MonoBehaviour
             RemoteProj rp = projs[projGone[i]];
             if (rp != null && rp.Go != null) Destroy(rp.Go);
             projs.Remove(projGone[i]);
+        }
+    }
+
+    /// <summary>Replays the owner's transient cosmetic events (splash bursts,
+    /// tracer bolts) at the matching board-local positions.</summary>
+    void ReplayFx(BoardSnapshot s)
+    {
+        for (int i = 0; i < s.Fxs.Count; i++)
+        {
+            BoardSnapshot.FxSnap f = s.Fxs[i];
+            FxEvent e = new FxEvent
+            {
+                Kind = (FxKind)f.Kind,
+                From = BoardOffset + new Vector3(BoardSnapshot.Dec(f.X), BoardSnapshot.Dec(f.Y), BoardSnapshot.Dec(f.Z)),
+                To = BoardOffset + new Vector3(BoardSnapshot.Dec(f.EX), BoardSnapshot.Dec(f.EY), BoardSnapshot.Dec(f.EZ)),
+                Radius = f.Radius / 100f,
+                A = new Color(f.R / 255f, f.G / 255f, f.B / 255f),
+                B = new Color(f.R2 / 255f, f.G2 / 255f, f.B2 / 255f)
+            };
+            FxEvents.Play(e);
         }
     }
 
@@ -346,7 +368,19 @@ public class RemoteBoard : MonoBehaviour
         {
             RemoteProj rp = kv.Value;
             if (rp == null || rp.Go == null) continue;
-            rp.Go.transform.position = Vector3.Lerp(rp.Go.transform.position, rp.Target, Mathf.Clamp01(k));
+
+            Vector3 cur = rp.Go.transform.position;
+            Vector3 next = Vector3.Lerp(cur, rp.Target, Mathf.Clamp01(k));
+
+            // the skewer rod must point along its travel (the local FirePierce
+            // orients it with FromToRotation(up, dir))
+            if ((TowerType)rp.Type == TowerType.Pierce)
+            {
+                Vector3 dir = next - cur;
+                if (dir.sqrMagnitude > 0.000001f)
+                    rp.Go.transform.rotation = Quaternion.FromToRotation(Vector3.up, dir.normalized);
+            }
+            rp.Go.transform.position = next;
         }
 
         // turret aim slerps toward the latest snapshot yaw (was snapping at ~15 Hz)
