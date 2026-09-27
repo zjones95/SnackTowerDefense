@@ -310,6 +310,9 @@ publish the existing `build/WebGL` without rebuilding.
   contents of `build/WebGL/` — or the shareable zip at
   `C:\Users\Desktop\SnackTowerDefense-WebGL.zip`.
 
+> **Only build/publish the WebGL player when explicitly asked** — it's a heavy full
+> build. Route it through the `webgl-build` skill (or `tools\publish-webgl.ps1`).
+
 ## Models
 
 Tower and mob models were authored in Blender as actual food objects and exported

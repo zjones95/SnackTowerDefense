@@ -100,8 +100,12 @@ checked (`len 15.74 s, peak 0.92, rms 0.21, bad 0`).
   It builds WebGL locally (`WebGLBuild.Build` → `build/WebGL`) and force-pushes a
   single-commit `webgl` branch; pass `-SkipBuild` to publish an existing build. No
   licence, no Actions minutes, no `UNITY_*` secrets.
-- `.github/workflows/unity-ci.yml` (StandaloneLinux64) still uses **GameCI** and
-  **fails**: Unity activation returns **HTTP 401**
+- **Only publish WebGL when the user explicitly asks** — it is a heavy full build plus
+  a branch push. Routine verification is a batch compile (or a Windows player build).
+  The `webgl-build` project skill (`.opencode/skills/webgl-build/`) wraps the publish.
+- `.github/workflows/unity-ci.yml` (StandaloneLinux64) uses **GameCI** and now
+  **passes** (the Unity credentials were corrected). It previously failed on
+  activation with **HTTP 401**:
 
   ```
   UnityConnectLoginRequest: Failed to login ... HTTP error code 401

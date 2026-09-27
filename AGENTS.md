@@ -38,6 +38,12 @@ Unity.exe -batchmode -projectPath C:\Users\Desktop\SnackTowerDefense `
 Editor render helpers (write PNGs to `%TEMP%\opencode\`): `SnackPreview.Render`
 (towers + mobs), `TDArenaPreview.Render` (map + room), `TDMusicCheck.Verify`.
 
+> **Do not build the WebGL player unless the user explicitly asks.** A batch
+> *compile* (or, when asked, the Windows player) is the normal verification; the
+> WebGL build + Pages publish is heavy. When a WebGL build *is* requested, use the
+> `webgl-build` skill (or `tools\publish-webgl.ps1`) — the licence-free deploy to
+> the `webgl` branch.
+
 - **Never claim a behavioural change works** from a compile alone.
 - **Play mode and networking cannot be tested by an agent** — the editor pauses
   when unfocused. Ask the user to play-test and report back.
@@ -74,3 +80,5 @@ Editor render helpers (write PNGs to `%TEMP%\opencode\`): `SnackPreview.Render`
 2. Make the change; keep it consistent with surrounding style.
 3. Verify by compiling in batch mode (and rendering, if visual).
 4. Commit and push to `main`; ask the user to play-test behaviour.
+5. **Only build WebGL when explicitly asked** (use the `webgl-build` skill); commit
+   does not imply a WebGL publish.
