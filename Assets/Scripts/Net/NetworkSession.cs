@@ -465,10 +465,10 @@ public class NetworkSession : MonoBehaviour
         string version = newline >= 0 ? payload.Substring(0, newline).Trim() : "";
         string name = newline >= 0 ? payload.Substring(newline + 1) : payload;
 
-        if (version != NetConfig.GameVersion)
+        if (version != NetConfig.FullVersion)
         {
             response.Approved = false;
-            response.Reason = "Version mismatch: host " + NetConfig.GameVersion +
+            response.Reason = "Version mismatch: host " + NetConfig.FullVersion +
                               ", you " + (string.IsNullOrEmpty(version) ? "unknown" : version) +
                               " - both players must update";
             Debug.Log("[net] refused connection " + request.ClientNetworkId + ": " + response.Reason);
@@ -600,12 +600,12 @@ public class NetworkSession : MonoBehaviour
         return n;
     }
 
-    /// <summary>Connection approval payload: protocol version on the first
-    /// line, display name after it. The host rejects a version mismatch, so
-    /// mismatched builds never get into a lobby together.</summary>
+    /// <summary>Connection approval payload: full version (scheme + build commit)
+    /// on the first line, display name after it. The host rejects any mismatch, so
+    /// builds from different commits never get into a lobby together.</summary>
     static string ConnectionPayload(string name)
     {
-        return NetConfig.GameVersion + "\n" + name;
+        return NetConfig.FullVersion + "\n" + name;
     }
 
     static bool TryParseAddress(string target, out string ip, out ushort port)
