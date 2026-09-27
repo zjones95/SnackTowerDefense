@@ -12,7 +12,7 @@ public class TowerViewer : MonoBehaviour
     public RenderTexture Texture { get; private set; }
     public int Index { get; private set; }
     public bool IsOpen { get; private set; }
-    public TowerType CurrentType { get { return TowerCatalog.AllTypes[Index]; } }
+    public TowerType CurrentType { get { return TowerCatalog.GalleryTypes[Index]; } }
 
     private const float StageY = -400f;
     private const int Size = 512;
@@ -47,7 +47,7 @@ public class TowerViewer : MonoBehaviour
 
     public void Next(int dir)
     {
-        int n = TowerCatalog.AllTypes.Length;
+        int n = TowerCatalog.GalleryTypes.Length;
         Show((Index + dir % n + n) % n);
     }
 
@@ -93,7 +93,7 @@ public class TowerViewer : MonoBehaviour
 
     void Show(int index)
     {
-        int n = TowerCatalog.AllTypes.Length;
+        int n = TowerCatalog.GalleryTypes.Length;
         Index = ((index % n) + n) % n;
 
         if (model != null) Destroy(model);
@@ -101,7 +101,11 @@ public class TowerViewer : MonoBehaviour
         model = new GameObject("ViewerTower");
         model.transform.SetParent(root, false);
         model.transform.localPosition = Vector3.zero;
-        TowerVisual.Build(model.transform, CurrentType, 1);   // same art as in-game
+
+        // Tier 7 fusion types only exist at tier 7; everything else previews at T1.
+        TowerType t = CurrentType;
+        int tier = TowerCatalog.IsT7Type(t) ? TowerCatalog.MaxTier : 1;
+        TowerVisual.Build(model.transform, t, tier);   // same art as in-game
     }
 
     void Update()

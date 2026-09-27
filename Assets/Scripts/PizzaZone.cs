@@ -14,6 +14,23 @@ public class PizzaZone : MonoBehaviour
 
     private float life;
 
+    static Material cheeseMat, sauceMat;
+    static Shader zoneShader;
+
+    /// <summary>Build-safe translucent material (the Resources Fx shader, like
+    /// SplashFX) at 30% opacity, so the zone reads as molten cheese on the mat.</summary>
+    static Material ZoneMat(ref Material cache, Color c)
+    {
+        if (cache != null) return cache;
+        if (zoneShader == null) zoneShader = Resources.Load<Shader>("Snack/Fx");
+        if (zoneShader == null) zoneShader = Shader.Find("Snack/Fx");
+        cache = zoneShader != null ? new Material(zoneShader) : TDVisuals.TransparentMat(c, 0.30f, 0.3f);
+        Color col = new Color(c.r, c.g, c.b, 0.30f);
+        if (cache.HasProperty("_Color")) cache.SetColor("_Color", col);
+        if (cache.HasProperty("_BaseColor")) cache.SetColor("_BaseColor", col);
+        return cache;
+    }
+
     void Start()
     {
         life = Duration;
@@ -26,8 +43,7 @@ public class PizzaZone : MonoBehaviour
         baseGO.transform.SetParent(transform, false);
         baseGO.transform.localPosition = new Vector3(0f, 0.04f, 0f);
         baseGO.transform.localScale = new Vector3(Radius * 2f, 0.03f, Radius * 2f);
-        baseGO.GetComponent<Renderer>().sharedMaterial =
-            TDVisuals.Mat(new Color(0.95f, 0.78f, 0.38f), 0f, 0.5f);
+        baseGO.GetComponent<Renderer>().sharedMaterial = ZoneMat(ref cheeseMat, new Color(0.95f, 0.78f, 0.38f));
 
         GameObject sauceGO = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         Strip(sauceGO);
@@ -35,8 +51,7 @@ public class PizzaZone : MonoBehaviour
         sauceGO.transform.SetParent(transform, false);
         sauceGO.transform.localPosition = new Vector3(0f, 0.06f, 0f);
         sauceGO.transform.localScale = new Vector3(Radius * 1.75f, 0.02f, Radius * 1.75f);
-        sauceGO.GetComponent<Renderer>().sharedMaterial =
-            TDVisuals.Mat(new Color(0.85f, 0.20f, 0.12f), 0f, 0.6f);
+        sauceGO.GetComponent<Renderer>().sharedMaterial = ZoneMat(ref sauceMat, new Color(0.85f, 0.20f, 0.12f));
     }
 
     static void Strip(GameObject g)

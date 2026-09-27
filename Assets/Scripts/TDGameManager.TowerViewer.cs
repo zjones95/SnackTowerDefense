@@ -80,7 +80,9 @@ public partial class TDGameManager
 
     void DrawTowerStats(TowerDef def, Rect area)
     {
-        int cols = def.tiers.Count;                 // 6 for the 7 random types, 3 for Gold
+        bool t7 = TowerCatalog.IsT7Type(def.type);
+        int cols = t7 ? 1 : def.tiers.Count;   // 6 for the random types, 3 for Gold, 1 for a T7 fusion
+        int last = def.tiers.Count - 1;
         float rowH = 26f;
         float labelW = area.width * 0.22f;
         float colW = (area.width - labelW) / cols;
@@ -91,7 +93,8 @@ public partial class TDGameManager
         GUIStyle val = Style(fs, TextAnchor.MiddleCenter, Color.white);
 
         for (int t = 0; t < cols; t++)
-            GUI.Label(new Rect(area.x + labelW + t * colW, area.y, colW, rowH), "T" + (t + 1), head);
+            GUI.Label(new Rect(area.x + labelW + t * colW, area.y, colW, rowH),
+                "T" + (t7 ? TowerCatalog.MaxTier : (t + 1)), head);
 
         string[] rows = { "Damage", "Range", "Rate", "Special" };
         for (int r = 0; r < rows.Length; r++)
@@ -100,7 +103,7 @@ public partial class TDGameManager
             GUI.Label(new Rect(area.x, y, labelW, rowH), rows[r], lab);
             for (int t = 0; t < cols; t++)
             {
-                TowerTierStats s = def.tiers[t];
+                TowerTierStats s = def.tiers[t7 ? last : t];
                 GUI.Label(new Rect(area.x + labelW + t * colW, y, colW, rowH), StatText(def.type, r, s), val);
             }
         }
@@ -108,19 +111,28 @@ public partial class TDGameManager
         GUI.Label(new Rect(area.x - 40f, area.y + 5f * rowH + 6f, area.width + 80f, 46f), Blurb(def.type),
             Style(14, TextAnchor.UpperCenter, new Color(0.85f, 0.88f, 0.92f)));
 
-        // unique tier 5 / 6 modifiers (word-wrapped, full text)
+        // tier 5/6 modifiers, or the tier 7 fusion tag (word-wrapped, full text)
+        string mod7 = TowerCatalog.ModifierText(def.type, 7);
         string mod5 = TowerCatalog.ModifierText(def.type, 5);
         string mod6 = TowerCatalog.ModifierText(def.type, 6);
+        GUIStyle mod7Style = Style(14, TextAnchor.UpperCenter, new Color(1f, 0.92f, 0.55f));
+        mod7Style.wordWrap = true;
         GUIStyle mod5Style = Style(14, TextAnchor.UpperCenter, new Color(0.72f, 0.86f, 1f));
         mod5Style.wordWrap = true;
         GUIStyle mod6Style = Style(14, TextAnchor.UpperCenter, new Color(1f, 0.82f, 0.45f));
         mod6Style.wordWrap = true;
         float my0 = area.y + 5f * rowH + 54f;
-        if (mod5 != null)
+        if (mod7 != null)
+        {
+            GUI.Label(new Rect(area.x - 40f, my0, area.width + 80f, 34f), "T7   " + mod7, mod7Style);
+        }
+        else if (mod5 != null)
+        {
             GUI.Label(new Rect(area.x - 40f, my0, area.width + 80f, 34f), "T5   " + mod5, mod5Style);
-        if (mod6 != null)
-            GUI.Label(new Rect(area.x - 40f, my0 + 36f, area.width + 80f, 34f), "T6   " + mod6, mod6Style);
-        if (mod5 == null)
+            if (mod6 != null)
+                GUI.Label(new Rect(area.x - 40f, my0 + 36f, area.width + 80f, 34f), "T6   " + mod6, mod6Style);
+        }
+        else
         {
             GUIStyle noModStyle = Style(14, TextAnchor.UpperCenter, new Color(0.75f, 0.75f, 0.78f));
             noModStyle.wordWrap = true;
@@ -149,6 +161,10 @@ public partial class TDGameManager
                     case TowerType.Pierce: return "prc " + s.pierceCount;
                     case TowerType.Poison: return s.poisonDps.ToString("0.#") + "dps";
                     case TowerType.Gold: return "+$" + s.goldPerHit;
+                    case TowerType.FondueFountain: return "dip +" + Mathf.RoundToInt(s.dippedBonus * 100f) + "% x" + s.dippedMaxStacks;
+                    case TowerType.IceCreamTruck: return Mathf.RoundToInt(s.stunChance * 100f) + "% stun";
+                    case TowerType.BobaBlaster: return s.rateMinInterval > 0f ? ("-> " + s.rateMinInterval.ToString("0.00") + "s") : "-";
+                    case TowerType.PizzaOven: return s.zoneDps.ToString("0.#") + " dps";
                     default: return "-";
                 }
         }
@@ -173,6 +189,10 @@ public partial class TDGameManager
             case TowerType.Pierce: return "Fires a line that skewers every enemy it passes through.";
             case TowerType.Poison: return "Applies damage over time that keeps ticking.";
             case TowerType.Gold: return "Deals no damage - pays out gold on every confirmed hit (max 4 per board).";
+            case TowerType.FondueFountain: return "Tier 7 fusion. Heavy molten-chocolate beam that stacks +damage taken (max 5).";
+            case TowerType.IceCreamTruck: return "Tier 7 fusion. Splash cones that can stun everything caught (20%).";
+            case TowerType.BobaBlaster: return "Tier 7 fusion. Single-target DPS that ramps its fire rate on one target.";
+            case TowerType.PizzaOven: return "Tier 7 fusion. Lands a hit and leaves a 5s damaging pizza zone.";
             default: return "";
         }
     }

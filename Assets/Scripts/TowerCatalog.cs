@@ -128,6 +128,15 @@ public static class TowerCatalog
         TowerType.Chain, TowerType.Pierce, TowerType.Poison, TowerType.Gold
     };
 
+    /// <summary>Everything the Tower Viewer gallery browses: the buildable types
+    /// plus the Tier 7 fusion results (which only exist at tier 7).</summary>
+    public static readonly TowerType[] GalleryTypes =
+    {
+        TowerType.SingleShot, TowerType.Splash, TowerType.Slow, TowerType.Sniper,
+        TowerType.Chain, TowerType.Pierce, TowerType.Poison, TowerType.Gold,
+        TowerType.FondueFountain, TowerType.IceCreamTruck, TowerType.BobaBlaster, TowerType.PizzaOven
+    };
+
     /// <summary>Types a random build / merge / re-roll may produce. Gold is
     /// excluded: it is only ever placed deliberately from Gold mode.</summary>
     public static readonly TowerType[] RandomTypes =
@@ -169,7 +178,17 @@ public static class TowerCatalog
     public static string ModifierText(TowerType t, int tier)
     {
         if (t == TowerType.Gold) return null;
-        if (tier == 7) return IsT7Type(t) ? "Tier 7 fusion tower" : null;
+        if (tier == 7)
+        {
+            switch (t)
+            {
+                case TowerType.FondueFountain: return "Fusion - heavy beam that stacks a damage-taken debuff";
+                case TowerType.IceCreamTruck: return "Fusion - splash cones that can stun a whole group";
+                case TowerType.BobaBlaster: return "Fusion - single-target DPS that ramps on one target";
+                case TowerType.PizzaOven: return "Fusion - lands a hit and leaves a 5s damaging pizza zone";
+                default: return null;
+            }
+        }
 
         if (tier == 5)
         {
@@ -304,7 +323,7 @@ public static class TowerCatalog
         d = new TowerDef();
         d.type = TowerType.FondueFountain; d.displayName = "Fondue Fountain"; d.color = new Color(0.70f, 0.40f, 0.18f);
         for (int i = 0; i < TowerCatalog.MaxTier - 1; i++) d.tiers.Add(new TowerTierStats());
-        d.tiers.Add(new TowerTierStats { damage = 100, range = 10.5f, fireInterval = 0.45f, projectileSpeed = 26f, dippedBonus = 0.12f, dippedDuration = 4f, dippedMaxStacks = 5 });
+        d.tiers.Add(new TowerTierStats { damage = 300, range = 10.5f, fireInterval = 0.45f, projectileSpeed = 26f, dippedBonus = 0.12f, dippedDuration = 4f, dippedMaxStacks = 5 });
         defs[d.type] = d;
 
         d = new TowerDef();
@@ -322,7 +341,7 @@ public static class TowerCatalog
         d = new TowerDef();
         d.type = TowerType.PizzaOven; d.displayName = "Pizza Oven"; d.color = new Color(0.90f, 0.45f, 0.22f);
         for (int i = 0; i < TowerCatalog.MaxTier - 1; i++) d.tiers.Add(new TowerTierStats());
-        d.tiers.Add(new TowerTierStats { damage = 50, range = 10f, fireInterval = 2.0f, projectileSpeed = 18f, splashRadius = 2.5f, zoneDps = 120f, zoneDuration = 5f });
+        d.tiers.Add(new TowerTierStats { damage = 50, range = 10f, fireInterval = 2.0f, projectileSpeed = 18f, splashRadius = 2.5f, zoneDps = 240f, zoneDuration = 5f });
         defs[d.type] = d;
     }
 }

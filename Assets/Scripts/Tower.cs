@@ -216,6 +216,9 @@ public class Tower : MonoBehaviour
             case TowerType.PizzaOven:
                 FirePizza(target, s);
                 break;
+            case TowerType.FondueFountain:
+                FireFondue(muzzle, target, s);
+                break;
             default:
                 // SingleShot T6 "Kettle Burst" fires a volley at several targets.
                 if (s.multiShot > 1) SpawnVolley(muzzle, target, s);
@@ -413,6 +416,21 @@ public class Tower : MonoBehaviour
         z.Radius = s.splashRadius;
         z.Dps = s.zoneDps;
         z.Duration = s.zoneDuration;
+    }
+
+    /// <summary>Fondue Fountain T7: a heavy molten-chocolate beam that also coats
+    /// the target in stacking Dipped (damage-taken) stacks.</summary>
+    void FireFondue(Vector3 from, Mob target, TowerTierStats s)
+    {
+        if (target == null) return;
+
+        Vector3 hit = target.transform.position + Vector3.up * 0.4f;
+        target.TakeDamage(s.damage);
+        AddDamage(s.damage);
+        if (s.dippedBonus > 0f)
+            target.ApplyDipped(s.dippedBonus, s.dippedDuration, s.dippedMaxStacks);
+
+        FxEvents.Beam(from, hit, new Color(0.45f, 0.25f, 0.10f));   // brown beam (mirrored)
     }
 
     // ---------------------------------------------------------- gumball slow
