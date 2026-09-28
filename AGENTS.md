@@ -79,6 +79,7 @@ Editor render helpers (write PNGs to `%TEMP%\opencode\`): `SnackPreview.Render`
 1. Read the docs above, then the files you intend to change.
 2. Make the change; keep it consistent with surrounding style.
 3. Verify by compiling in batch mode (and rendering, if visual).
-4. Commit and push to `main`; ask the user to play-test behaviour.
+4. Commit and push to `main`; **then** build if needed (a player's version stamp is
+   `HEAD`'s sha, so commit *before* building). Ask the user to play-test behaviour.
 5. **Only build WebGL when explicitly asked** (use the `webgl-build` skill); commit
    does not imply a WebGL publish.

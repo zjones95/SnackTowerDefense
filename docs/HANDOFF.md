@@ -4,8 +4,8 @@ Written so a **fresh session** can pick this project up fast. Read this first, t
 `docs/ARCHITECTURE.md`, then `docs/TierPlan.md` and `docs/MobRoster.md`.
 
 > **The GitHub issue tracker is the live to-do list** —
-> `github.com/zjones95/SnackTowerDefense/issues` (currently **#1–#19**). This doc is
-> the *state of the world*; the issues are the *work*.
+> `github.com/zjones95/SnackTowerDefense/issues` (**#1–#32**; only **#8** and **#17**
+> remain open, both design). This doc is the *state of the world*; the issues are the *work*.
 
 ---
 
@@ -24,6 +24,7 @@ Written so a **fresh session** can pick this project up fast. Read this first, t
 |---|---|
 | Single player | **35 waves**, one mob type per wave, a standalone boss every 5th (waves 5–35) |
 | Towers | 7 random-build types × **6 tiers** + **Gold** (3 tiers) + **4 Tier 7 fusion types** (#12). **T6+T6 → a random T7 for `$200`** on the merge key; T7 is terminal. 2:1 merge at any tier up to T5 (`$10`; `T4+T4 → T5`, `T5+T5 → T6`); cash **ascension** **T4→T5 `$150` / T5→T6 `$300`** with **U**. **T5/T6 modifiers implemented** and **T6 is cumulative with its T5 trait**. |
+| Models | Every tower + the 4 T7 fusions have Blender `.glb` models; the **Soda Cup (Splash)** was re-authored as a painted straw-cannon. Sources in `Assets/Models/**`, runtime in `Resources/Snack/**`; authoring scripts in `tools/blender/`. |
 | Targeting | Per-tower mode in the selection panel: Default / Nearest / Farthest / Random / Highest health / Lowest health (`TowerTargeting`) |
 | Mobs | 35 fruits/veg; **34 modelled**, Granola Mom is the procedural humanoid |
 | Status FX | Floating bars **and** the boss bar show **burn (flame + `xN`)** and **slow (ice cube)** and **tar** icons (`MobStatusIcons`) |
@@ -33,58 +34,55 @@ Written so a **fresh session** can pick this project up fast. Read this first, t
 | Viewers | **Tower Viewer** and **Mob Viewer** on the main menu |
 | Audio | fully procedural SFX + a **deep-house** looping track (122 BPM, 8 bars); `M` toggles mute |
 | Menus | Orbiting board backdrop, construction-paper buttons, **Settings** (music/SFX), in-game **pause** menu |
-| Multiplayer | Lobby (8 players), one board each, **Unity Relay (UGS)**; **independent per-board waves** (#7), live board sync (~15 Hz), collapsible scoreboard, relay chat (**T**), version gate (#30) |
+| Multiplayer | Lobby (8 players), one board each, **Unity Relay (UGS)**; **independent per-board waves** (#7), live board sync (~20 Hz) with remote projectiles + FX, collapsible scoreboard, relay chat (**T**), version gate (#30) |
 | WebGL | `WebGLBuild.Build` → `build/WebGL`; live at <https://zjones95.github.io/SnackTowerDefense/>; publish with `tools\publish-webgl.ps1` → `webgl` branch (**licence-free**); share zip `C:\Users\Desktop\SnackTowerDefense-WebGL.zip` |
 | CI | `unity-ci.yml` now **passes** (the Unity credentials were corrected); the WebGL deploy is licence-free (see below) |
 
 ## Verified vs not
 
-**Verified by the agent** (batch mode): the project compiles; `StandaloneWindows64`
-and **WebGL** players link; models/levels checked with editor renders; music loop
-checked (`len 15.74 s, peak 0.92, rms 0.21, bad 0`).
+**Verified by the agent** (batch mode): compiles clean; the **StandaloneWindows64**
+and **WebGL** players link; models check out in editor renders (`SnackPreview` shows the
+new Soda Cup in the tower grid); music loop checked (`len 15.74 s, peak 0.92, rms 0.21, bad 0`).
 
 **NOT verified — needs a human play-test:**
-1. **Balance** across 35 waves — the biggest unknown.
-2. **Boss behaviours** (`regen`, `armour`, `slowImmune`, `enrage`, `dash`).
-3. **Difficulty selector.**
-4. **Multiplayer end-to-end** (tiers, status icons, Relay over the internet).
-5. **T5/T6 modifier behaviours** — implemented, never played.
+1. **Balance** across 35 waves — the biggest unknown, incl. the new T7 towers.
+2. **T7 fusion towers** — Fondue (beam + stacking Dipped), Ice Cream Truck (splash stun),
+   Boba (rate ramp), Pizza Oven (translucent 5 s zone). Implemented + modelled, never played.
+3. **Boss behaviours** (`regen`, `armour`, `slowResist`, `enrage`, `dash`).
+4. **Multiplayer end-to-end** — independent waves, chat, scoreboard, version gate, remote
+   projectiles + the FX channel (Relay over the internet). Agents **cannot** test networking.
+5. **Difficulty selector**, **Damage Test** (#9), **sell** (#18) and **merge-at-any-tier** (#10).
+6. **The new Soda Cup model** — check its aim/scale against the other towers.
 
 ## Open work — GitHub issues
 
-| # | Title |
-|---|---|
-| 1 | UI: Sour Belt selection panel content is cut off — enlarge the panel |
-| 2 | UI: show full targeting-mode button names (needs #1) |
-| 3 | Sour Straw (Sniper) tracer ray should be green |
-| 4 | Bug: poison tower damage not counted in "Damage Done" |
-| 5 | Balance: nerf the poison death explosion by 20% |
-| 6 | Balance: bosses should never be immune to stuns *(superseded by #11)* |
-| 7 | Multiplayer: independent board wave progression |
-| 8 | Feature: roguelike upgrades (pick 1 of 3 after each boss wave) — design |
-| 9 | Feature: "Damage Test" end-of-run scenario |
-| 10 | Design: allow merging towers at any tier |
-| 11 | Balance: stuns always work on bosses; Sour Belt stun 5% → 10% |
-| 12 | Design: five new unique Tier 7 fusion towers — brainstorm for review |
-| 13 | UI: bottom toolbar for build options (Tower / Gold Tower) |
-| 14 | Balance: slow towers 50% effective on bosses instead of immune |
-| 15 | Perf: optimize multiplayer board syncing; raise spectate FPS |
-| 16 | UI: track gold earned per individual Gold tower |
-| 17 | Design: cooperative map (larger, non-symmetrical) |
-| 18 | Feature: sell towers for 50% of invested cost (hotkey X) |
-| 19 | UI: tar (+damage-taken) status icon on mob/boss bars |
+The tracker is at **#1–#32**. **Everything is implemented and closed except two design
+issues waiting on a decision:**
+
+- **#8 [Feature] Roguelike upgrades** — pick 1 of 3 after each boss wave. A full spec is on
+  the issue (pool, rarity weights 60/30/10, per-player in MP, carries into the Damage Test).
+- **#17 [Design] Cooperative map** — larger, non-symmetrical shared board; a phased plan is
+  on the issue (author the layout single-player first, then host-authoritative shared-board
+  netcode).
+
+Recent ships (all closed): #1–#7, #9, #11, #13–#16, #18–#32 — including the **Tier 7** tier
+(#20) + four fusion towers (#21–#24), Spicy Chips → **Burn** (#29), multiplayer
+**independent waves** (#7), spectate perf (#15), **version gate** (#30), collapsible
+**scoreboard** (#32), relay **chat** (#27), **sell** (#18), **merge at any tier** (#10), the
+**Damage Test** (#9), and the T7-tower + Soda-Cup Blender models.
 
 ## Suggested next steps
 
-1. **Play-test single player** and tune balance (highest value).
-   - health curve: `TDBalance.HealthMult` (now tapers 13%→10%/wave)
-   - global mob HP: `TDBalance.MobHealthScale` (1.25)
-   - income: `TDBalance.KillReward` (1) / `RoundBonus` (flat 50)
-   - tower stats: `TowerCatalog`; ascension costs in `TDBalance`
-2. **Cheap wins:** #1–#3, #16, #19; balance tweaks #5, #11, #14.
-3. **Multiplayer:** #15 (perf/spectate FPS), then decide #7 (independent waves).
-4. **Design reviews** before code: #8 (roguelike), #12 (T7), #17 (co-op map).
-5. **Fix CI licence** to unblock the Pages deploy (below).
+1. **Play-test single player** and tune balance (highest value) — especially the four T7
+   fusion towers and the new Soda Cup model.
+   - tower stats: `TowerCatalog` (all rows, incl. the `--- Tier 7 fusion towers ---` block)
+   - health curve `TDBalance.HealthMult`; global HP `TDBalance.MobHealthScale` (1.25)
+   - income `TDBalance.KillReward` (1) / `RoundBonus` (flat 50)
+   - merge/ascend costs in `TDBalance`; sell/merge rules in `TDGameManager`
+2. **Decide #8 and #17** (proposals are on the issues), then implement.
+3. **Multiplayer play-test** (ParrelSync, two editors): independent waves, chat (**T**),
+   scoreboard, version gate, remote projectiles + FX.
+4. Re-author more towers in the soda-cup style if you like — `tools/blender/` has the script.
 
 ## CI / licence / deploy
 
@@ -138,12 +136,15 @@ checked (`len 15.74 s, peak 0.92, rms 0.21, bad 0`).
   its own wave on clear (independent waves, #7). Any board clearing all 35 waves is a
   shared victory.
 - `RemoteBoard` rebuilds a tower when its **type or tier** changes (merge/re-roll).
-- `BoardSnapshot.MobSnap` carries `Status` / `Stacks` (status icons). **Changing the
-  wire format requires bumping `NetConfig.GameVersion`** — both peers must match. The
-  join handshake refuses mismatches (#30); the version is `<scheme>+<git sha>` stamped
-  by `Assets/Editor/BuildVersion.cs`.
-- Spectate snapshots stream at ~15 Hz (#15); `RemoteBoard` interpolates frame-rate
-  independently.
+- `BoardSnapshot` carries mobs (`Status`/`Stacks`), towers, and projectiles (`Type` = the
+  firing tower, so the remote picks the right model). **Changing the wire format requires
+  bumping `NetConfig.GameVersion`** — both peers must match. The join handshake refuses
+  mismatches (#30); the version is `<scheme>+<git sha>` stamped by `Assets/Editor/BuildVersion.cs`.
+- Spectate snapshots stream at **~20 Hz** (#15); `RemoteBoard` interpolates mobs/projectiles
+  and slerps turret aim, so remote boards render smoothly at the display frame rate.
+- Cosmetic FX (splash bursts, Sniper/Chain tracer bolts, the Fondue beam) ride their **own
+  best-effort channel** — `Net/FxSync.cs` (`td.fx`/`td.fxall`), separate from the board
+  snapshot, so cosmetics can change/drop without touching the sim wire format.
 - Chat relay lives in `Net/ChatSync.cs`; in-match overlays (collapsible scoreboard at
   top-right, chat log lower-left) are drawn from `TDGameManager.Multiplayer.cs`.
 
@@ -155,7 +156,10 @@ checked (`len 15.74 s, peak 0.92, rms 0.21, bad 0`).
    verification section — and/or the editor render helpers.
 4. **Ask the user to play-test** anything behavioural (the agent cannot run play mode
    or networking).
-5. **Commit and push** to `main`.
+5. **Commit and push** to `main`. For a **player build, commit first** — the player's
+   version stamp is `<scheme>+<git sha>` of `HEAD`, so building uncommitted work bakes the
+   previous commit. And **only build WebGL when the user explicitly asks** (see the
+   `webgl-build` skill); routine verification is a batch compile / Windows build.
 6. `gh` is **not logged in** by default; a token can be pulled from the git credential
    store when filing issues/PRs.
 

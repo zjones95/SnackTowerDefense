@@ -41,11 +41,12 @@ MainMenu ─┬─ DifficultySelect ── StartingRun ── Playing ─┬─ 
 | `TDGameManager.MobViewer.cs` | Mob gallery screen |
 | `TDGameManager.Settings.cs` | Pause menu + music/SFX settings overlay, time-scale handling |
 | `TDBalance.cs` | Money/lives/prep, difficulty, **35-wave table**, health & speed curves |
-| `TowerCatalog.cs` | 8 tower types (7 random-build ×6 tiers + Gold ×3); tier stats, merge/ascend costs live in `TDBalance` |
+| `TowerCatalog.cs` | 12 types: 7 random-build ×6 tiers, Gold ×3, and 4 Tier 7 fusion types; tier stats; merge/ascend/fuse costs live in `TDBalance` |
 | `Tower.cs` | Targeting, firing, merging, muzzle, model composition |
 | `Projectile.cs` | Homing projectile (also arc/hop + splash + poison + slow on hit) |
 | `PierceProjectile.cs` | Straight-line travelling rod that skewers enemies |
 | `SplashFX.cs` | Expanding burst + droplets for splash impacts |
+| `FxEvents.cs` | Queues/replays cosmetic FX (splash, tracer, beam) for remote boards |
 | `MobCatalog.cs` | 35 mob defs: archetype, stats, colour, boss traits |
 | `Mob.cs` | Movement, health, status effects, boss behaviours |
 | `TDMap.cs` | ASCII layout → grid, cell centres, world↔cell, waypoints |
@@ -55,14 +56,15 @@ MainMenu ─┬─ DifficultySelect ── StartingRun ── Playing ─┬─ 
 | `TDVisuals.cs` | Primitive + material helpers (`Mat`, `TransparentMat`, `Box`, …) |
 | `TDTextures`/`TDRoom`/`TDVisuals` | Pure scene dressing; safe to ignore for gameplay work |
 | `SnackModels.cs` | glTF loading, `CenterOn`, model path helpers |
-| `SnackVisuals.cs` | `TowerVisual`, `MobVisual`, `MobStatusIcons` (poison/slow/tar icons), tier scale/colours |
+| `SnackVisuals.cs` | `TowerVisual`, `MobVisual`, `MobStatusIcons` (burn/slow/tar icons), tier scale/colours |
 | `SnackArt.cs` | Procedural fallback art when a `.glb` is missing |
 | `ChildModel.cs` | Procedural humanoid with a walk cycle (used by Granola Mom) |
 | `TDAudio.cs` / `TDSynth.cs` | Procedural SFX + the looping music track |
 | `TowerViewer.cs` / `MobViewer.cs` | Off-screen turntables rendered to a RenderTexture |
 | `Net/NetworkSession.cs` | NGO `NetworkManager`, host/join/leave, lobby roster |
 | `Net/MatchSync.cs` | Per-board state relay + independent waves; difficulty |
-| `Net/SpectateSync.cs` | Board snapshot streaming (host fan-out, ~15 Hz) |
+| `Net/SpectateSync.cs` | Board snapshot streaming (host fan-out, ~20 Hz) |
+| `Net/FxSync.cs` | Best-effort cosmetic FX channel (`td.fx` / `td.fxall`) |
 | `Net/BoardSnapshot.cs` | Compact quantised board state |
 | `Net/BoardLayout.cs` | Where each player's board sits in the world |
 | `Net/ChatSync.cs` | Relay chat + typing flag |
@@ -90,26 +92,28 @@ forward); instant towers draw a `Tracer` (flat camera-facing neon ribbon). Each 
 tracks `DamageDone` (shown in the selection panel). **Gold** is an economy tower
 (`G`, cap 4, `$1/$2/$3` per hit) that never merges and is excluded from the random pool.
 
-Tiers: 2:1 **merging** (`E`) is capped at source tier ≤ `TowerCatalog.MaxMergeTier`
-(3), so **T3+T3 → T4** is the top merge. Tiers **4 → 5 → 6** advance by **cash
-ascension** (`U`, `TDBalance.AscendCost`) — a single tower rebuilt in place at tier + 1,
-same type, no second tower consumed. `MaxTier` is 6. **All T5/T6 modifier behaviours
-are implemented** (crit/Deadeye, Twin Lash + stun, Sticky Sour, Candy Shell, Sticky
-Tar, poison stacks + Ghost Pepper detonation, Ricochet Pop, Kettle Burst, Fizz
-Ricochet, Sticky Soda, Wide Skewer, Boomerang) and **T6 keeps its T5 trait**. See
-[`docs/TierPlan.md`](TierPlan.md).
+Tiers: 2:1 **merging** (`E`) works at any source tier up to `TowerCatalog.MaxMergeTier`
+(5) for `$10`; at **T6 the same action fuses two T6s into a random Tier 7 for `$200`**
+(T7 is terminal). Tiers **4 → 5 → 6** also advance by **cash ascension** (`U`,
+`TDBalance.AscendCost`) — a single tower rebuilt in place at tier + 1, same type, no
+second tower consumed. `MaxTier` is 7. **All T5/T6 modifier behaviours are implemented**
+(crit/Deadeye, Twin Lash + stun, Sticky Sour, Candy Shell, Sticky Tar, burn stacks +
+Ghost Pepper detonation, Ricochet Pop, Kettle Burst, Fizz Ricochet, Sticky Soda, Wide
+Skewer, Boomerang) and **T6 keeps its T5 trait**; the four T7 fusion types add their own
+mechanics (Fondue beam + Dipped, Ice Cream splash-stun, Boba ramp, Pizza zone). See
+[`docs/TierPlan.md`](TierPlan.md) and issue #12.
 
 **Mobs** — one mob type per wave. `MobCatalog` derives stats from the archetype
 (Basic/Fast/Tank/Swarm/Boss) and then applies per-boss traits: `regen`,
-`armour` (flat damage reduction), `slowImmune`, `enrage` (speed rises as health
-falls) and `dashEvery` (periodic burst).
+`armour` (flat damage reduction), `slowResist` (0.5 on Coconut/Granola Mom), `enrage`
+(speed rises as health falls) and `dashEvery` (periodic burst).
 
 **Waves** — `TDBalance.Waves` is the single source of truth: one mob id per wave,
 35 waves, a standalone boss every 5th. Mob health is `TDBalance.HealthMult(wave)`
 (per-wave growth tapers from 13% → 10% by the last wave, ~41× at wave 35) times the
 difficulty multiplier and `TDBalance.MobHealthScale` (1.25). In single player the next
-wave starts immediately; in multiplayer the shared clock starts later waves when every
-board clears (independent waves = issue #7).
+wave starts immediately; in multiplayer each board runs its **own** wave independently
+(#7) — `MatchSync` relays per-board state rather than sharing a clock.
 
 **UI** — all IMGUI, drawn from `TDGameManager.OnGUI` and dispatched to the
 partial-class screens. The main/difficulty menus build a real board
@@ -120,7 +124,7 @@ Esc in a run opens the pause menu (`TDGameManager.Settings.cs`), which freezes
 
 **Multiplayer** — host-authoritative state, per-board simulation. Each peer simulates
 its **own** board and streams a `BoardSnapshot` to the host; the host fans each board
-out to the others over **unreliable sequenced** delivery (~15 Hz). Waves are
+out to the others over **unreliable sequenced** delivery (~20 Hz). Waves are
 **independent per board** (#7): clearing your wave starts your next immediately, and
 `MatchSync` is a per-board state relay rather than a shared clock. Connections go
 through **Unity Relay (UGS)** — `NetworkSession` picks the allocation endpoint by
@@ -210,6 +214,11 @@ Editor render helpers (write PNGs to `%TEMP%\opencode\`):
 | `TDPlacementPreview.Render` | ground contact of towers/mobs |
 | `TDMusicCheck.Verify` | prints the music clip's length/peak/RMS |
 
+> **Player builds:** commit **before** building — the player's version stamp is
+> `<scheme>+<git sha>` of `HEAD`, so building uncommitted work bakes the previous commit.
+> **Only build WebGL when the user explicitly asks** (see the `webgl-build` skill);
+> routine verification is a batch compile or a Windows player build.
+
 **Play mode and networking cannot be tested by an agent** — the editor pauses
 when unfocused. Ask the user to play-test and report.
 
@@ -221,7 +230,10 @@ Driven through the Blender MCP (`tools["blender"]`).
   `bpy.ops.export_scene.gltf(filepath=…, export_format='GLB', use_selection=True)`.
 - **Axis conversion**: Blender `+Z` → Unity `+Y`; Blender `+Y` → Unity `−Z`.
 - Models are mirrored to **both** `Assets/Resources/Snack/**` (runtime) and
-  `Assets/Models/**` (source copies).
+  `Assets/Models/**` (source copies). Authoring scripts live in `tools/blender/`
+  (e.g. `soda_cup_concept.py`, which builds + exports the Soda Cup as `Soda.glb`).
+- Name a model's base object **`pedestal`** when it has a fixed stand (the Soda Cup
+  cannon does): `CenterOn` anchors on it, and the head-split keeps it from rotating.
 - For preview renders set `scene.view_settings.view_transform = 'Standard'` —
   the default AgX transform desaturates badly — and dial the key light to suit
   (the rig was tuned at ~65–95 W for Standard).
@@ -239,8 +251,9 @@ Driven through the Blender MCP (`tools["blender"]`).
 4. `SnackModels.CenterOn` anchors on a renderer named `pedestal` if one exists,
    otherwise the whole-model bounds.
 5. Tower head-split: children whose names contain `pedestal`/`rim` stay fixed
-   while everything else rotates to aim. The snack towers have no such nodes, so
-   the **whole model rotates**.
+   while everything else rotates to aim. Most snack towers have no such nodes, so
+   the **whole model rotates**; the Soda Cup names its base `pedestal`, so the cup +
+   straw cannon aim while the stand stays put.
 6. **Adding a mob needs no code** — drop `<id>.glb` into
    `Assets/Resources/Snack/Mobs/` where `<id>` matches `MobDef.id`.
 7. `Projectile.Bounces`/`Arc` remain from the retired Jelly Bean tower; `Arc` is

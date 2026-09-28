@@ -93,13 +93,28 @@ Stats live in `Assets/Scripts/TowerCatalog.cs`.
   Default (furthest along the path), Nearest, Farthest, Random, Highest health,
   Lowest health.
 - **Tier 5/6 modifiers** are implemented for every type (crit/Deadeye, Twin Lash +
-  stun, Sticky Sour, Candy Shell, Sticky Tar, poison stacks + death explosion,
+  stun, Sticky Sour, Candy Shell, Sticky Tar, burn stacks + death explosion,
   Ricochet Pop, Kettle Burst, Fizz Ricochet, Sticky Soda, Wide Skewer, Boomerang),
   and **T6 keeps its T5 trait**. See [`docs/TierPlan.md`](docs/TierPlan.md).
-- **Status icons** — poisoned mobs show a droplet with a stack count and slowed mobs
-  an ice cube, on both the floating bars and the boss bar.
+- **Status icons** — burned mobs show a flame with a stack count, slowed mobs an ice
+  cube, and tarred mobs a syrup icon, on both the floating bars and the boss bar.
 - **Metrics** — each tower reports **Damage done** in the selection panel, and the HUD
   tracks total **Gold Generated**.
+
+### Tier 7 fusion towers
+
+Fuse **two T6 towers** with the normal **Merge (E)** key for **`$200`** → a random one
+of four unique **Tier 7** towers (T7 is terminal — no further merge/ascend/re-roll):
+
+| Type | Name | Attack |
+|---|---|---|
+| FondueFountain | Fondue Fountain | Heavy molten-chocolate **beam** that stacks a **"Dipped" damage-taken debuff** on the target |
+| IceCreamTruck | Ice Cream Truck | Lobs ice-cream cones that **splash**, with a 20% chance to **stun** every mob caught |
+| BobaBlaster | Boba Blaster | Single-target DPS that **ramps its fire rate** while it holds one target |
+| PizzaOven | Pizza Oven | Landing hit + a **5 s translucent damaging zone** |
+
+Their Blender models and the model authoring script live in `tools/blender/`; see
+[`docs/TierPlan.md`](docs/TierPlan.md) and issue #12.
 
 ## Mobs
 
@@ -108,7 +123,7 @@ standalone **boss every 5th wave**: Watermelon, Pumpkin, Pineapple, Durian,
 Coconut, Dragonfruit and the **Granola Mom** finale.
 
 Archetypes are `Basic` · `Fast` · `Tank` · `Swarm` · `Boss`, and bosses carry
-traits (regeneration, armour, slow-immunity, enrage, dashes).
+traits (regeneration, armour, slow-resistance, enrage, dashes).
 
 Defined in `Assets/Scripts/MobCatalog.cs`; models live in
 `Assets/Resources/Snack/Mobs/`. The full wave-by-wave table is in
@@ -315,7 +330,11 @@ publish the existing `build/WebGL` without rebuilding.
 
 ## Models
 
-Tower and mob models were authored in Blender as actual food objects and exported
-as glTF. Import is handled by [glTFast](https://docs.unity3d.com/Packages/com.unity.cloud.gltfast@latest).
+Tower and mob models were authored in Blender and exported as glTF. They live in
+`Assets/Resources/Snack/{Towers,Mobs,Projectiles}` (runtime, loaded by path) and are
+mirrored to `Assets/Models/**` (source). The **Soda Cup** (Splash tower) is a painted
+straw-cannon; its authoring script is `tools/blender/soda_cup_concept.py`. Import is
+handled by [glTFast](https://docs.unity3d.com/Packages/com.unity.cloud.gltfast@latest).
 Because the source files sit at different Blender origins, `SnackModels.CenterOn`
-re-centers each model on its pedestal at spawn time.
+re-centers each model on its pedestal at spawn time (a model whose base is named
+`pedestal` anchors on that, so the tower stays on its tile while the head rotates to aim).
