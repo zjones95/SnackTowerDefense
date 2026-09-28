@@ -1,20 +1,26 @@
-# Slow tower (gumball machine) — replaces Gum.glb art.
-# Concept: %TEMP%/opencode/slow_new_genai_concept_v4.png
-# (red body, glass globe of colorful gumballs, chrome lid, SHORT smooth
-# dark-steel open barrel with empty muzzle, NO muzzle gumball, NO gauge).
+# Slow tower (gumball machine) — restyled Gum.glb art.
+# Concept: %TEMP%/opencode/gum_restyle_genai_concept.png
+# (classic store gumball machine: round CLEAR glass head with a white tint,
+# red TAPERED CYLINDRICAL body wider at the base, red/blue/green/purple/orange
+# gumballs, chrome lid, and a VERY SHORT dark barrel at the lower-front
+# dispenser chute. No coin slot, no accents.)
+#
 # Model machine only — base via shared script tools/blender/wooden_base.py
-# (build_base via importlib; base occupies z 0->0.18).
+# (build_base via importlib; base occupies z 0->0.18, objects `pedestal`+`rim`).
 #
 # Layout (Blender units = meters, -Y = forward):
-#   base: z 0 -> 0.18 (pedestal + rim from wooden_base)
-#   Body: red tapered box, ~0.45 wide, ~0.35 tall, bottom z=0.18
-#   Globe: glass sphere r=0.30, center z=0.70
-#   Gumballs: 14 x r=0.075 spheres packed inside globe
-#   Lid: chrome disc + knob on globe top (~z 1.00)
-#   Barrel: SHORT smooth dark-steel cylinder, len 0.22, r 0.075,
-#           pointing FORWARD (-Y) from body front at z~0.45, open muzzle
-#           (muzzle ring joined into Barrel, near-black recessed bore disc).
-# Run through the Blender MCP (execute_blender_code) or Scripting tab.
+#   base:  z 0 -> 0.18 (pedestal + rim from wooden_base)
+#   Body:  red tapered cylinder (frustum), bottom r=0.30 -> top r=0.20,
+#          height 0.35, bottom z=0.18 (top z=0.53)
+#   Globe: clear glass sphere r=0.30, white tint (alpha 0.18), center z=0.70
+#   Gumballs: 14 x r=0.075, colors red/blue/green/purple/orange
+#   Lid:   chrome disc + knob on globe top (~z 1.00)
+#   Barrel: SHORT dark-steel cylinder, len 0.16, r 0.07, pointing FORWARD (-Y)
+#           from the NECK of the body (upper body, z~0.47, just under the glass),
+#           open muzzle (near-black recessed bore disc, no gumball).
+# Run via the Blender MCP (execute_blender_code) or headless:
+#   "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" \
+#       --background --python tools\blender\gum_barrel.py
 
 import bpy
 import math
@@ -22,9 +28,9 @@ import os
 import random
 import importlib.util
 
-BASE_SCRIPT = "C:/Users/Desktop/SnackTowerDefense/tools/blender/wooden_base.py"
-OUT_RES = "C:/Users/Desktop/SnackTowerDefense/Assets/Resources/Snack/Towers/Gum.glb"
-OUT_MOD = "C:/Users/Desktop/SnackTowerDefense/Assets/Models/Towers/Gum.glb"
+BASE_SCRIPT = "C:/Users/zach-laptop/SnackTowerDefense/tools/blender/wooden_base.py"
+OUT_RES = "C:/Users/zach-laptop/SnackTowerDefense/Assets/Resources/Snack/Towers/Gum.glb"
+OUT_MOD = "C:/Users/zach-laptop/SnackTowerDefense/Assets/Models/Towers/Gum.glb"
 
 UP = "Build the Slow tower (gumball machine) in Blender for SnackTowerDefense (Windows), replacing Gum.glb art."
 
@@ -81,68 +87,45 @@ def build_art():
         print("XFORM_FALLBACK", e)
 
     # --- materials ---
-    red_mat = mat_flat('GumRed', (0.80, 0.10, 0.12), metallic=0.15, rough=0.4)
-    dark_mat = mat_flat('GumDark', (0.08, 0.08, 0.09), metallic=0.3, rough=0.6)
-    steel_mat = mat_flat('GumSteel', (0.25, 0.25, 0.28), metallic=0.6, rough=0.45)
+    red_mat = mat_flat('GumRed', (0.78, 0.06, 0.08), metallic=0.10, rough=0.35)
+    steel_mat = mat_flat('GumSteel', (0.16, 0.16, 0.18), metallic=0.6, rough=0.45)
     chrome_mat = mat_flat('GumChrome', (0.85, 0.86, 0.88), metallic=0.85, rough=0.3)
     bore_mat = mat_flat('GumBore', (0.02, 0.02, 0.02), metallic=0.0, rough=0.9)
-    glass_mat = mat_flat('GumGlass', (0.85, 0.95, 1.0), metallic=0.0, rough=0.05, alpha=0.22)
+    # Clear glass, soft white tint, NOT frosted: low roughness, modest alpha.
+    glass_mat = mat_flat('GumGlass', (0.93, 0.96, 1.0), metallic=0.0, rough=0.05, alpha=0.18)
     gum_mats = [
         mat_flat('GumBall_Red', (0.90, 0.08, 0.10), metallic=0.0, rough=0.25),
-        mat_flat('GumBall_Yellow', (0.95, 0.80, 0.08), metallic=0.0, rough=0.25),
-        mat_flat('GumBall_Green', (0.10, 0.75, 0.15), metallic=0.0, rough=0.25),
         mat_flat('GumBall_Blue', (0.10, 0.45, 0.95), metallic=0.0, rough=0.25),
+        mat_flat('GumBall_Green', (0.10, 0.75, 0.15), metallic=0.0, rough=0.25),
+        mat_flat('GumBall_Purple', (0.55, 0.20, 0.80), metallic=0.0, rough=0.25),
+        mat_flat('GumBall_Orange', (0.95, 0.55, 0.10), metallic=0.0, rough=0.25),
     ]
 
     art = []
 
-    # --- Body: tapered red box, bottom z=0.18, ~0.45 wide, ~0.35 tall ---
-    W, H = 0.45, 0.35
+    # --- Body: tapered red cylinder (frustum), wider at the base ---
+    BOT_R, TOP_R, BH = 0.30, 0.20, 0.35
     Z0 = 0.18
-    bpy.ops.mesh.primitive_cube_add(size=W, location=(0, 0, Z0 + H / 2))
+    bpy.ops.mesh.primitive_cylinder_add(
+        vertices=24, radius=BOT_R, depth=BH, location=(0, 0, Z0 + BH / 2))
     body = bpy.context.active_object
     body.name = 'Body'
-    # squash Z: default cube is W x W x W -> scale Z to H
-    body.scale = (1.0, 1.0, H / W)
     apply_scale(body)
-    # taper: pull top verts inward (toy-like bevel look), then re-apply
+    # taper: interpolate radius from BOT_R (bottom, t=0) to TOP_R (top, t=1)
     me = body.data
+    half = BH / 2.0
     for v in me.vertices:
-        if v.co.z > 0:
-            v.co.x *= 0.88
-            v.co.y *= 0.88
+        t = (v.co.z + half) / BH
+        s = 1.0 - t + t * (TOP_R / BOT_R)
+        v.co.x *= s
+        v.co.y *= s
     body.data.materials.clear()
     body.data.materials.append(red_mat)
     if len(body.data.uv_layers) == 0:
         body.data.uv_layers.new(name="UVMap")
     art.append(body)
 
-    # --- CoinSlot: small dark box + tiny knob on front (-Y), joined ---
-    bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0, -W / 2 - 0.008, 0.47))
-    slot = bpy.context.active_object
-    slot.name = 'CoinSlot_box'
-    slot.scale = (0.12, 0.02, 0.07)
-    apply_scale(slot)
-    bpy.ops.mesh.primitive_cylinder_add(
-        vertices=12, radius=0.018, depth=0.03, location=(0.09, -W / 2 - 0.02, 0.50))
-    knob = bpy.context.active_object
-    knob.name = 'CoinSlot_knob'
-    knob.rotation_euler = (math.pi / 2, 0, 0)
-    apply_scale(knob)
-    bpy.ops.object.select_all(action='DESELECT')
-    slot.select_set(True)
-    knob.select_set(True)
-    bpy.context.view_layer.objects.active = slot
-    bpy.ops.object.join()
-    coinslot = bpy.context.active_object
-    coinslot.name = 'CoinSlot'
-    coinslot.data.materials.clear()
-    coinslot.data.materials.append(dark_mat)
-    if len(coinslot.data.uv_layers) == 0:
-        coinslot.data.uv_layers.new(name="UVMap")
-    art.append(coinslot)
-
-    # --- Globe: clear glass sphere r=0.30, center z=0.70 ---
+    # --- Globe: clear glass sphere r=0.30, white tint, center z=0.70 ---
     bpy.ops.mesh.primitive_uv_sphere_add(
         segments=16, ring_count=10, radius=0.30, location=(0, 0, 0.70))
     globe = bpy.context.active_object
@@ -154,9 +137,9 @@ def build_art():
         globe.data.uv_layers.new(name="UVMap")
     art.append(globe)
 
-    # --- Gumballs: 14 x r=0.075 packed inside globe ---
+    # --- Gumballs: 14 x r=0.075, red/blue/green/purple/orange, packed inside ---
     rng = random.Random(7)
-    palette = [0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1]
+    palette = [0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3]
     placed = []
     R_IN = 0.30 - 0.075 - 0.01  # keep fully inside glass
     tries = 0
@@ -182,7 +165,7 @@ def build_art():
         g.name = 'Gumball_%02d' % (i + 1)
         apply_scale(g)
         g.data.materials.clear()
-        g.data.materials.append(gum_mats[palette[i] % 4])
+        g.data.materials.append(gum_mats[palette[i] % 5])
         if len(g.data.uv_layers) == 0:
             g.data.uv_layers.new(name="UVMap")
         art.append(g)
@@ -211,10 +194,10 @@ def build_art():
         kn.data.uv_layers.new(name="UVMap")
     art.append(kn)
 
-    # --- Barrel: SHORT smooth dark-steel cylinder, -Y forward, z~0.45 ---
-    # tube: len 0.22, r 0.075, center y=-0.335 ; muzzle ring flange joined in
-    BLEN, BR = 0.22, 0.075
-    BC_Y, BC_Z = -(W / 2) - BLEN / 2 + 0.02, 0.45
+    # --- Barrel: SHORT dark-steel cylinder at the neck (upper body) ---
+    # tube: len 0.16, r 0.07, center y=-0.27, z=0.47 ; muzzle ring joined in
+    BLEN, BR = 0.16, 0.07
+    BC_Y, BC_Z = -0.27, 0.47
     bpy.ops.mesh.primitive_cylinder_add(
         vertices=16, radius=BR, depth=BLEN, location=(0, BC_Y, BC_Z))
     tube = bpy.context.active_object
@@ -224,7 +207,7 @@ def build_art():
     # muzzle ring flange at the muzzle end
     MUZ_Y = BC_Y - BLEN / 2
     bpy.ops.mesh.primitive_cylinder_add(
-        vertices=16, radius=0.092, depth=0.035, location=(0, MUZ_Y + 0.005, BC_Z))
+        vertices=16, radius=0.086, depth=0.03, location=(0, MUZ_Y + 0.004, BC_Z))
     ring = bpy.context.active_object
     ring.name = 'Barrel_ring'
     ring.rotation_euler = (math.pi / 2, 0, 0)
@@ -244,7 +227,7 @@ def build_art():
 
     # --- MuzzleBore: recessed near-black disc, empty opening, NO gumball ---
     bpy.ops.mesh.primitive_cylinder_add(
-        vertices=16, radius=0.058, depth=0.012,
+        vertices=16, radius=0.056, depth=0.012,
         location=(0, MUZ_Y - 0.004, BC_Z))
     bore = bpy.context.active_object
     bore.name = 'MuzzleBore'
@@ -277,23 +260,23 @@ def report(art):
         f, v = len(o.data.polygons), len(o.data.vertices)
         tf += f
         tv += v
-        print("GUM %s faces=%d verts=%d loc=%s" % (o.name, f, v, list(o.location)))
+        print("GUM %s faces=%d verts=%d" % (o.name, f, v))
     print("GUM ART faces=%d verts=%d (excl. base pedestal/rim)" % (tf, tv))
     for o in list(bpy.data.objects):
         if o.type == 'MESH' and o.name in ('pedestal', 'rim'):
             print("GUM BASE %s faces=%d verts=%d" % (
                 o.name, len(o.data.polygons), len(o.data.vertices)))
-    print("GUM glass: Principled Alpha=0.22 white-blue tint, blend_method=BLEND")
-    print("GUM muzzle: -Y forward (Blender), empty bore, NO gumball, NO gauge")
+    print("GUM glass: Principled Alpha=0.18 white tint, clear (not frosted), blend_method=BLEND")
+    print("GUM muzzle: -Y forward (Blender), at the neck (upper body), empty bore, NO gumball, NO coin slot")
 
 
-if __name__ == "__main__":
-    spec = importlib.util.spec_from_file_location("wooden_base", BASE_SCRIPT)
-    wb = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(wb)
-    ped, rim, _mats = wb.build_base(clear=True)
-    art = build_art()
-    export_all(OUT_RES)
-    export_all(OUT_MOD)
-    wb.report(ped, rim)
-    report(art)
+# Execute at module scope (Blender MCP / headless --python convention: no top-level return).
+_spec = importlib.util.spec_from_file_location("wooden_base", BASE_SCRIPT)
+_wb = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_wb)
+_ped, _rim, _mats = _wb.build_base(clear=True)
+_art = build_art()
+export_all(OUT_RES)
+export_all(OUT_MOD)
+_wb.report(_ped, _rim)
+report(_art)
