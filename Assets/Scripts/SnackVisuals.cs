@@ -178,6 +178,7 @@ public static class MobVisual
             m.transform.localPosition = Vector3.zero;
             m.transform.localScale = Vector3.one * (def.scale * 1.5f);
             SnackModels.CenterOn(m, parent.position);
+            MobWalkAnimation.Attach(m);
         }
         else
         {

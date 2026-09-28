@@ -6,6 +6,7 @@ Guidance for AI agents working in this repo.
 - `docs/HANDOFF.md` — current state, what is verified vs not, next steps
 - `docs/ARCHITECTURE.md` — codebase map, conventions, verification loop, gotchas
 - `docs/MobRoster.md` — the 35-wave fruit & vegetable roster and boss concepts
+- `docs/MobModelling.md` — how mobs are modelled, rigged, walk-animated and verified (read before making or changing a mob model)
 
 **Open work is tracked in GitHub issues** (`github.com/zjones95/SnackTowerDefense/issues`,
 currently **#1–#19**) — check there before starting something non-trivial, and file
