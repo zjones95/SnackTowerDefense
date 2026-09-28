@@ -53,8 +53,10 @@ public static class SnackModels
         return "Snack/Projectiles/" + TowerName(t);
     }
 
-    // Recenters an instantiated model so it sits on the cell: the pedestal
-    // (base) is aligned to the anchor in X/Z with its bottom at the anchor Y.
+    // Recenters an instantiated model so it sits on the cell: the base's bottom
+    // is aligned to the anchor in X/Z. The wooden base's bottom ring ("rim")
+    // sits exactly at the ground plane, while the "pedestal" body starts a
+    // little above it, so anchor on the rim first to keep the base flush.
     public static void CenterOn(GameObject instance, Vector3 worldAnchor)
     {
         Renderer[] rs = instance.GetComponentsInChildren<Renderer>();
@@ -63,7 +65,14 @@ public static class SnackModels
         Renderer anchorRenderer = null;
         for (int i = 0; i < rs.Length; i++)
         {
-            if (rs[i].name.ToLower().Contains("pedestal")) { anchorRenderer = rs[i]; break; }
+            if (rs[i].name.ToLower() == "rim") { anchorRenderer = rs[i]; break; }
+        }
+        if (anchorRenderer == null)
+        {
+            for (int i = 0; i < rs.Length; i++)
+            {
+                if (rs[i].name.ToLower().Contains("pedestal")) { anchorRenderer = rs[i]; break; }
+            }
         }
 
         Bounds b;
