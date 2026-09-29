@@ -327,7 +327,10 @@ public partial class TDGameManager : MonoBehaviour
         TDBoardBuilder.BuildTiles(worldRoot, map, SelectedTheme);
         BuildHover();
         BuildGhost();
-        TDBoardBuilder.BuildRoom(worldRoot, map, boardOffset);
+        if (SelectedTheme == BoardTheme.Classic)
+            TDBoardBuilder.BuildRoom(worldRoot, map, boardOffset);   // kid's room is Classic's surroundings
+        else
+            BoardThemeProps.Build(worldRoot, map, SelectedTheme, true);   // themed grounds + props + perimeter
     }
 
     void BuildHover()
@@ -1076,6 +1079,10 @@ public partial class TDGameManager : MonoBehaviour
     // --------------------------------------------------------------- GUI
     void OnGUI()
     {
+        // The board preview only lives on the single-player setup screen.
+        if (State != GameState.DifficultySelect && BoardPreview.Instance != null && BoardPreview.Instance.IsOpen)
+            BoardPreview.Instance.Close();
+
         if (State == GameState.MainMenu) DrawMenu();
         else if (State == GameState.DifficultySelect) DrawDifficulty();
         else if (State == GameState.TowerViewer) DrawTowerViewer();
@@ -1190,18 +1197,23 @@ public partial class TDGameManager : MonoBehaviour
     {
         DrawMenuOverlay();
 
-        GUI.Label(new Rect(0f, Screen.height * 0.11f, Screen.width, 60f), "SELECT DIFFICULTY",
+        BoardPreview pv = BoardPreview.Ensure();
+        if (!pv.IsOpen) pv.Open();
+        pv.Show(SelectedTheme);
+
+        GUI.Label(new Rect(0f, Screen.height * 0.06f, Screen.width, 60f), "SELECT DIFFICULTY",
             Style(40, TextAnchor.MiddleCenter, new Color(1f, 0.85f, 0.4f)));
 
-        float bw = 300f, bh = 52f, gap = 12f;
-        float bx = (Screen.width - bw) * 0.5f - 120f;
-        float by = Screen.height * 0.30f;
+        // ---- left: difficulty buttons ----
+        float bw = 250f, bh = 52f, gap = 12f;
+        float bx = Screen.width * 0.25f - 240f;
+        float by = Screen.height * 0.24f;
         GUIStyle btn = PaperButton(22);
 
         // Dark strip behind the blurbs keeps the coloured text readable over the board.
         Color old = GUI.color;
         GUI.color = new Color(0f, 0f, 0f, 0.45f);
-        GUI.DrawTexture(new Rect(bx + bw + 10f, by - 4f, 320f, 4f * (bh + gap) + 4f), Texture2D.whiteTexture);
+        GUI.DrawTexture(new Rect(bx + bw + 8f, by - 4f, 212f, 4f * (bh + gap) + 4f), Texture2D.whiteTexture);
         GUI.color = old;
 
         for (int i = 0; i < 4; i++)
@@ -1214,29 +1226,66 @@ public partial class TDGameManager : MonoBehaviour
                 CurrentDifficulty = d;
                 StartRun();
             }
-            GUI.Label(new Rect(bx + bw + 18f, y, 300f, bh), TDBalance.DifficultyBlurb(d),
-                Style(16, TextAnchor.MiddleLeft, TDBalance.DifficultyColour(d)));
+            GUI.Label(new Rect(bx + bw + 16f, y, 200f, bh), TDBalance.DifficultyBlurb(d),
+                Style(14, TextAnchor.MiddleLeft, TDBalance.DifficultyColour(d)));
         }
 
-        if (GUI.Button(new Rect(bx, by + 4f * (bh + gap) + 12f, bw, 46f), "Back", btn))
+        // ---- right: map picker with rotating preview ----
+        float cxR = Screen.width * 0.75f;
+        float size = Mathf.Clamp(Mathf.Min(Screen.height * 0.50f, Screen.width * 0.34f), 240f, 440f);
+        float top = Screen.height * 0.17f;
+        Rect panel = new Rect(cxR - size * 0.5f, top, size, size);
+
+        BoardThemeDef md = BoardThemes.Get(SelectedTheme);
+        GUI.Label(new Rect(cxR - 320f, top - 48f, 640f, 38f), md.displayName.ToUpper(),
+            Style(28, TextAnchor.MiddleCenter, Color.white));
+
+        GUI.DrawTexture(panel, pv.Texture, ScaleMode.ScaleToFit, false);
+
+        GUIStyle arrow = PaperButton(28);
+        float ay = panel.y + panel.height * 0.5f - 50f;
+        if (GUI.Button(new Rect(panel.x - 92f, ay, 72f, 100f), "<", arrow))
+        {
+            Click();
+            CycleTheme(-1);
+        }
+        if (GUI.Button(new Rect(panel.xMax + 20f, ay, 72f, 100f), ">", arrow))
+        {
+            Click();
+            CycleTheme(1);
+        }
+
+        int ti = (int)SelectedTheme;
+        GUI.Label(new Rect(cxR - 320f, panel.yMax + 10f, 640f, 24f),
+            (ti + 1) + " / " + BoardThemes.All.Length,
+            Style(15, TextAnchor.MiddleCenter, new Color(0.7f, 0.75f, 0.8f)));
+
+        if (Event.current.type == EventType.KeyDown)
+        {
+            if (Event.current.keyCode == KeyCode.LeftArrow) { Click(); CycleTheme(-1); }
+            else if (Event.current.keyCode == KeyCode.RightArrow) { Click(); CycleTheme(1); }
+            else if (Event.current.keyCode == KeyCode.Escape) State = GameState.MainMenu;
+        }
+
+        float bbw = 200f, bbh = 46f;
+        if (GUI.Button(new Rect((Screen.width - bbw) * 0.5f, Screen.height - 72f, bbw, bbh), "Back", PaperButton(20)))
         {
             Click();
             State = GameState.MainMenu;
         }
 
-        // Board skin picker (single player): full-width row under the difficulty buttons.
-        float tw = Mathf.Min(1060f, Screen.width - 80f);
-        float tx = (Screen.width - tw) * 0.5f;
-        float tyy = by + 4f * (bh + gap) + 70f;
-        GUI.Label(new Rect(tx, tyy, tw, 22f), "BOARD STYLE",
-            Style(15, TextAnchor.MiddleCenter, new Color(0.75f, 0.8f, 0.85f)));
-        DrawThemeRow(tx, tyy + 24f, tw);
+        GUI.Label(new Rect(0f, Screen.height - 24f, Screen.width, 20f),
+            "Left / Right to change map   -   Esc to go back",
+            Style(13, TextAnchor.MiddleCenter, new Color(0.7f, 0.73f, 0.78f)));
+    }
 
-        GUI.Label(new Rect(0f, Screen.height - 30f, Screen.width, 24f),
-            "Esc to go back", Style(13, TextAnchor.MiddleCenter, new Color(0.85f, 0.88f, 0.92f)));
-
-        if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Escape)
-            State = GameState.MainMenu;
+    /// <summary>Steps the board skin forward/back, wrapping around.</summary>
+    void CycleTheme(int dir)
+    {
+        int n = BoardThemes.All.Length;
+        int i = BoardThemes.All.Length > 0 ? System.Array.IndexOf(BoardThemes.All, SelectedTheme) : 0;
+        if (i < 0) i = 0;
+        SetTheme(BoardThemes.All[(i + dir % n + n) % n]);
     }
 
     void DrawHud()
