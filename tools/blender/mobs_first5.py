@@ -600,6 +600,15 @@ def export(ob, arm):
     # glTF names the animation after its action; make ours exactly "Walk" for this export
     act = arm.animation_data.action
     act.name = 'Walk'
+    # The exporter unions selection across ALL view layers, and older build
+    # sessions leave objects selected in other scenes (e.g. the last mob of a
+    # previous batch). Clear selection + active object in every view layer or
+    # those strays get exported into this mob's GLB.
+    for s in bpy.data.scenes:
+        for vl in s.view_layers:
+            for o in vl.objects:
+                o.select_set(False, view_layer=vl)
+            vl.objects.active = None
     bpy.ops.object.select_all(action='DESELECT')
     ob.select_set(True)
     arm.select_set(True)
