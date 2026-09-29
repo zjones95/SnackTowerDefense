@@ -21,6 +21,13 @@ public class MobViewer : MonoBehaviour
     private Transform root;
     private GameObject model;
 
+    /// <summary>Max world-space dimension allowed in the preview frame. Normal
+    /// mobs (~1-unit art, Tank peak ~1.4) pass through at scale 1; bosses
+    /// (scale 1.45-1.6 x 1.5 in MobVisual) are scaled down viewer-side only.</summary>
+    private const float FitSize = 1.7f;
+    /// <summary>Constant gait rate for the preview (no movement delta exists).</summary>
+    private const float PreviewWalkRate = 2f;
+
     public static MobViewer Ensure()
     {
         if (Instance != null) return Instance;
@@ -108,6 +115,49 @@ public class MobViewer : MonoBehaviour
         // no Mob component here, so drop the health bar (it wouldn't billboard)
         Transform hp = model.transform.Find("HPBar");
         if (hp != null) Destroy(hp.gameObject);
+
+        FitToFrame();
+        EnablePreviewWalk();
+    }
+
+    /// <summary>Viewer-only auto-fit: measures the built model and shrinks the
+    /// viewer root so the max dimension fits the existing panel. Never scales
+    /// up, so normal mobs keep their exact size; game-board scaling in
+    /// MobVisual.Build is untouched.</summary>
+    void FitToFrame()
+    {
+        if (model == null) return;
+        Renderer[] rs = model.GetComponentsInChildren<Renderer>();
+        if (rs == null || rs.Length == 0) return;
+        Bounds b = rs[0].bounds;
+        for (int i = 1; i < rs.Length; i++) b.Encapsulate(rs[i].bounds);
+        Vector3 size = b.size;
+        float maxDim = Mathf.Max(size.x, Mathf.Max(size.y, size.z));
+        if (maxDim <= 1e-4f) return;
+        float s = FitSize / maxDim;
+        if (s >= 1f) return;
+        model.transform.localScale *= s;
+    }
+
+    /// <summary>Viewer has no movement, so MobWalkAnimation would sit frozen at
+    /// speed 0 — force its constant preview gait instead. Falls back to driving
+    /// the Legacy clip directly if no walker was attached.</summary>
+    void EnablePreviewWalk()
+    {
+        if (model == null) return;
+        MobWalkAnimation w = model.GetComponentInChildren<MobWalkAnimation>();
+        if (w != null) { w.SetPreview(true, PreviewWalkRate); return; }
+        Animation a = model.GetComponentInChildren<Animation>();
+        if (a == null) return;
+        a.playAutomatically = false;
+        a.cullingType = AnimationCullingType.AlwaysAnimate;
+        foreach (AnimationState st in a)
+        {
+            st.wrapMode = WrapMode.Loop;
+            st.speed = PreviewWalkRate;
+            a.Play(st.name);
+            break;
+        }
     }
 
     void Update()

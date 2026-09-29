@@ -21,8 +21,8 @@ modifiers.** The original tier-6 ideas were scrapped.
   tier up to 5 (`$10`, random result: `T4+T4 → T5`, `T5+T5 → T6`); **T6+T6 → a
   random T7** is the `$200` fusion. **Cash ascension** remains the single-tower
   alternative at T4/T5 (`$150` / `$300`). *(Issue #10, option 3 — keep both.)*
-- **Gold tower:** pays `$1/$2/$3` per hit by tier (rate `5.0/4.0/3.2 s`), capped at 4,
-  never merges, cash-upgraded `$50` / `$100` for T1→2 / T2→3, and excluded from the
+- **Gold tower:** pays `$1/$2/$3/$5` per hit by tier (rate `5.0/4.0/3.2/2.0 s`), capped at 4,
+  never merges, cash-upgraded `$50` / `$100` / `$200` for T1→2 / T2→3 / T3→4, and excluded from the
   random pool.
 - **Income:** `KillReward = 1` and a flat `$50` `RoundBonus` per completed round;
   late-game scaling is meant to come from Gold towers.
@@ -31,11 +31,11 @@ modifiers.** The original tier-6 ideas were scrapped.
 
 ## Gold tower rules
 
-- Gold is capped at **3 tiers** (T1→T3). It must **never** reach tier 4+.
+- Gold is capped at **4 tiers** (T1→T4). It must **never** reach tier 5+.
 - Gold is **never mergeable** — `TryMerge` must reject any Gold tower, and the
   selection panel must not offer Merge on a Gold.
 - Gold is **upgradeable for cash** instead (same action/button as ascension, no
-  second tower): **T1→T2 `$50`, T2→T3 `$100`**. No upgrade is offered at T3.
+  second tower): **T1→T2 `$50`, T2→T3 `$100`, T3→T4 `$200`**. No upgrade is offered at T4.
 - Gold is **excluded from the random pool** for random build, merge results and
   re-roll. Verify `TowerCatalog.RandomTypeExcluding` / the re-roll path can never
   return Gold (only `G` builds Gold).

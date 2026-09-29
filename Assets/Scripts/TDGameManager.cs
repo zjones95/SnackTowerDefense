@@ -63,10 +63,10 @@ public partial class TDGameManager : MonoBehaviour
     private Vector3 camFocus;
     // in-game camera state (reset to these when a run starts)
     private const float GameYaw = 45f, GamePitch = 42f, GameDist = 32f;
-    // bottom HUD chrome: the controls legend sits directly above the build toolbar
+    // bottom HUD chrome: build toolbar pinned to the screen bottom
     private const float ToolbarButtonH = 34f;
     private const float ToolbarBottomMargin = 6f;
-    private const float ToolbarLegendH = 22f;
+    private const float ToolbarLegendH = 0f;   // hotkey legend removed; kept at 0 so layout math still compiles
     private float camYaw = GameYaw, camPitch = GamePitch;
     private float camDist = GameDist;
     private readonly float camDistMin = 12f, camDistMax = 90f;
@@ -503,14 +503,22 @@ public partial class TDGameManager : MonoBehaviour
             return;
         }
 
-        // Paused: freeze gameplay input and simulation, run only the menu.
-        if (paused)
+        // Paused: single-player freezes gameplay input and simulation, run only the menu.
+        // In multiplayer the pause menu is an overlay only: the sim keeps running
+        // underneath, gameplay input behind the menu is blocked.
+        if (paused && !mpActive)
         {
             HandlePauseInput();
             return;
         }
+        if (paused && mpActive)
+        {
+            HandlePauseInput();
+            if (!paused) return;   // resumed this frame: don't re-open on the same Esc press
+            // else fall through: sim/camera/spectate below keep ticking, input stays blocked
+        }
 
-        if (Input.GetKeyDown(KeyCode.Escape) && !ChatSync.IsTyping)
+        if (!paused && Input.GetKeyDown(KeyCode.Escape) && !ChatSync.IsTyping)
         {
             // Esc first cancels an active build/merge/re-roll mode, then pauses.
             if (building || goldBuilding || merging || reRolling) CancelMode();
@@ -518,7 +526,7 @@ public partial class TDGameManager : MonoBehaviour
             return;
         }
 
-        HandleHotkeys();
+        if (!paused) HandleHotkeys();
 
         if (mpActive)
         {
@@ -543,8 +551,12 @@ public partial class TDGameManager : MonoBehaviour
         }
 
         UpdateCamera(Time.deltaTime);
-        HandleMouse();
-        UpdateHover();
+        if (!paused)
+        {
+            HandleMouse();
+            UpdateHover();
+        }
+        else HideHover();
         if (mpActive) { UpdateRemoteBoards(); UpdateSpectate(); }
     }
 
@@ -626,7 +638,7 @@ public partial class TDGameManager : MonoBehaviour
         float mx = Input.mousePosition.x;
         float my = Screen.height - Input.mousePosition.y;
         if (my < 84f) return true;                                    // top stats (top-left build buttons removed)
-        if (my > Screen.height - ToolbarBottomMargin - ToolbarButtonH - ToolbarLegendH) return true;  // bottom legend + toolbar
+        if (my > Screen.height - ToolbarBottomMargin - ToolbarButtonH - ToolbarLegendH) return true;  // bottom toolbar
         if (Selected != null && mx < 460f && my < 474f) return true;  // selected-tower panel
         return false;
     }
@@ -943,7 +955,7 @@ public partial class TDGameManager : MonoBehaviour
         return true;
     }
 
-    /// <summary>Cash cost to upgrade the tower one tier: Gold upgrades 1->2->3,
+    /// <summary>Cash cost to upgrade the tower one tier: Gold upgrades 1->2->3->4,
     /// other towers ascend 4->5->6. 0 means no cash upgrade is available.</summary>
     static int UpgradeCost(Tower t)
     {
@@ -955,7 +967,7 @@ public partial class TDGameManager : MonoBehaviour
     /// <summary>
     /// Cash upgrade: promotes a tower in place to tier + 1 for money, keeping its
     /// type and cell and leaving the new tower selected. No second tower is
-    /// consumed. Gold upgrades at tiers 1-2 (max 3); other towers ascend at 4-5.
+    /// consumed. Gold upgrades at tiers 1-3 (max 4); other towers ascend at 4-5.
     /// </summary>
     bool TryAscend(Tower t)
     {
@@ -964,7 +976,7 @@ public partial class TDGameManager : MonoBehaviour
         int cost = UpgradeCost(t);
         if (cost <= 0)
         {
-            if (t.Type == TowerType.Gold) message = "Gold is max tier (Tier 3)";
+            if (t.Type == TowerType.Gold) message = "Gold is max tier (Tier 4)";
             else if (t.Tier >= TowerCatalog.MaxTier) message = "Already max tier";
             else if (t.Tier == TowerCatalog.MaxTier - 1) message = "Tier 6 fuses with E (merge two T6s)";
             else message = "Merge to Tier 4, then ascend with U";
@@ -1279,7 +1291,8 @@ public partial class TDGameManager : MonoBehaviour
                 {
                     GUIStyle noModStyle = Style(12, TextAnchor.UpperLeft, new Color(0.75f, 0.75f, 0.78f));
                     noModStyle.wordWrap = true;
-                    GUI.Label(new Rect(20, 196, 412, 34), "No tier 5/6 modifiers (max tier 3)", noModStyle);
+                    GUI.Label(new Rect(20, 196, 412, 34), "No tier 5/6 modifiers" +
+                        (Selected.Type == TowerType.Gold ? " (Gold max tier 4)" : ""), noModStyle);
                 }
             }
 
@@ -1310,7 +1323,7 @@ public partial class TDGameManager : MonoBehaviour
             bool canMerge = Selected.Type != TowerType.Gold &&
                             (Selected.Tier <= TowerCatalog.MaxMergeTier || canFuse);
             int mergeCost = canFuse ? TDBalance.FuseCost : TDBalance.MergeCost;
-            int ascendCost = UpgradeCost(Selected);   // Gold 1->2->3; others ascend 4->5->6
+            int ascendCost = UpgradeCost(Selected);   // Gold 1->2->3->4; others ascend 4->5->6
             bool canAscend = ascendCost > 0;
             bool canReRoll = Selected.Tier >= 2 && Selected.Tier < TowerCatalog.MaxTier;   // T7 is terminal
             int sellValue = Mathf.FloorToInt(TDBalance.SellRefund * Selected.InvestedCost);
@@ -1381,12 +1394,8 @@ public partial class TDGameManager : MonoBehaviour
             }
         }
 
-        // ---- bottom toolbar: build slots (room for future options) + controls legend ----
-        float legendY = Screen.height - ToolbarBottomMargin - ToolbarButtonH - ToolbarLegendH;
-        GUI.Label(new Rect(0, legendY, Screen.width, ToolbarLegendH),
-            "B: Build ($" + TDBalance.BuildCost + ")   |   G: Gold ($" + TDBalance.BuildCost + ", max " + TowerCatalog.MaxGoldTowers + ")   |   E: Merge ($" + TDBalance.MergeCost + "), T6 fuse ($" + TDBalance.FuseCost + ")   |   U: Ascend ($" + TDBalance.AscendCost4to5 + "/$" + TDBalance.AscendCost5to6 + "), Gold ($" + TDBalance.GoldUpgrade1to2 + "/$" + TDBalance.GoldUpgrade2to3 + ")   |   R: Re-roll   |   X: Sell (50%)   |   Left-click: place / select   |   Right-click: cancel   |   WASD: move   |   Middle-drag: rotate   |   Scroll: zoom   |   M: music   |   Esc: menu",
-            Style(13, TextAnchor.MiddleCenter, new Color(0.8f, 0.8f, 0.8f)));
-
+        // ---- bottom toolbar: build slots (room for future options) ----
+        // (hotkey legend removed; full keybinding map lives in Settings -> Controls)
         if (ViewingOwnBoard)
         {
             float btnY = Screen.height - ToolbarBottomMargin - ToolbarButtonH;

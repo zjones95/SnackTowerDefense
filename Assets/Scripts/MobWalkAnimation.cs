@@ -19,6 +19,22 @@ public class MobWalkAnimation : MonoBehaviour
     private Transform mover;
     private Vector3 last;
     private float smoothed;
+    /// <summary>When true (mob gallery preview has no movement) the clip loops
+    /// at <see cref="previewRate"/> instead of following movement delta.</summary>
+    public bool preview;
+    public float previewRate = 2f;
+
+    /// <summary>Forces a constant looping gait for previews with no movement.</summary>
+    public void SetPreview(bool on, float rate = 2f)
+    {
+        preview = on;
+        previewRate = rate;
+        if (state != null && on)
+        {
+            state.wrapMode = WrapMode.Loop;
+            state.speed = previewRate;
+        }
+    }
 
     /// <summary>Wires up the walk clip on an instantiated mob model, if it has one.</summary>
     public static void Attach(GameObject model)
@@ -50,6 +66,14 @@ public class MobWalkAnimation : MonoBehaviour
     {
         float dt = Time.deltaTime;
         if (state == null || dt <= 1e-5f) return;
+
+        // Viewer preview: no movement delta exists (turntable only rotates),
+        // so hold a constant gait instead of freezing at speed 0.
+        if (preview)
+        {
+            state.speed = previewRate;
+            return;
+        }
 
         Vector3 p = mover.position;
         Vector3 d = new Vector3(p.x - last.x, 0f, p.z - last.z);

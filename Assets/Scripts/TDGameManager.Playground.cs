@@ -305,7 +305,7 @@ public partial class TDGameManager
     void PgSetTower(TowerType t)
     {
         pgTower = t;
-        if (t == TowerType.Gold) pgTier = Mathf.Clamp(pgTier, 1, 3);
+        if (t == TowerType.Gold) pgTier = Mathf.Clamp(pgTier, 1, 4);
         else if (TowerCatalog.IsT7Type(t)) pgTier = 7;
         else pgTier = Mathf.Clamp(pgTier, 1, TowerCatalog.MaxTier);
     }
@@ -313,13 +313,13 @@ public partial class TDGameManager
     void PgSetTier(int tier)
     {
         if (TowerCatalog.IsT7Type(pgTower)) { pgTier = 7; return; }
-        if (pgTower == TowerType.Gold) pgTier = Mathf.Clamp(tier, 1, 3);
+        if (pgTower == TowerType.Gold) pgTier = Mathf.Clamp(tier, 1, 4);
         else pgTier = Mathf.Clamp(tier, 1, TowerCatalog.MaxTier);
     }
 
     bool PgTierEnabled(int tier)
     {
-        if (pgTower == TowerType.Gold) return tier <= 3;
+        if (pgTower == TowerType.Gold) return tier <= 4;
         if (TowerCatalog.IsT7Type(pgTower)) return tier == 7;
         return true;
     }

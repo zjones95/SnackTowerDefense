@@ -307,13 +307,14 @@ public static class TowerCatalog
         defs[d.type] = d;
 
         // Gold is economy-only: no damage, a modest range, and a slow fire rate
-        // that speeds up ~25% per tier. The payout is a flat $1 per confirmed
-        // hit at every tier - the faster rate is the whole upgrade.
+        // that speeds up per tier. The payout rises per tier ($1/$2/$3/$5) -
+        // the faster rate plus the bigger payout is the whole upgrade.
         d = new TowerDef();
         d.type = TowerType.Gold; d.displayName = "Gold Coin"; d.color = new Color(1f, 0.82f, 0.25f);
         d.tiers.Add(new TowerTierStats { damage = 0, range = 4.5f, fireInterval = 5.0f, projectileSpeed = 20f, goldPerHit = 1 });
         d.tiers.Add(new TowerTierStats { damage = 0, range = 5.2f, fireInterval = 4.0f, projectileSpeed = 22f, goldPerHit = 2 });
         d.tiers.Add(new TowerTierStats { damage = 0, range = 6.0f, fireInterval = 3.2f, projectileSpeed = 24f, goldPerHit = 3 });
+        d.tiers.Add(new TowerTierStats { damage = 0, range = 6.8f, fireInterval = 2.0f, projectileSpeed = 26f, goldPerHit = 5 });
         defs[d.type] = d;
 
         // --- Tier 7 fusion towers ---
@@ -323,25 +324,25 @@ public static class TowerCatalog
         d = new TowerDef();
         d.type = TowerType.FondueFountain; d.displayName = "Fondue Fountain"; d.color = new Color(0.70f, 0.40f, 0.18f);
         for (int i = 0; i < TowerCatalog.MaxTier - 1; i++) d.tiers.Add(new TowerTierStats());
-        d.tiers.Add(new TowerTierStats { damage = 200, range = 10.5f, fireInterval = 0.45f, projectileSpeed = 26f, dippedBonus = 0.12f, dippedDuration = 4f, dippedMaxStacks = 5 });
+        d.tiers.Add(new TowerTierStats { damage = 400, range = 10.5f, fireInterval = 0.45f, projectileSpeed = 26f, dippedBonus = 0.12f, dippedDuration = 4f, dippedMaxStacks = 5 });
         defs[d.type] = d;
 
         d = new TowerDef();
         d.type = TowerType.IceCreamTruck; d.displayName = "Ice Cream Truck"; d.color = new Color(0.98f, 0.72f, 0.80f);
         for (int i = 0; i < TowerCatalog.MaxTier - 1; i++) d.tiers.Add(new TowerTierStats());
-        d.tiers.Add(new TowerTierStats { damage = 60, range = 9f, fireInterval = 0.55f, projectileSpeed = 22f, splashRadius = 4.8f, stunChance = 0.20f, stunDuration = 1.2f });
+        d.tiers.Add(new TowerTierStats { damage = 120, range = 9f, fireInterval = 0.55f, projectileSpeed = 22f, splashRadius = 4.8f, stunChance = 0.20f, stunDuration = 1.2f });
         defs[d.type] = d;
 
         d = new TowerDef();
         d.type = TowerType.BobaBlaster; d.displayName = "Boba Blaster"; d.color = new Color(0.72f, 0.55f, 0.35f);
         for (int i = 0; i < TowerCatalog.MaxTier - 1; i++) d.tiers.Add(new TowerTierStats());
-        d.tiers.Add(new TowerTierStats { damage = 40, range = 9f, fireInterval = 0.30f, projectileSpeed = 30f, rateMinInterval = 0.10f, spinUpTime = 2.5f });
+        d.tiers.Add(new TowerTierStats { damage = 80, range = 9f, fireInterval = 0.30f, projectileSpeed = 30f, rateMinInterval = 0.10f, spinUpTime = 2.5f });
         defs[d.type] = d;
 
         d = new TowerDef();
         d.type = TowerType.PizzaOven; d.displayName = "Pizza Oven"; d.color = new Color(0.90f, 0.45f, 0.22f);
         for (int i = 0; i < TowerCatalog.MaxTier - 1; i++) d.tiers.Add(new TowerTierStats());
-        d.tiers.Add(new TowerTierStats { damage = 50, range = 10f, fireInterval = 2.0f, projectileSpeed = 18f, splashRadius = 2.5f, zoneDps = 240f, zoneDuration = 5f });
+        d.tiers.Add(new TowerTierStats { damage = 100, range = 10f, fireInterval = 2.0f, projectileSpeed = 18f, splashRadius = 2.5f, zoneDps = 240f, zoneDuration = 5f });
         defs[d.type] = d;
     }
 }

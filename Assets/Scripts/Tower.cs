@@ -26,9 +26,11 @@ public class Tower : MonoBehaviour
     private Mob deadeyeTarget;
     private int deadeyeStacks;
 
-    // Boba T7 "Bobarista": the fire rate ramps up while one target is held.
-    private Mob bobaTarget;
+    // Boba T7 "Bobarista": the fire rate ramps up while it keeps firing.
+    // Switching targets does NOT reset the spin; it resets only after 5s
+    // without firing (tracked via bobaLastFire).
     private float bobaSpin;
+    private float bobaLastFire = -99f;
 
     // where shots leave the model: half its height, just clear of its body
     private float muzzleY = 0.6f;
@@ -175,12 +177,13 @@ public class Tower : MonoBehaviour
             deadeyeStacks = 0;
         }
 
-        // Bobarista (Boba T7) spins up while it holds one target, and resets the
-        // moment that target changes or is lost.
+        // Bobarista (Boba T7) spins up while it has a target to shoot at, and
+        // the spin survives target switches. It resets only after 5s without
+        // firing (bobaLastFire is stamped on every shot below).
         if (Type == TowerType.BobaBlaster && s.rateMinInterval > 0f && s.spinUpTime > 0f)
         {
-            if (target != bobaTarget) { bobaTarget = target; bobaSpin = 0f; }
-            else bobaSpin += Time.deltaTime;
+            if (target != null) bobaSpin += Time.deltaTime;
+            else if (Time.time - bobaLastFire >= 5f) bobaSpin = 0f;
         }
 
         cooldown -= Time.deltaTime;
@@ -198,6 +201,7 @@ public class Tower : MonoBehaviour
         if (Type == TowerType.BobaBlaster && s.rateMinInterval > 0f && s.spinUpTime > 0f)
             interval = Mathf.Lerp(s.fireInterval, s.rateMinInterval, Mathf.Clamp01(bobaSpin / s.spinUpTime));
         cooldown = interval;
+        if (Type == TowerType.BobaBlaster) bobaLastFire = Time.time;   // spin persists across targets; idleness resets it
         if (TDAudio.Instance != null) TDAudio.Instance.Shot(Type);
 
         Vector3 muzzle = Muzzle();

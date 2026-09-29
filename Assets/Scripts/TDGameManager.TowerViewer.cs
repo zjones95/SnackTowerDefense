@@ -81,7 +81,7 @@ public partial class TDGameManager
     void DrawTowerStats(TowerDef def, Rect area)
     {
         bool t7 = TowerCatalog.IsT7Type(def.type);
-        int cols = t7 ? 1 : def.tiers.Count;   // 6 for the random types, 3 for Gold, 1 for a T7 fusion
+        int cols = t7 ? 1 : def.tiers.Count;   // 6 for the random types, 4 for Gold, 1 for a T7 fusion
         int last = def.tiers.Count - 1;
         float rowH = 26f;
         float labelW = area.width * 0.22f;
@@ -136,7 +136,8 @@ public partial class TDGameManager
         {
             GUIStyle noModStyle = Style(14, TextAnchor.UpperCenter, new Color(0.75f, 0.75f, 0.78f));
             noModStyle.wordWrap = true;
-            GUI.Label(new Rect(area.x - 40f, my0, area.width + 80f, 34f), "No tier 5/6 modifiers (max tier 3)", noModStyle);
+            GUI.Label(new Rect(area.x - 40f, my0, area.width + 80f, 34f), "No tier 5/6 modifiers" +
+                (def.type == TowerType.Gold ? " (Gold max tier 4)" : ""), noModStyle);
         }
     }
 

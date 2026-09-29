@@ -8,23 +8,26 @@ using UnityEngine;
 // = pause). A bool pair tracks that context instead of adding GameState values.
 public partial class TDGameManager
 {
-    private bool paused;            // in-game pause menu open (timeScale = 0)
+    private bool paused;            // in-game pause menu open (SP: timeScale = 0; MP: overlay only, sim keeps running)
     private bool settingsOpen;      // settings overlay visible
     private bool settingsFromPause; // Esc/Back returns to the pause menu, not the menu
 
     // --------------------------------------------------------------- helpers
-    /// <summary>Un-freezes the game and clears the pause flag. Safe to call anywhere.</summary>
+    /// <summary>Un-freezes the game and clears the pause flag. Safe to call anywhere.
+    /// In multiplayer the sim never freezes, so timeScale is left alone.</summary>
     void RestoreTimeScale()
     {
-        Time.timeScale = 1f;
+        if (!mpActive) Time.timeScale = 1f;
         paused = false;
     }
 
+    /// <summary>Opens the pause menu. Single-player freezes (timeScale = 0);
+    /// multiplayer keeps simulating underneath (overlay only).</summary>
     void OpenPause()
     {
         paused = true;
         settingsOpen = false;
-        Time.timeScale = 0f;
+        if (!mpActive) Time.timeScale = 0f;
     }
 
     void ResumeGame()
@@ -34,10 +37,11 @@ public partial class TDGameManager
         RestoreTimeScale();
     }
 
-    /// <summary>Esc while paused: close settings first, otherwise resume.</summary>
+    /// <summary>Esc while paused: close settings first, otherwise resume.
+    /// Ignored while typing chat so Esc cancels the chat line first.</summary>
     void HandlePauseInput()
     {
-        if (!Input.GetKeyDown(KeyCode.Escape)) return;
+        if (!Input.GetKeyDown(KeyCode.Escape) || ChatSync.IsTyping) return;
         if (settingsOpen) CloseSettings();
         else ResumeGame();
     }
@@ -110,16 +114,19 @@ public partial class TDGameManager
     {
         settingsOpen = true;
         settingsFromPause = fromPause;
+        controlsOpen = false;   // always land on Settings, never a stale Controls layer
     }
 
     void CloseSettings()
     {
+        if (controlsOpen) { controlsOpen = false; return; }   // Esc/Back closes Controls first
         settingsOpen = false;
         settingsFromPause = false;   // pause (if any) stays open behind it
     }
 
     void DrawSettings()
     {
+        if (controlsOpen) { DrawControls(); return; }   // Controls overlay (TDGameManager.Controls.cs)
         TDAudio audio = TDAudio.Instance;
 
         // scrim over whatever opened this
@@ -172,9 +179,16 @@ public partial class TDGameManager
             if (Event.current.type == EventType.MouseUp) Click();
         }
 
-        // ---- back ----
+        // ---- controls + back ----
         float bw = 220f, bh = 50f;
-        if (GUI.Button(new Rect((Screen.width - bw) * 0.5f, y + 126f, bw, bh), "Back", PaperButton(20)))
+        float btnY = y + 126f;
+        float cx = (Screen.width - (bw * 2f + 16f)) * 0.5f;
+        if (GUI.Button(new Rect(cx, btnY, bw, bh), "Controls", PaperButton(20)))
+        {
+            Click();
+            OpenControls();
+        }
+        if (GUI.Button(new Rect(cx + bw + 16f, btnY, bw, bh), "Back", PaperButton(20)))
         {
             Click();
             CloseSettings();

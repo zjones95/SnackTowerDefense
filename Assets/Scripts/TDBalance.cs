@@ -38,15 +38,17 @@ public static class TDBalance
         return 0;
     }
 
-    // Gold never merges and tops out at tier 3, so it is upgraded with cash at
-    // tiers 1->2 and 2->3 only (see docs/TierPlan.md).
+    // Gold never merges and tops out at tier 4, so it is upgraded with cash at
+    // tiers 1->2, 2->3 and 3->4 only (see docs/TierPlan.md).
     public const int GoldUpgrade1to2 = 50;
     public const int GoldUpgrade2to3 = 100;
+    public const int GoldUpgrade3to4 = 200;
 
     public static int GoldUpgradeCost(int fromTier)
     {
         if (fromTier == 1) return GoldUpgrade1to2;
         if (fromTier == 2) return GoldUpgrade2to3;
+        if (fromTier == 3) return GoldUpgrade3to4;
         return 0;
     }
 
