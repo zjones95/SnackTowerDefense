@@ -42,8 +42,9 @@ tower/mob characters are modelled in Blender and imported as glTF (`.glb`).
   Gold-placement mode: the same green/red "?" ghost, but the placed tower is
   always **Gold Coin** (`$25`). A board may hold at most **4**; the button shows
   the count and is disabled at the cap, and placement past 4 is refused with a
-  message. Gold deals no damage — it pays a flat **`$1` per confirmed hit at
-  every tier**; the tower's fire rate is the upgrade (`5.0 → 4.0 → 3.2s`).
+  message. Gold deals no damage — it pays **`$1/$2/$3/$5` per confirmed hit by
+  tier**; rate also improves (`5.0 → 4.0 → 3.2 → 2.0s`). Cash-upgrade T1→2 **$50** /
+  T2→3 **$100** / T3→4 **$200** with **U**.
 - **Selection** — left-click a tower to select it: its tile is outlined in
   **yellow** (the same frame build mode uses for hover). Left-click it again
   (or right-click / click empty ground) to deselect. Selecting a tower and
@@ -69,7 +70,7 @@ tower/mob characters are modelled in Blender and imported as glTF (`.glb`).
 
 8 types (7 random-build + the economy-only Gold Coin). The 7 random types have
 **6 tiers each** — tiers 1-4 by merging, tiers 5-6 by cash ascension — while Gold
-has 3 (it is economy-only). A merge picks the resulting type at random (never
+has 4 (it is economy-only). A merge picks the resulting type at random (never
 Gold).
 
 | Type | Name | Attack |
@@ -81,7 +82,7 @@ Gold).
 | Chain | Sour Belt | Bolt arcs to 2/3/4 more enemies (25% falloff per hop) |
 | Pierce | Skewer | Throws a slow metal rod that skewers 3/4/5 enemies |
 | Poison | Spicy Chips | Fires a tortilla chip that applies damage over time |
-| Gold | Gold Coin | Economy: no damage, pays a flat $1 per confirmed hit at every tier (max 4 per board) |
+| Gold | Gold Coin | Economy: no damage, pays $1/$2/$3/$5 per hit by tier (max 4 per board) |
 
 Every tower fires twice as often for half the damage vs. the original numbers,
 so DPS is similar but the board is far busier. A further balance pass cut all

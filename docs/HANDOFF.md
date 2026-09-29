@@ -29,7 +29,7 @@ Written so a **fresh session** can pick this project up fast. Read this first, t
 | Mobs | 35 fruits/veg; **34 modelled**, Granola Mom is the procedural humanoid |
 | Status FX | Floating bars **and** the boss bar show **burn (flame + `xN`)** and **slow (ice cube)** and **tar** icons (`MobStatusIcons`) |
 | Metrics | Per-tower **Damage done** (selection panel; DoT + detonations are attributed) and per-Gold-tower **Gold made**; collective **Gold Generated** (HUD top-right) |
-| Gold tower | Hotkey **G**, cap **4**, pays **$1/$2/$3** per hit, cash-upgrade T1→2 **$50** / T2→3 **$100**, never merges, excluded from the random pool |
+| Gold tower | Hotkey **G**, cap **4**, pays **$1/$2/$3/$5** per hit, cash-upgrade T1→2 **$50** / T2→3 **$100** / T3→4 **$200**, never merges, excluded from the random pool |
 | Difficulty | Easy/Normal/Hard/Insane (−25% → +50% mob HP), single player + lobby — **untested** |
 | Viewers | **Tower Viewer** and **Mob Viewer** on the main menu |
 | Audio | fully procedural SFX + a **deep-house** looping track (122 BPM, 8 bars); `M` toggles mute |

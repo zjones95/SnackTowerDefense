@@ -90,7 +90,7 @@ Highest health, Lowest health; ties fall back to furthest-along), then dispatche
 type. Projectile towers spawn from `Muzzle()` (half the model's height, nudged
 forward); instant towers draw a `Tracer` (flat camera-facing neon ribbon). Each tower
 tracks `DamageDone` (shown in the selection panel). **Gold** is an economy tower
-(`G`, cap 4, `$1/$2/$3` per hit) that never merges and is excluded from the random pool.
+(`G`, cap 4, `$1/$2/$3/$5` per hit) that never merges and is excluded from the random pool.
 
 Tiers: 2:1 **merging** (`E`) works at any source tier up to `TowerCatalog.MaxMergeTier`
 (5) for `$10`; at **T6 the same action fuses two T6s into a random Tier 7 for `$200`**
