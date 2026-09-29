@@ -34,7 +34,6 @@ public class NetworkSession : MonoBehaviour
         public const string Hello = "td.hello";
         public const string Lobby = "td.lobby";
         public const string Start = "td.start";
-        public const string Theme = "td.theme";   // client -> host: board skin choice
     }
 
     public enum SessionState { Idle, Hosting, Connecting, InLobby, Reconnecting, Failed }
@@ -281,7 +280,6 @@ public class NetworkSession : MonoBehaviour
         cm.RegisterNamedMessageHandler(Msg.Hello, OnHelloMessage);
         cm.RegisterNamedMessageHandler(Msg.Lobby, OnLobbyMessage);
         cm.RegisterNamedMessageHandler(Msg.Start, OnStartMessage);
-        cm.RegisterNamedMessageHandler(Msg.Theme, OnThemeMessage);
 
         for (int i = 0; i < matchNames.Length; i++)
         {
@@ -475,7 +473,7 @@ public class NetworkSession : MonoBehaviour
         LobbyChanged?.Invoke();
         if (!IsHost || Manager.CustomMessagingManager == null) return;
 
-        using var writer = new FastBufferWriter(4 + NetConfig.MaxPlayers * 52, Allocator.Temp);
+        using var writer = new FastBufferWriter(4 + NetConfig.MaxPlayers * 48, Allocator.Temp);
         writer.WriteValueSafe(Players.Count);
         writer.WriteValueSafe((byte)MatchDifficulty);
         for (int i = 0; i < Players.Count; i++)
@@ -483,7 +481,6 @@ public class NetworkSession : MonoBehaviour
             writer.WriteValueSafe(Players[i].ClientId);
             writer.WriteValueSafe(Players[i].Name ?? "");
             writer.WriteValueSafe(Players[i].IsHost);
-            writer.WriteValueSafe(Players[i].Theme);
         }
         Manager.CustomMessagingManager.SendNamedMessageToAll(Msg.Lobby, writer);
     }
@@ -499,8 +496,7 @@ public class NetworkSession : MonoBehaviour
             reader.ReadValueSafe(out ulong id);
             reader.ReadValueSafe(out string name);
             reader.ReadValueSafe(out bool isHost);
-            reader.ReadValueSafe(out int theme);
-            Players.Add(new LobbyPlayerInfo { ClientId = id, Name = name, IsHost = isHost, Theme = theme });
+            Players.Add(new LobbyPlayerInfo { ClientId = id, Name = name, IsHost = isHost });
         }
         LobbyChanged?.Invoke();
         Debug.Log("[net] roster: " + Players.Count + " player(s)");
@@ -515,46 +511,6 @@ public class NetworkSession : MonoBehaviour
     void OnHelloMessage(ulong sender, FastBufferReader reader)
     {
         if (IsHost) BroadcastLobby();
-    }
-
-    /// <summary>Sends our board skin choice to the host (lobby only).</summary>
-    public void SendTheme(int theme)
-    {
-        if (Manager == null || !Manager.IsListening || IsHost)
-        {
-            // Host applies its own choice directly to its roster seat.
-            if (IsHost)
-            {
-                for (int i = 0; i < Players.Count; i++)
-                    if (Players[i].ClientId == Manager.LocalClientId)
-                    {
-                        var p = Players[i];
-                        p.Theme = theme;
-                        Players[i] = p;
-                        break;
-                    }
-                BroadcastLobby();
-            }
-            return;
-        }
-        using var writer = new FastBufferWriter(8, Allocator.Temp);
-        writer.WriteValueSafe(theme);
-        SendNamedToServer(Msg.Theme, writer);
-    }
-
-    void OnThemeMessage(ulong sender, FastBufferReader reader)
-    {
-        if (!IsHost) return;
-        reader.ReadValueSafe(out int theme);
-        for (int i = 0; i < Players.Count; i++)
-            if (Players[i].ClientId == sender)
-            {
-                var p = Players[i];
-                p.Theme = Mathf.Clamp(theme, 0, BoardThemes.All.Length - 1);
-                Players[i] = p;
-                break;
-            }
-        BroadcastLobby();
     }
 
     // ---------------------------------------------------------- connections

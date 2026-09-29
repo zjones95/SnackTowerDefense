@@ -14,7 +14,6 @@ public partial class TDGameManager
     private string mpJoinInput = "";
     private string mpError = "";
     private bool failedRouted;   // Failed already routed to Menu/Join (runs once)
-    private bool mpThemeSent;    // persisted theme pushed to the host for this lobby visit
     private bool mpActive;          // local player is in a multiplayer match
     private int mpPlayerCount = 1;
     private bool mpScoreboardCollapsed = true;   // top-right scoreboard tab state
@@ -134,7 +133,6 @@ public partial class TDGameManager
         mpJoinInput = "";
         mpError = "";
         mpActive = false;
-        mpThemeSent = false;
         mpScreen = MpScreen.Menu;
         State = GameState.MultiplayerMenu;
         ClearWorld();
@@ -198,7 +196,7 @@ public partial class TDGameManager
         {
             if (i == mySlot) continue;
             RemoteBoard rb = RemoteBoard.Create(worldRoot, BoardLayout.Position(i, count),
-                ns.Players[i].ClientId, ns.Players[i].Name, (BoardTheme)Mathf.Clamp(ns.Players[i].Theme, 0, BoardThemes.All.Length - 1));
+                ns.Players[i].ClientId, ns.Players[i].Name);
             remoteBoards.Add(rb);
         }
     }
@@ -577,46 +575,6 @@ public partial class TDGameManager
         PlayerPrefs.Save();
     }
 
-    /// <summary>Board skin picker shared by the difficulty screen (single
-    /// player) and the multiplayer lobby (per player).</summary>
-    public void SetTheme(BoardTheme t)
-    {
-        SelectedTheme = t;
-        BoardThemes.Save(t);
-        // In a lobby our choice rides to the host; otherwise it just applies
-        // to the next locally built board (boards are never re-skinned live).
-        NetworkSession ns = NetworkSession.Instance;
-        if (ns != null && (ns.InLobby || ns.State == NetworkSession.SessionState.Hosting))
-            ns.SendTheme((int)t);
-    }
-
-    /// <summary>Every theme as one row of small swatch buttons. Returns the
-    /// rect it drew into (for click hit-testing where needed).</summary>
-    public bool DrawThemeRow(float x, float y, float totalW)
-    {
-        bool changed = false;
-        int n = BoardThemes.All.Length;
-        float gap = 6f;
-        float bw = (totalW - gap * (n - 1)) / n;
-        for (int i = 0; i < n; i++)
-        {
-            BoardTheme t = BoardThemes.All[i];
-            BoardThemeDef d = BoardThemes.Get(t);
-            Color prev = GUI.backgroundColor;
-            GUI.backgroundColor = SelectedTheme == t ? new Color(1f, 0.9f, 0.45f) : d.swatch;
-            GUIStyle st = PaperButton(11);
-            st.normal.textColor = Color.black;
-            if (GUI.Button(new Rect(x + i * (bw + gap), y, bw, 30f), d.displayName, st))
-            {
-                Click();
-                SetTheme(t);
-                changed = true;
-            }
-            GUI.backgroundColor = prev;
-        }
-        return changed;
-    }
-
     // ------------------------------------------------------------------- UI
     void DrawMultiplayer()
     {
@@ -789,13 +747,6 @@ public partial class TDGameManager
 
         bool host = ns.IsHost;
 
-        // Push our persisted theme once per lobby visit so our seat carries it.
-        if (!mpThemeSent)
-        {
-            mpThemeSent = true;
-            ns.SendTheme((int)SelectedTheme);
-        }
-
         GUI.Label(new Rect(0, Screen.height * 0.20f, Screen.width, 30f),
             host ? "You are the HOST" : "Waiting for the host to start...",
             Style(20, TextAnchor.MiddleCenter, host ? new Color(1f, 0.9f, 0.5f) : new Color(0.8f, 0.9f, 1f)));
@@ -834,19 +785,12 @@ public partial class TDGameManager
             string nm = players[i].Name;
             if (players[i].IsHost) nm += "  (host)";
             if (players[i].ClientId == NetworkManagerLocalClientId()) nm += "   (you)";
-            nm += "   [" + BoardThemes.Get((BoardTheme)Mathf.Clamp(players[i].Theme, 0, BoardThemes.All.Length - 1)).displayName + "]";
             GUI.Label(new Rect(cx - 200f, listY + 30f + i * 24f, 400f, 22f),
                 "• " + nm, Style(16, TextAnchor.MiddleLeft, new Color(0.9f, 0.92f, 0.95f)));
         }
 
-        // ---- board style (per player) ----
-        float sy = listY + 30f + players.Count * 24f + 10f;
-        GUI.Label(new Rect(cx - 280f, sy, 560f, 22f), "BOARD STYLE (yours):",
-            Style(15, TextAnchor.MiddleCenter, new Color(0.75f, 0.8f, 0.85f)));
-        DrawThemeRow(cx - 280f, sy + 24f, 560f);
-
-        // ---- difficulty (stacked below the theme row so big lobbies never overlap) ----
-        float dy = sy + 24f + 30f + 12f;
+        // ---- difficulty ----
+        float dy = Screen.height * 0.63f;
         GUI.Label(new Rect(cx - 280f, dy, 560f, 24f),
             host ? "Difficulty (you choose):" : "Difficulty:",
             Style(16, TextAnchor.MiddleCenter, new Color(0.75f, 0.8f, 0.85f)));
