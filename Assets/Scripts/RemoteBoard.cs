@@ -82,6 +82,11 @@ public class RemoteBoard : MonoBehaviour
 
     public static RemoteBoard Create(Transform parent, Vector3 offset, ulong clientId, string playerName)
     {
+        return Create(parent, offset, clientId, playerName, BoardTheme.Classic);
+    }
+
+    public static RemoteBoard Create(Transform parent, Vector3 offset, ulong clientId, string playerName, BoardTheme theme)
+    {
         GameObject go = new GameObject("RemoteBoard_" + playerName);
         go.transform.SetParent(parent, false);
         RemoteBoard rb = go.AddComponent<RemoteBoard>();
@@ -90,7 +95,7 @@ public class RemoteBoard : MonoBehaviour
         rb.BoardOffset = offset;
 
         rb.map = TDBoardBuilder.CreateMap(TDGameManager.Layout, TDGameManager.Route, 2f, offset);
-        TDBoardBuilder.BuildTiles(go.transform, rb.map);
+        TDBoardBuilder.BuildTiles(go.transform, rb.map, theme);
         TDBoardBuilder.BuildRoom(go.transform, rb.map, offset);
 
         GameObject live = new GameObject("Live");

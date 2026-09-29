@@ -56,6 +56,9 @@ public partial class TDGameManager : MonoBehaviour
 
     public Transform ProjectilesRoot { get; private set; }
     public Tower Selected { get; private set; }
+    /// <summary>Board skin for the local board (difficulty screen picker,
+    /// persisted; each MP player carries their own in the lobby roster).</summary>
+    public BoardTheme SelectedTheme { get; private set; }
 
     private TDMap map;
     private Vector3 boardOffset;
@@ -118,6 +121,7 @@ public partial class TDGameManager : MonoBehaviour
         SetupCameraAndLight();
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
+        SelectedTheme = BoardThemes.Load();
         State = GameState.MainMenu;
     }
 
@@ -320,7 +324,7 @@ public partial class TDGameManager : MonoBehaviour
 
         // (room floor is built by TDRoom)
 
-        TDBoardBuilder.BuildTiles(worldRoot, map);
+        TDBoardBuilder.BuildTiles(worldRoot, map, SelectedTheme);
         BuildHover();
         BuildGhost();
         TDBoardBuilder.BuildRoom(worldRoot, map, boardOffset);
@@ -1219,6 +1223,14 @@ public partial class TDGameManager : MonoBehaviour
             Click();
             State = GameState.MainMenu;
         }
+
+        // Board skin picker (single player): full-width row under the difficulty buttons.
+        float tw = Mathf.Min(1060f, Screen.width - 80f);
+        float tx = (Screen.width - tw) * 0.5f;
+        float tyy = by + 4f * (bh + gap) + 70f;
+        GUI.Label(new Rect(tx, tyy, tw, 22f), "BOARD STYLE",
+            Style(15, TextAnchor.MiddleCenter, new Color(0.75f, 0.8f, 0.85f)));
+        DrawThemeRow(tx, tyy + 24f, tw);
 
         GUI.Label(new Rect(0f, Screen.height - 30f, Screen.width, 24f),
             "Esc to go back", Style(13, TextAnchor.MiddleCenter, new Color(0.85f, 0.88f, 0.92f)));

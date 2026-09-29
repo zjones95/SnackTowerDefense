@@ -14,8 +14,11 @@ public static class TDBoardBuilder
         return new TDMap(layout, route, cell, origin);
     }
 
-    public static void BuildTiles(Transform parent, TDMap map)
+    public static void BuildTiles(Transform parent, TDMap map) { BuildTiles(parent, map, BoardTheme.Classic); }
+
+    public static void BuildTiles(Transform parent, TDMap map, BoardTheme theme)
     {
+        BoardThemeDef th = BoardThemes.Get(theme);
         string[] layout = null;
         // rebuild the char grid from the map (layout is cheap and keeps callers simple)
         int gw = map.Width, gh = map.Height;
@@ -27,22 +30,23 @@ public static class TDBoardBuilder
             layout[ly] = new string(row);
         }
 
-        Color[] tileCols =
-        {
-            new Color(0.82f, 0.34f, 0.34f),
-            new Color(0.34f, 0.56f, 0.86f),
-            new Color(0.88f, 0.76f, 0.30f),
-            new Color(0.42f, 0.76f, 0.44f)
-        };
+        Color[] tileCols = th.tiles;
         Material[] tileMats = new Material[tileCols.Length];
         for (int i = 0; i < tileCols.Length; i++)
             tileMats[i] = TDVisuals.TexturedMat(TDTextures.Weave(), tileCols[i], new Vector2(3f, 3f));
 
-        Material pathMat = TDVisuals.TexturedMat(TDTextures.Road(), Color.white, Vector2.one);
-        Material crossMat = TDVisuals.TexturedMat(TDTextures.RoadCross(), Color.white, Vector2.one);
-        Material voidMat = TDVisuals.Mat(new Color(0.60f, 0.54f, 0.44f), 0f, 0.25f);
-        Material startMat = TDVisuals.Mat(new Color(0.25f, 0.80f, 0.35f), 0f, 0.3f);
-        Material endMat = TDVisuals.Mat(new Color(0.85f, 0.22f, 0.22f), 0f, 0.3f);
+        Material pathMat = th.flatPath ? TDVisuals.Mat(th.path, 0f, 0.4f)
+                                       : TDVisuals.TexturedMat(TDTextures.Road(), th.path, Vector2.one);
+        Material crossMat = th.flatPath ? pathMat
+                                        : TDVisuals.TexturedMat(TDTextures.RoadCross(), th.path, Vector2.one);
+        if (th.glowPath)
+        {
+            pathMat = BoardThemes.GlowMat(th.path, 1.1f);
+            crossMat = pathMat;
+        }
+        Material voidMat = TDVisuals.Mat(th.voidC, 0f, 0.25f);
+        Material startMat = th.glowPath ? BoardThemes.GlowMat(th.start, 1.3f) : TDVisuals.Mat(th.start, 0f, 0.3f);
+        Material endMat = th.glowPath ? BoardThemes.GlowMat(th.end, 1.3f) : TDVisuals.Mat(th.end, 0f, 0.3f);
 
         float cell = map.Cell;
         for (int ly = 0; ly < gh; ly++)
