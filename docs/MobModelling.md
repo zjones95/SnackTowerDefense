@@ -135,6 +135,11 @@ root
   export_skins=True, export_animation_mode='ACTIVE_ACTIONS')`.
 - Use **`ACTIVE_ACTIONS`**. The default `ACTIONS` can drag in other actions in the
   file. Verified: each GLB contains exactly one clip.
+- **Clear selection in every view layer before exporting.** The exporter unions
+  selection across *all* view layers, and old build sessions leave strays selected
+  in other scenes (we shipped a Cherry GLB containing the Watermelon this way).
+  `export()` now deselects every object in every scene's every view layer and
+  clears all active objects first.
 - The exporter names the clip `Animation` regardless of the action name. That is fine,
   because `MobWalkAnimation` plays the first clip.
 - The exporter's size optimisation drops constant channels to 2 keys. The moving

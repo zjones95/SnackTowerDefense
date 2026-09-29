@@ -11,7 +11,8 @@ using UnityEngine;
 // human play-test.
 public static class MobWalkCheck
 {
-    static readonly string[] Mobs = { "Apple", "Carrot", "Pear", "Banana", "Watermelon" };
+    static readonly string[] Mobs = { "Apple", "Carrot", "Pear", "Banana", "Watermelon", "Cherry",
+        "Potato", "Orange", "Grapes", "Pumpkin", "Corn", "Tomato" };
 
     public static void Verify()
     {
