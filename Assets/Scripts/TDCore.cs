@@ -10,7 +10,8 @@ public enum GameState
     Playing,
     GameOver,
     Victory,
-    DamageTest
+    DamageTest,
+    Playground
 }
 
 public enum RoundState

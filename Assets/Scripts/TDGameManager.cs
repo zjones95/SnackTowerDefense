@@ -374,6 +374,17 @@ public partial class TDGameManager : MonoBehaviour
 
     void EndWave()
     {
+        if (playgroundActive)
+        {
+            // Manual mode: a sent wave clearing simply returns to Preparing; the
+            // player decides when (and which) wave to send next.
+            message = "Wave cleared - send another!";
+            messageTimer = 2.5f;
+            Round = RoundState.Preparing;
+            prepTimer = 0f;
+            return;
+        }
+
         int bonus = TDBalance.RoundBonus(Wave);
         Money += bonus;
         message = "Round cleared! +$" + bonus;
@@ -437,6 +448,7 @@ public partial class TDGameManager : MonoBehaviour
     public void OnMobLeaked(Mob mob)
     {
         Mobs.Remove(mob);
+        if (playgroundActive) return;   // leaks are free in the playground (unlimited lives)
         // Flagged bosses (Granola Mom) end the run outright if they leak.
         Lives -= mob.Def.instantLossOnLeak ? Lives : mob.Def.leakDamage;
         if (Lives <= 0)
@@ -472,6 +484,12 @@ public partial class TDGameManager : MonoBehaviour
         TickDamageTest();   // solo Damage Test timers (issue #9)
 
         if (waveIntroTimer > 0f) waveIntroTimer -= Time.deltaTime;
+
+        if (State == GameState.Playground)
+        {
+            TickPlayground();
+            return;
+        }
 
         if (State != GameState.Playing)
         {
@@ -1047,6 +1065,7 @@ public partial class TDGameManager : MonoBehaviour
         else if (State == GameState.TowerViewer) DrawTowerViewer();
         else if (State == GameState.MobViewer) DrawMobViewer();
         else if (State == GameState.MultiplayerMenu || State == GameState.Lobby) DrawMultiplayer();
+        else if (State == GameState.Playground) DrawPlayground();
         else
         {
             if (State == GameState.DamageTest) DrawDamageTestHud();
@@ -1134,12 +1153,17 @@ public partial class TDGameManager : MonoBehaviour
             Click();
             OpenMobViewer();
         }
-        if (GUI.Button(new Rect(bx, by + 4f * (bh + gap), bw, bh), "Settings", btn))
+        if (GUI.Button(new Rect(bx, by + 4f * (bh + gap), bw, bh), "Playground", btn))
+        {
+            Click();
+            StartPlayground();
+        }
+        if (GUI.Button(new Rect(bx, by + 5f * (bh + gap), bw, bh), "Settings", btn))
         {
             Click();
             OpenSettings(false);
         }
-        if (GUI.Button(new Rect(bx, by + 5f * (bh + gap), bw, bh), "Quit", btn))
+        if (GUI.Button(new Rect(bx, by + 6f * (bh + gap), bw, bh), "Quit", btn))
         {
             Click();
             QuitGame();
@@ -1397,7 +1421,7 @@ public partial class TDGameManager : MonoBehaviour
     /// <summary>Wave title + any unique modifiers, shown for a few seconds at wave start.</summary>
     void DrawWaveIntro()
     {
-        if (State != GameState.Playing || waveIntroTimer <= 0f) return;
+        if ((State != GameState.Playing && State != GameState.Playground) || waveIntroTimer <= 0f) return;
         if (Wave < 1 || Wave > TDBalance.TotalWaves) return;
 
         MobDef md = MobCatalog.Get(TDBalance.Waves[Wave - 1].mob);
@@ -1456,7 +1480,7 @@ public partial class TDGameManager : MonoBehaviour
     /// Bosses have no floating bar, so this is the only read on their health.</summary>
     void DrawBossBar()
     {
-        if (State != GameState.Playing) return;
+        if (State != GameState.Playing && State != GameState.Playground) return;
 
         string name;
         float frac;
