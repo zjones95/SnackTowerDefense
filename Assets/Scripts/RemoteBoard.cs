@@ -96,7 +96,6 @@ public class RemoteBoard : MonoBehaviour
 
         rb.map = TDBoardBuilder.CreateMap(TDGameManager.Layout, TDGameManager.Route, 2f, offset);
         TDBoardBuilder.BuildTiles(go.transform, rb.map, theme);
-        BoardThemeProps.Build(go.transform, rb.map, theme, true);   // no-op for Classic
         TDBoardBuilder.BuildRoom(go.transform, rb.map, offset);
 
         GameObject live = new GameObject("Live");

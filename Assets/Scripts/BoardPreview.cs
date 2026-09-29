@@ -60,7 +60,6 @@ public class BoardPreview : MonoBehaviour
 
         TDMap map = TDBoardBuilder.CreateMap(TDGameManager.Layout, TDGameManager.Route, Cell, Vector3.zero);
         TDBoardBuilder.BuildTiles(board.transform, map, theme);
-        BoardThemeProps.Build(board.transform, map, theme, false);   // no perimeter: keeps the framing tight
     }
 
     void EnsureStage()

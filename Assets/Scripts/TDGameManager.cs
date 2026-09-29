@@ -327,10 +327,7 @@ public partial class TDGameManager : MonoBehaviour
         TDBoardBuilder.BuildTiles(worldRoot, map, SelectedTheme);
         BuildHover();
         BuildGhost();
-        if (SelectedTheme == BoardTheme.Classic)
-            TDBoardBuilder.BuildRoom(worldRoot, map, boardOffset);   // kid's room is Classic's surroundings
-        else
-            BoardThemeProps.Build(worldRoot, map, SelectedTheme, true);   // themed grounds + props + perimeter
+        TDBoardBuilder.BuildRoom(worldRoot, map, boardOffset);
     }
 
     void BuildHover()
