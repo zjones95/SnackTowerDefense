@@ -1,7 +1,7 @@
 using UnityEngine;
 
-// Debug Playground: a dark, neon "TRON" board with a full sandbox for testing
-// towers, waves and boss behaviours in isolation. Reached from the main menu.
+// Debug Playground: a bright, high-contrast sandbox board for testing towers,
+// waves and boss behaviours in isolation. Reached from the main menu.
 //
 //   - pick any wave (1-35) and send it on demand (no auto-wave)
 //   - place any tower at any tier for free (unlimited money)
@@ -9,8 +9,9 @@ using UnityEngine;
 //   - leaks never cost lives
 //
 // The normal 35-wave run is untouched: this is a standalone GameState that
-// reuses the existing map layout (restyled as a neon grid) and the shared
-// SpawnMob / CreateTower paths so it exercises the exact same gameplay code.
+// reuses the existing map layout (off-white board, light-grey path, raised
+// dark-grey buildable pads, pastel start/end) and the shared SpawnMob /
+// CreateTower paths so it exercises the exact same gameplay code.
 public partial class TDGameManager
 {
     private bool playgroundActive;
@@ -78,7 +79,6 @@ public partial class TDGameManager
         pgPlacing = true;
         pgDeleting = false;
         if (cam != null) cam.backgroundColor = new Color(0.12f, 0.14f, 0.17f);
-        PgSetLights(false);
         State = GameState.MainMenu;
         ClearWorld();
     }
@@ -99,57 +99,29 @@ public partial class TDGameManager
         float cell = 2f;
         map = TDBoardBuilder.CreateMap(layout, route, cell, Vector3.zero);
 
-        BuildTronTiles(worldRoot, map);
+        BuildPlaygroundTiles(worldRoot, map);
         BuildHover();
         BuildGhost();
 
-        if (cam != null) cam.backgroundColor = new Color(0.012f, 0.018f, 0.032f);
-        PgSetLights(true);
+        if (cam != null) cam.backgroundColor = new Color(0.96f, 0.96f, 0.95f);
     }
 
-    /// <summary>Emissive Standard-shader material (neon on a dark board).</summary>
-    static Material PgNeon(Color c, float emit)
-    {
-        Shader sh = Shader.Find("Standard");
-        if (sh == null) sh = Shader.Find("Legacy Shaders/Diffuse");
-        Material m = new Material(sh);
-        if (m.HasProperty("_Color")) m.SetColor("_Color", c);
-        if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", c);
-        if (m.HasProperty("_Metallic")) m.SetFloat("_Metallic", 0f);
-        if (m.HasProperty("_Glossiness")) m.SetFloat("_Glossiness", 0.3f);
-        if (m.HasProperty("_EmissionColor")) m.SetColor("_EmissionColor", c * emit);
-        m.EnableKeyword("_EMISSION");
-        return m;
-    }
-
-    /// <summary>Dark floor, neon wireframe grid, glowing path, dark buildable cells.</summary>
-    void BuildTronTiles(Transform parent, TDMap map)
+    /// <summary>Bright, high-contrast board: off-white floor, light-grey path,
+    /// raised dark-grey pads marking buildable cells, pastel start/end.</summary>
+    void BuildPlaygroundTiles(Transform parent, TDMap map)
     {
         int gw = map.Width, gh = map.Height;
         float cell = map.Cell;
         float W = gw * cell, H = gh * cell;
 
-        // floor (top face flush with y = 0)
-        TDVisuals.Box(parent, "Floor", new Vector3(0f, -0.08f, 0f), new Vector3(W + 1f, 0.16f, H + 1f),
-            TDVisuals.Mat(new Color(0.012f, 0.018f, 0.032f), 0f, 0.25f));
+        // off-white board (top face flush with y = 0)
+        TDVisuals.Box(parent, "Board", new Vector3(0f, -0.08f, 0f), new Vector3(W + 2f, 0.16f, H + 2f),
+            TDVisuals.Mat(new Color(0.93f, 0.92f, 0.89f), 0f, 0.5f));
 
-        // neon wireframe grid, floating just above the tiles
-        Material grid = PgNeon(new Color(0.16f, 0.85f, 1.0f), 0.7f);
-        for (int i = 0; i <= gw; i++)
-        {
-            float x = -W * 0.5f + i * cell;
-            TDVisuals.Box(parent, "GridV", new Vector3(x, 0.012f, 0f), new Vector3(0.03f, 0.014f, H), grid);
-        }
-        for (int j = 0; j <= gh; j++)
-        {
-            float z = -H * 0.5f + j * cell;
-            TDVisuals.Box(parent, "GridH", new Vector3(0f, 0.012f, z), new Vector3(W, 0.014f, 0.03f), grid);
-        }
-
-        Material path = PgNeon(new Color(0.04f, 0.55f, 0.75f), 1.1f);
-        Material cellM = TDVisuals.Mat(new Color(0.05f, 0.07f, 0.11f), 0f, 0.35f);
-        Material start = PgNeon(new Color(1.0f, 0.20f, 0.85f), 1.3f);
-        Material end = PgNeon(new Color(1.0f, 0.22f, 0.28f), 1.3f);
+        Material path = TDVisuals.Mat(new Color(0.72f, 0.72f, 0.75f), 0f, 0.5f);
+        Material pad = TDVisuals.Mat(new Color(0.26f, 0.27f, 0.31f), 0f, 0.55f);
+        Material start = TDVisuals.Mat(new Color(0.56f, 0.89f, 0.56f), 0f, 0.5f);
+        Material end = TDVisuals.Mat(new Color(0.95f, 0.58f, 0.58f), 0f, 0.5f);
 
         for (int ly = 0; ly < gh; ly++)
         {
@@ -157,25 +129,16 @@ public partial class TDGameManager
             {
                 char c = map.At(x, ly);
                 Material m = null;
+                float h = 0.10f;      // flush with the board top
+                float cy = -0.05f;
                 if (c == 'm') m = path;
                 else if (c == 's') m = start;
                 else if (c == 'e') m = end;
-                else if (c == 't') m = cellM;
+                else if (c == 't') { m = pad; h = 0.12f; cy = -0.04f; }   // buildable pads sit slightly proud
                 if (m == null) continue;
-                Vector3 pos = map.CellCenter(x, ly) - Vector3.up * 0.05f;
-                TDVisuals.Box(parent, "Tile", pos, new Vector3(cell * 0.97f, 0.10f, cell * 0.97f), m);
+                Vector3 pos = map.CellCenter(x, ly) + Vector3.up * cy;
+                TDVisuals.Box(parent, "Tile", pos, new Vector3(cell * 0.97f, h, cell * 0.97f), m);
             }
-        }
-    }
-
-    /// <summary>Scale every directional light down (neon reads better dark) and back.</summary>
-    void PgSetLights(bool dim)
-    {
-        var lights = Object.FindObjectsByType<Light>(FindObjectsSortMode.None);
-        for (int i = 0; i < lights.Length; i++)
-        {
-            if (lights[i].type != LightType.Directional) continue;
-            lights[i].intensity = dim ? lights[i].intensity * 0.30f : lights[i].intensity / 0.30f;
         }
     }
 
@@ -396,11 +359,11 @@ public partial class TDGameManager
     void DrawPlayground()
     {
         // status (top-left)
-        GUI.Label(new Rect(12f, 6f, 460f, 24f), "PLAYGROUND", Style(22, TextAnchor.MiddleLeft, new Color(0.4f, 1f, 1f)));
+        GUI.Label(new Rect(12f, 6f, 460f, 24f), "PLAYGROUND", Style(22, TextAnchor.MiddleLeft, new Color(0.05f, 0.35f, 0.40f)));
         GUI.Label(new Rect(12f, 32f, 460f, 20f), "Enemies " + Mobs.Count + "    Towers " + towers.Count,
-            Style(15, TextAnchor.MiddleLeft, new Color(0.75f, 0.85f, 0.95f)));
+            Style(15, TextAnchor.MiddleLeft, new Color(0.25f, 0.28f, 0.32f)));
         GUI.Label(new Rect(12f, 52f, 460f, 20f), "Money inf    Lives inf",
-            Style(15, TextAnchor.MiddleLeft, new Color(0.75f, 0.85f, 0.95f)));
+            Style(15, TextAnchor.MiddleLeft, new Color(0.25f, 0.28f, 0.32f)));
 
         // wave bar (top-center)
         float barW = 660f;
@@ -412,7 +375,7 @@ public partial class TDGameManager
         string wn = MobCatalog.Get(TDBalance.Waves[Mathf.Clamp(pgWave, 1, TDBalance.TotalWaves) - 1].mob).displayName;
         GUI.Label(new Rect(bx + 46f, by, 192f, 40f),
             "Wave " + pgWave + " / " + TDBalance.TotalWaves + "\n" + wn,
-            Style(13, TextAnchor.MiddleCenter, new Color(1f, 0.95f, 0.7f)));
+            Style(13, TextAnchor.MiddleCenter, new Color(0.45f, 0.33f, 0.05f)));
         if (PgButton(new Rect(bx + 244f, by, 40f, 40f), ">", false, 20)) { pgWave = Mathf.Min(TDBalance.TotalWaves, pgWave + 1); Click(); }
         if (PgButton(new Rect(bx + 292f, by, 80f, 40f), "Waves", pgShowWaves, 14)) { pgShowWaves = !pgShowWaves; Click(); }
         if (PgButton(new Rect(bx + 380f, by, 140f, 40f), "SEND WAVE", false, 15)) { PlaygroundSendWave(); Click(); }
@@ -424,7 +387,7 @@ public partial class TDGameManager
         float px = Screen.width - 212f;
         float py = 70f;
         pgTowerPanel = new Rect(px - 10f, py - 34f, 212f, 30f + TowerCatalog.GalleryTypes.Length * 27f + 14f);
-        GUI.Label(new Rect(px, py, 200f, 24f), "TOWER", Style(16, TextAnchor.MiddleLeft, new Color(0.9f, 0.7f, 1f)));
+        GUI.Label(new Rect(px, py, 200f, 24f), "TOWER", Style(16, TextAnchor.MiddleLeft, new Color(0.35f, 0.18f, 0.45f)));
         float ty = py + 30f;
         for (int i = 0; i < TowerCatalog.GalleryTypes.Length; i++)
         {
@@ -436,7 +399,7 @@ public partial class TDGameManager
 
         // tier picker (right, under tower list)
         pgTierPanel = new Rect(px - 10f, ty + 2f, 212f, 46f);
-        GUI.Label(new Rect(px, ty + 4f, 200f, 18f), "TIER", Style(13, TextAnchor.MiddleLeft, new Color(0.9f, 0.7f, 1f)));
+        GUI.Label(new Rect(px, ty + 4f, 200f, 18f), "TIER", Style(13, TextAnchor.MiddleLeft, new Color(0.35f, 0.18f, 0.45f)));
         float ttx = px;
         float tty = ty + 24f;
         for (int t = 1; t <= TowerCatalog.MaxTier; t++)
@@ -468,10 +431,10 @@ public partial class TDGameManager
 
         // message + hint
         if (!string.IsNullOrEmpty(message))
-            GUI.Label(new Rect(0f, 90f, Screen.width, 24f), message, Style(16, TextAnchor.MiddleCenter, new Color(0.6f, 1f, 0.6f)));
+            GUI.Label(new Rect(0f, 90f, Screen.width, 24f), message, Style(16, TextAnchor.MiddleCenter, new Color(0.10f, 0.45f, 0.15f)));
         GUI.Label(new Rect(0f, Screen.height - 66f, Screen.width, 14f),
             "Left-click: place / select    Right-click: cancel    Space: send wave    WASD / middle-drag / scroll: camera    Esc: back",
-            Style(11, TextAnchor.MiddleCenter, new Color(0.5f, 0.65f, 0.75f)));
+            Style(11, TextAnchor.MiddleCenter, new Color(0.35f, 0.38f, 0.42f)));
 
         DrawWaveIntro();
         DrawBossBar();
