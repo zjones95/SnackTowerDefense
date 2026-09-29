@@ -104,7 +104,7 @@ public class ChatSync : MonoBehaviour
         if (releaseTyping) { releaseTyping = false; SetTyping(false); }
 
         NetworkSession ns = NetworkSession.Instance;
-        if (ns == null || !ns.InLobby) return;
+        if (ns == null || !ns.InSession) return;
 
         if (Open)
         {

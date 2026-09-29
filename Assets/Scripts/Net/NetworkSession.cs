@@ -36,7 +36,7 @@ public class NetworkSession : MonoBehaviour
         public const string Start = "td.start";
     }
 
-    public enum SessionState { Idle, Hosting, Connecting, InLobby, Failed }
+    public enum SessionState { Idle, Hosting, Connecting, InLobby, Reconnecting, Failed }
 
     public SessionState State { get; private set; } = SessionState.Idle;
     public string Address { get; private set; } = "";
@@ -58,11 +58,34 @@ public class NetworkSession : MonoBehaviour
 
     public bool IsHost => Manager != null && Manager.IsListening && Manager.IsServer;
     public bool InLobby => State == SessionState.Hosting || State == SessionState.InLobby;
+    /// <summary>Any live session, including a mid-match link outage that is
+    /// being retried. Sync loops (MatchSync/SpectateSync/FxSync/ChatSync) run
+    /// under this so the local board keeps simulating while disconnected.</summary>
+    public bool InSession => State == SessionState.Hosting || State == SessionState.InLobby
+                             || State == SessionState.Reconnecting;
+    public bool Reconnecting => State == SessionState.Reconnecting;
+    /// <summary>True when named messages can actually go out: listening, and
+    /// (as a client) still connected. All SendNamed* entry points check this,
+    /// so gameplay code can publish blindly during an outage.</summary>
+    public bool LinkUp
+    {
+        get
+        {
+            if (Manager == null || !Manager.IsListening) return false;
+            if (Manager.IsServer) return true;
+            return Manager.IsConnectedClient;
+        }
+    }
     public int PlayerCount => Players.Count;
     public float ConnectingSeconds => State == SessionState.Connecting ? Time.time - connectStart : 0f;
+    /// <summary>Seconds spent in Reconnecting (unscaled: the sim clock may be paused).</summary>
+    public float ReconnectingSeconds => State == SessionState.Reconnecting ? Time.unscaledTime - reconnectStart : 0f;
 
     public event Action MatchStarted;
     public event Action LobbyChanged;
+    /// <summary>Fired on a client that just re-established its transport
+    /// mid-match (new ClientId, same seat). The game resyncs without resetting.</summary>
+    public event Action Reconnected;
 
     // Match/chat messages are forwarded to whoever registers (MatchSync,
     // SpectateSync, ChatSync), looked up at delivery time so registration order
@@ -92,7 +115,9 @@ public class NetworkSession : MonoBehaviour
 
     public static void SendNamedToAll(string name, FastBufferWriter writer)
     {
-        var m = Instance != null ? Instance.Manager : null;
+        var ns = Instance;
+        if (ns == null || !ns.LinkUp) return;
+        var m = ns.Manager;
         if (m != null && m.CustomMessagingManager != null)
             m.CustomMessagingManager.SendNamedMessageToAll(name, writer);
     }
@@ -100,7 +125,9 @@ public class NetworkSession : MonoBehaviour
     public static void SendNamedToServer(string name, FastBufferWriter writer,
                                          NetworkDelivery delivery = NetworkDelivery.ReliableSequenced)
     {
-        var m = Instance != null ? Instance.Manager : null;
+        var ns = Instance;
+        if (ns == null || !ns.LinkUp) return;
+        var m = ns.Manager;
         if (m != null && m.CustomMessagingManager != null)
             m.CustomMessagingManager.SendNamedMessage(name, NetworkManager.ServerClientId, writer, delivery);
     }
@@ -108,7 +135,9 @@ public class NetworkSession : MonoBehaviour
     public static void SendNamedToClients(string name, IReadOnlyList<ulong> clientIds, FastBufferWriter writer,
                                           NetworkDelivery delivery = NetworkDelivery.ReliableSequenced)
     {
-        var m = Instance != null ? Instance.Manager : null;
+        var ns = Instance;
+        if (ns == null || !ns.LinkUp) return;
+        var m = ns.Manager;
         if (m != null && m.CustomMessagingManager != null && clientIds != null && clientIds.Count > 0)
             m.CustomMessagingManager.SendNamedMessage(name, clientIds, writer, delivery);
     }
@@ -137,6 +166,23 @@ public class NetworkSession : MonoBehaviour
     private bool pendingLeave;
     private float connectStart;
     private readonly Dictionary<ulong, string> namesByClient = new Dictionary<ulong, string>();
+    /// <summary>Stable per-install identity, so a rejoin maps back to its seat
+    /// even though NGO assigns a fresh ClientId every connect.</summary>
+    private readonly Dictionary<ulong, string> guidByClient = new Dictionary<ulong, string>();
+    /// <summary>True once Start (lobby -> match) has fired. While set, a local
+    /// transport drop parks in Reconnecting (sim keeps running) instead of
+    /// tearing the session down, and the host tombstones rather than prunes.</summary>
+    private bool matchLive;
+
+    // Reconnect loop (mid-match client only): retry the last address every few
+    // seconds until ReconnectGraceSeconds elapses, then give up to Failed.
+    private bool reconnectBusy;
+    private float reconnectTimer;
+    private float reconnectStart;
+    private float reconnectAttemptStart;
+
+    public const float ReconnectGraceSeconds = 300f;
+    const float ReconnectRetrySeconds = 4f;
 
     const float ConnectTimeoutSeconds = 12f;
 
@@ -174,6 +220,30 @@ public class NetworkSession : MonoBehaviour
 
         if (State == SessionState.Connecting && Time.time - connectStart > ConnectTimeoutSeconds)
             Fail("Timed out connecting to " + Address);
+
+        // Mid-match link outage: keep retrying the last address until the
+        // grace period elapses (unscaled time: the render loop may be paused).
+        if (State == SessionState.Reconnecting)
+        {
+            if (Time.unscaledTime - reconnectStart >= ReconnectGraceSeconds)
+            {
+                Fail("Could not reconnect to the match.");
+                return;
+            }
+            if (reconnectBusy)
+            {
+                if (Time.unscaledTime - reconnectAttemptStart > ConnectTimeoutSeconds)
+                {
+                    reconnectBusy = false;
+                    reconnectTimer = ReconnectRetrySeconds;
+                }
+            }
+            else
+            {
+                reconnectTimer -= Time.unscaledDeltaTime;
+                if (reconnectTimer <= 0f) TryReconnect();
+            }
+        }
     }
 
     // ---------------------------------------------------------------- manager
@@ -231,7 +301,7 @@ public class NetworkSession : MonoBehaviour
         Error = ""; Address = ""; AddressIsRelay = false;
         leaving = false;
         EnsureManager();
-        Manager.NetworkConfig.ConnectionData = Encoding.UTF8.GetBytes(ConnectionPayload(localName));
+        Manager.NetworkConfig.ConnectionData = Encoding.UTF8.GetBytes(ConnectionPayload(localName, LocalGuid));
 
         bool started;
         if (await TryRelayHost())
@@ -299,7 +369,7 @@ public class NetworkSession : MonoBehaviour
         Error = ""; Address = ""; AddressIsRelay = false;
         leaving = false;
         EnsureManager();
-        Manager.NetworkConfig.ConnectionData = Encoding.UTF8.GetBytes(ConnectionPayload(localName));
+        Manager.NetworkConfig.ConnectionData = Encoding.UTF8.GetBytes(ConnectionPayload(localName, LocalGuid));
 
         target = (target ?? "").Trim();
         bool looksLikeCode = target.Length == NetConfig.RelayCodeLength
@@ -389,6 +459,7 @@ public class NetworkSession : MonoBehaviour
     public void StartMatch()
     {
         if (!IsHost) return;
+        matchLive = true;
         if (Manager.CustomMessagingManager != null)
         {
             using var writer = new FastBufferWriter(1, Allocator.Temp);
@@ -433,6 +504,7 @@ public class NetworkSession : MonoBehaviour
 
     void OnStartMessage(ulong sender, FastBufferReader reader)
     {
+        matchLive = true;   // clients learn the match began here (drives reconnect, not lobby)
         MatchStarted?.Invoke();
     }
 
@@ -456,14 +528,19 @@ public class NetworkSession : MonoBehaviour
         response.CreatePlayerObject = false;
         response.Pending = false;
 
-        // Payload is "<version>\n<name>". Refuse a protocol mismatch here, in
+        // Payload is "<version>\n<guid>\n<name>". Refuse a protocol mismatch here, in
         // the connection handshake, so a stale client never reaches the lobby.
+        // The guid is a stable per-install identity: a mid-match rejoin maps
+        // back to its seat even though NGO assigns a fresh ClientId.
         string payload = "";
         if (request.Payload != null && request.Payload.Length > 0)
             payload = Encoding.UTF8.GetString(request.Payload);
-        int newline = payload.IndexOf('\n');
-        string version = newline >= 0 ? payload.Substring(0, newline).Trim() : "";
-        string name = newline >= 0 ? payload.Substring(newline + 1) : payload;
+        int first = payload.IndexOf('\n');
+        string version = first >= 0 ? payload.Substring(0, first).Trim() : "";
+        string rest = first >= 0 ? payload.Substring(first + 1) : payload;
+        int second = rest.IndexOf('\n');
+        string guid = second >= 0 ? rest.Substring(0, second).Trim() : "";
+        string name = second >= 0 ? rest.Substring(second + 1) : rest;
 
         if (version != NetConfig.FullVersion)
         {
@@ -476,6 +553,14 @@ public class NetworkSession : MonoBehaviour
         }
 
         namesByClient[request.ClientNetworkId] = SanitizeName(name);
+        guidByClient[request.ClientNetworkId] = guid ?? "";
+    }
+
+    /// <summary>Stable identity the host uses to recognise a rejoining peer.</summary>
+    public string GuidForClient(ulong id)
+    {
+        string g;
+        return guidByClient.TryGetValue(id, out g) ? g : "";
     }
 
     void OnClientConnected(ulong id)
@@ -486,24 +571,44 @@ public class NetworkSession : MonoBehaviour
         {
             string name;
             if (!namesByClient.TryGetValue(id, out name)) name = "Player " + id;
+            string guid = GuidForClient(id);
             bool exists = false;
             for (int i = 0; i < Players.Count; i++)
-                if (Players[i].ClientId == id) { exists = true; break; }
+            {
+                // A mid-match rejoin carries a fresh ClientId but the same
+                // install guid: adopt it into the kept seat so nobody's slot
+                // (board position) shifts.
+                if (Players[i].ClientId == id ||
+                    (!string.IsNullOrEmpty(guid) && Players[i].Guid == guid))
+                {
+                    var p = Players[i];
+                    p.ClientId = id;
+                    p.Name = name;
+                    p.Guid = guid;
+                    Players[i] = p;
+                    exists = true;
+                    break;
+                }
+            }
             if (!exists)
-                Players.Add(new LobbyPlayerInfo { ClientId = id, Name = name, IsHost = id == Manager.LocalClientId });
-            BroadcastLobby();
+                Players.Add(new LobbyPlayerInfo { ClientId = id, Name = name, IsHost = id == Manager.LocalClientId, Guid = guid });
+            if (!matchLive) BroadcastLobby();
             Debug.Log("[net] client " + id + " connected (" + Players.Count + " in lobby)");
         }
         else if (id == Manager.LocalClientId)
         {
             // We're through to the host: announce ourselves so it sends the roster.
+            bool wasRejoin = State == SessionState.Reconnecting;
             State = SessionState.InLobby;
-            Debug.Log("[net] connected to host as client " + id);
+            reconnectBusy = false;
+            Debug.Log("[net] connected to host as client " + id + (wasRejoin ? " (rejoin)" : ""));
             if (Manager.CustomMessagingManager != null)
             {
                 using var writer = new FastBufferWriter(1, Allocator.Temp);
                 Manager.CustomMessagingManager.SendNamedMessage(Msg.Hello, NetworkManager.ServerClientId, writer);
             }
+            // The game resyncs from live state (no wave reset, no board reset).
+            if (wasRejoin) Reconnected?.Invoke();
         }
     }
 
@@ -513,20 +618,99 @@ public class NetworkSession : MonoBehaviour
 
         if (Manager.IsServer)
         {
+            // Mid-match the roster seat is kept (the board row is tombstoned by
+            // MatchSync instead), so survivors' slots never shift. Pre-match a
+            // departure still removes the seat as before.
+            if (matchLive) { Debug.Log("[net] client " + id + " dropped mid-match (seat held)"); return; }
             for (int i = Players.Count - 1; i >= 0; i--)
                 if (Players[i].ClientId == id) Players.RemoveAt(i);
             namesByClient.Remove(id);
+            guidByClient.Remove(id);
             BroadcastLobby();
             Debug.Log("[net] client " + id + " left");
         }
         else if (id == Manager.LocalClientId)
         {
+            if (matchLive)
+            {
+                // Our board keeps simulating locally (per-peer sim needs no
+                // link); park in Reconnecting and retry the last address.
+                Debug.Log("[net] link lost mid-match - holding board, retrying " + Address);
+                EnterReconnecting();
+                return;
+            }
             // A refused join (e.g. version mismatch) supplies a reason; surface
             // it instead of the generic disconnect text.
             string reason = Manager != null ? Manager.DisconnectReason : null;
             Error = string.IsNullOrEmpty(reason) ? "Disconnected from host." : reason;
             pendingLeave = true;
         }
+    }
+
+    /// <summary>Parks the transport in Reconnecting without destroying the
+    /// manager, handlers, roster or world: the local sim keeps running and
+    /// sends drop silently (LinkUp) until the link is back.</summary>
+    void EnterReconnecting()
+    {
+        if (Manager != null && Manager.IsListening) Manager.Shutdown();
+        State = SessionState.Reconnecting;
+        reconnectBusy = false;
+        reconnectTimer = 0f;
+        reconnectStart = Time.unscaledTime;
+    }
+
+    /// <summary>One rejoin attempt against the last address (relay gets a fresh
+    /// allocation each try; LAN redials). Runs async; Update() times it out.</summary>
+    async void TryReconnect()
+    {
+        if (Manager == null || string.IsNullOrEmpty(Address)) { Fail("Could not reconnect to the match."); return; }
+        reconnectBusy = true;
+        reconnectAttemptStart = Time.unscaledTime;
+
+        bool started = false;
+        try
+        {
+            if (AddressIsRelay)
+            {
+                if (!await EnsureServices()) { Debug.Log("[net] rejoin: services unavailable"); }
+                else
+                {
+                    var join = await RelayService.Instance.JoinAllocationAsync(Address.ToUpperInvariant());
+                    RelayServerEndpoint ep = PickEndpoint(join.ServerEndpoints, RelayConnectionType());
+                    if (ep == null) Debug.Log("[net] rejoin: no usable endpoint.");
+                    else
+                    {
+                        ApplyRelayData(ep, join.AllocationIdBytes, join.ConnectionData, join.HostConnectionData, join.Key);
+                        leaving = false;
+                        Manager.NetworkConfig.ConnectionData = Encoding.UTF8.GetBytes(ConnectionPayload(localName, LocalGuid));
+                        started = Manager.StartClient();
+                    }
+                }
+            }
+            else if (TryParseAddress(Address, out string ip, out ushort port))
+            {
+                Transport.UseWebSockets = false;
+                Transport.SetConnectionData(ip, port);
+                leaving = false;
+                Manager.NetworkConfig.ConnectionData = Encoding.UTF8.GetBytes(ConnectionPayload(localName, LocalGuid));
+                started = Manager.StartClient();
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.Log("[net] rejoin attempt failed: " + e.Message);
+        }
+
+        if (started) return;   // OnClientConnected (or the attempt timeout) resolves it
+        reconnectBusy = false;
+        reconnectTimer = ReconnectRetrySeconds;
+    }
+
+    /// <summary>Retry the current outage immediately (reconnect overlay button).</summary>
+    public void RetryNow()
+    {
+        if (State != SessionState.Reconnecting || reconnectBusy) return;
+        reconnectTimer = 0f;
     }
 
     // ----------------------------------------------------------------- leave
@@ -541,6 +725,8 @@ public class NetworkSession : MonoBehaviour
     {
         leaving = true;
         handlersReady = false;
+        matchLive = false;
+        reconnectBusy = false;
 
         if (Manager != null && Manager.IsListening) Manager.Shutdown();
         if (Manager != null) Destroy(Manager.gameObject);
@@ -548,6 +734,7 @@ public class NetworkSession : MonoBehaviour
 
         Players.Clear();
         namesByClient.Clear();
+        guidByClient.Clear();
     }
 
     void Fail(string message)
@@ -600,12 +787,36 @@ public class NetworkSession : MonoBehaviour
         return n;
     }
 
-    /// <summary>Connection approval payload: full version (scheme + build commit)
-    /// on the first line, display name after it. The host rejects any mismatch, so
-    /// builds from different commits never get into a lobby together.</summary>
-    static string ConnectionPayload(string name)
+    private const string PlayerGuidKey = "td_player_guid";
+    private string localGuid = "";
+
+    /// <summary>Stable per-install identity, persisted like the player name.
+    /// Sent in the connection payload so a mid-match rejoin maps to its seat.</summary>
+    public string LocalGuid
     {
-        return NetConfig.FullVersion + "\n" + name;
+        get
+        {
+            if (string.IsNullOrEmpty(localGuid))
+            {
+                localGuid = PlayerPrefs.GetString(PlayerGuidKey, "");
+                if (string.IsNullOrEmpty(localGuid))
+                {
+                    localGuid = Guid.NewGuid().ToString("N");
+                    PlayerPrefs.SetString(PlayerGuidKey, localGuid);
+                    PlayerPrefs.Save();
+                }
+            }
+            return localGuid;
+        }
+    }
+
+    /// <summary>Connection approval payload: full version (scheme + build commit)
+    /// on the first line, install guid on the second, display name after it. The
+    /// host rejects any version mismatch, so builds from different commits never
+    /// get into a lobby together.</summary>
+    static string ConnectionPayload(string name, string guid)
+    {
+        return NetConfig.FullVersion + "\n" + guid + "\n" + name;
     }
 
     static bool TryParseAddress(string target, out string ip, out ushort port)

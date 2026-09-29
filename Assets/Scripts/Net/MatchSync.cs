@@ -38,6 +38,14 @@ public class MatchSync : MonoBehaviour
         public bool Cleared;
         public bool Eliminated;
         public bool HasStatus;   // false until we've heard from this board
+        /// <summary>Install guid (memory only, never on the wire): lets a
+        /// rejoin adopt its tombstoned row under a fresh ClientId.</summary>
+        public string Guid = "";
+        /// <summary>Link dropped but seat held. Treated like elimination for the
+        /// defeat check; cleared by the next live report. Expires after the
+        /// reconnect grace period, freeing the seat.</summary>
+        public bool Absent;
+        public float AbsentSince;
     }
 
     static class Msg
@@ -103,7 +111,8 @@ public class MatchSync : MonoBehaviour
                     TowerValue = 0,
                     Cleared = false,
                     Eliminated = false,
-                    HasStatus = false
+                    HasStatus = false,
+                    Guid = ns.Players[i].Guid ?? ""
                 });
             }
         }
@@ -122,7 +131,9 @@ public class MatchSync : MonoBehaviour
     // ---------------------------------------------------------------- update
     void Update()
     {
-        if (NetworkSession.Instance == null || !NetworkSession.Instance.InLobby) return;
+        // InSession (not just InLobby) so the local row stays live while the
+        // link is down: the board keeps simulating and reports on rejoin.
+        if (NetworkSession.Instance == null || !NetworkSession.Instance.InSession) return;
 
         if (host)
         {
@@ -248,12 +259,28 @@ public class MatchSync : MonoBehaviour
         BoardState b = LocalBoard();
         if (b == null)
         {
-            b = new BoardState { ClientId = NetworkSession.LocalClientId, Name = "Player" };
+            b = new BoardState
+            {
+                ClientId = NetworkSession.LocalClientId,
+                Name = "Player",
+                Guid = NetworkSession.Instance != null ? NetworkSession.Instance.LocalGuid : ""
+            };
             Boards.Add(b);
         }
         b.Lives = lives; b.Money = money; b.Wave = wave;
         b.GoldGenerated = goldGenerated; b.TowerValue = towerValue;
         b.Cleared = cleared; b.Eliminated = eliminated; b.HasStatus = true;
+    }
+
+    /// <summary>Mid-match rejoin resync: reports the live local board (which
+    /// kept simulating through the outage) so the host adopts our tombstoned
+    /// row. Never resets LocalWave or the board.</summary>
+    public void RejoinSync()
+    {
+        NetworkSession.RegisterNamed(Msg.State, OnStateMessage);
+        NetworkSession.RegisterNamed(Msg.Boards, OnBoardsMessage);
+        MarkLocalBoard();
+        PublishLocal();
     }
 
     void MarkLocalBoard()
@@ -306,12 +333,28 @@ public class MatchSync : MonoBehaviour
         BoardState b = BoardFor(sender);
         if (b == null)
         {
-            b = new BoardState { ClientId = sender, Name = "Player " + sender };
-            Boards.Add(b);
+            // A rejoin carries a fresh ClientId: adopt its tombstoned row by
+            // install guid so the seat (and scoreboard history) survives.
+            string guid = NetworkSession.Instance != null ? NetworkSession.Instance.GuidForClient(sender) : "";
+            if (!string.IsNullOrEmpty(guid))
+            {
+                for (int i = 0; i < Boards.Count; i++)
+                    if (Boards[i].Guid == guid) { b = Boards[i]; break; }
+            }
+            if (b == null)
+            {
+                b = new BoardState { ClientId = sender, Name = "Player " + sender, Guid = guid };
+                Boards.Add(b);
+            }
+            else
+            {
+                b.ClientId = sender;
+            }
         }
         b.Lives = lives; b.Money = money; b.Wave = wave;
         b.GoldGenerated = goldGenerated; b.TowerValue = towerValue;
         b.Cleared = cleared; b.Eliminated = eliminated; b.HasStatus = true;
+        b.Absent = false;
 
         CheckMatchEnd();
         Broadcast();
@@ -337,11 +380,12 @@ public class MatchSync : MonoBehaviour
             reader.ReadValueSafe(out int towerValue);
             reader.ReadValueSafe(out bool cleared);
             reader.ReadValueSafe(out bool eliminated);
+            reader.ReadValueSafe(out bool absent);
             Boards.Add(new BoardState
             {
                 ClientId = id, Name = bname, Lives = lives, Money = money, Wave = bwave,
                 GoldGenerated = goldGenerated, TowerValue = towerValue,
-                Cleared = cleared, Eliminated = eliminated, HasStatus = true
+                Cleared = cleared, Eliminated = eliminated, HasStatus = true, Absent = absent
             });
         }
 
@@ -372,7 +416,8 @@ public class MatchSync : MonoBehaviour
             }
         }
 
-        // Nobody can win once every board is out.
+        // Nobody can win once every board is out (absent boards count as out:
+        // their sim died with their link from the host's point of view).
         if (AllEliminated()) EndMatch(false);
     }
 
@@ -380,16 +425,31 @@ public class MatchSync : MonoBehaviour
     {
         if (Boards.Count == 0) return false;
         for (int i = 0; i < Boards.Count; i++)
-            if (!Boards[i].Eliminated) return false;
+            if (!Boards[i].Eliminated && !Boards[i].Absent) return false;
         return true;
     }
 
+    /// <summary>A drop holds its seat instead of freeing it: the row is marked
+    /// absent (survivors see "reconnecting") and expires after the reconnect
+    /// grace period, freeing the seat only then.</summary>
     void PruneDisconnected()
     {
         bool changed = false;
         for (int i = Boards.Count - 1; i >= 0; i--)
         {
-            if (!NetworkSession.IsConnected(Boards[i].ClientId))
+            BoardState b = Boards[i];
+            if (NetworkSession.IsConnected(b.ClientId))
+            {
+                if (b.Absent) { b.Absent = false; changed = true; }
+                continue;
+            }
+            if (!b.Absent)
+            {
+                b.Absent = true;
+                b.AbsentSince = Time.time;
+                changed = true;
+            }
+            else if (Time.time - b.AbsentSince >= NetworkSession.ReconnectGraceSeconds)
             {
                 Boards.RemoveAt(i);
                 changed = true;
@@ -418,6 +478,7 @@ public class MatchSync : MonoBehaviour
             w.WriteValueSafe(b.TowerValue);
             w.WriteValueSafe(b.Cleared);
             w.WriteValueSafe(b.Eliminated);
+            w.WriteValueSafe(b.Absent);
         }
         NetworkSession.SendNamedToAll(Msg.Boards, w);
     }

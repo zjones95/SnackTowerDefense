@@ -134,6 +134,15 @@ public class RemoteBoard : MonoBehaviour
         if (plateText.text != s) plateText.text = s;
     }
 
+    /// <summary>Repoints this board at a new ClientId (a rejoin carries a fresh
+    /// one). Position and rendered content stay; snapshots resume under the id.</summary>
+    public void Reassign(ulong clientId, string playerName)
+    {
+        ClientId = clientId;
+        PlayerName = playerName ?? PlayerName;
+        gameObject.name = "RemoteBoard_" + PlayerName;
+    }
+
     // ------------------------------------------------------------- rendering
     public void Apply(BoardSnapshot s)
     {

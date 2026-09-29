@@ -79,7 +79,7 @@ public class FxSync : MonoBehaviour
     void Update()
     {
         NetworkSession ns = NetworkSession.Instance;
-        if (ns == null || !ns.InLobby) return;
+        if (ns == null || !ns.InSession) return;
 
         timer -= Time.deltaTime;
         if (timer > 0f) return;

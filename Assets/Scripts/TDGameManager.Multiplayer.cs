@@ -13,6 +13,7 @@ public partial class TDGameManager
     private string mpName = "";
     private string mpJoinInput = "";
     private string mpError = "";
+    private bool failedRouted;   // Failed already routed to Menu/Join (runs once)
     private bool mpActive;          // local player is in a multiplayer match
     private int mpPlayerCount = 1;
     private bool mpScoreboardCollapsed = true;   // top-right scoreboard tab state
@@ -21,6 +22,9 @@ public partial class TDGameManager
     private bool cleared;           // local board has cleared the current wave
     private bool eliminated;        // local board is out of lives
     private readonly List<RemoteBoard> remoteBoards = new List<RemoteBoard>();
+    // Set when the link returns mid-match: remote boards are rebuilt once the
+    // fresh roster (with our new ClientId) arrives via the lobby message.
+    private bool remoteBoardsDirty;
 
     // spectating
     private Vector3 viewOffset;     // board the camera is currently on
@@ -119,6 +123,8 @@ public partial class TDGameManager
         NetworkSession ns = NetworkSession.Ensure();
         ns.MatchStarted -= OnMatchStarted;
         ns.MatchStarted += OnMatchStarted;
+        ns.Reconnected -= OnReconnected;
+        ns.Reconnected += OnReconnected;
 
         if (ChatSync.Instance != null) ChatSync.Instance.Close();
         mpScoreboardCollapsed = true;
@@ -137,6 +143,7 @@ public partial class TDGameManager
         if (NetworkSession.Instance != null)
         {
             NetworkSession.Instance.MatchStarted -= OnMatchStarted;
+            NetworkSession.Instance.Reconnected -= OnReconnected;
             NetworkSession.Instance.Leave();
         }
         if (ChatSync.Instance != null) ChatSync.Instance.Close();
@@ -194,6 +201,71 @@ public partial class TDGameManager
         }
     }
 
+    /// <summary>Mid-match link return: the board kept simulating through the
+    /// outage, so nothing resets. Remote boards rebuild once the fresh roster
+    /// arrives, and the live local row is published for the host to adopt.</summary>
+    void OnReconnected()
+    {
+        if (!mpActive) return;
+        remoteBoardsDirty = true;
+        if (MatchSync.Instance != null) MatchSync.Instance.RejoinSync();
+        message = "Reconnected - welcome back!";
+        messageTimer = 3f;
+        if (ChatSync.Instance != null) ChatSync.Instance.SendSystem("Reconnected.");
+    }
+
+    /// <summary>Reassigns RemoteBoards after an id change (a rejoin carries a
+    /// fresh ClientId). Matches rows to boards by name, preferring boards that
+    /// lost their row ("disconnected"), so snapshots resume on the right board
+    /// and nobody's slot shifts.</summary>
+    void SyncRemoteBoards()
+    {
+        MatchSync ms = MatchSync.Instance;
+        NetworkSession ns = NetworkSession.Instance;
+        if (ms == null || ns == null) return;
+
+        ulong me = NetworkSession.LocalClientId;
+        foreach (MatchSync.BoardState b in ms.Boards)
+        {
+            if (b.ClientId == me) continue;
+            bool has = false;
+            for (int i = 0; i < remoteBoards.Count; i++)
+                if (remoteBoards[i] != null && remoteBoards[i].ClientId == b.ClientId) { has = true; break; }
+            if (has) continue;
+
+            // Adopt an orphaned board (one whose row vanished), same name first.
+            RemoteBoard orphan = null, anyOrphan = null;
+            for (int i = 0; i < remoteBoards.Count; i++)
+            {
+                RemoteBoard rb = remoteBoards[i];
+                if (rb == null || ms.BoardFor(rb.ClientId) != null) continue;
+                if (anyOrphan == null) anyOrphan = rb;
+                if (rb.PlayerName == b.Name) { orphan = rb; break; }
+            }
+            RemoteBoard target = orphan ?? anyOrphan;
+            if (target != null) target.Reassign(b.ClientId, b.Name);
+        }
+
+        // Rebuild once after our own rejoin lands a fresh roster with our new id.
+        if (remoteBoardsDirty)
+        {
+            bool haveSelf = false;
+            int slot = mySlot;
+            for (int i = 0; i < ns.Players.Count; i++)
+                if (ns.Players[i].ClientId == me) { haveSelf = true; slot = i; break; }
+            if (haveSelf)
+            {
+                remoteBoardsDirty = false;
+                mySlot = slot;
+                viewSlot = slot;
+                slotCount = Mathf.Max(1, ns.PlayerCount);
+                mpPlayerCount = slotCount;
+                BuildRemoteBoards(ns, slot, slotCount);
+                SetViewSlot(slot);
+            }
+        }
+    }
+
     // ------------------------------------------------------------- match flow
     /// <summary>Called when this board moves to a (new) wave. Waves are
     /// independent per peer, so this is driven by our own MatchSync, not a
@@ -244,6 +316,7 @@ public partial class TDGameManager
     void UpdateRemoteBoards()
     {
         if (MatchSync.Instance == null) return;
+        SyncRemoteBoards();
         for (int i = 0; i < remoteBoards.Count; i++)
         {
             RemoteBoard rb = remoteBoards[i];
@@ -252,7 +325,9 @@ public partial class TDGameManager
             MatchSync.BoardState b = MatchSync.Instance.BoardFor(rb.ClientId);
             if (b == null) { rb.SetStatus("disconnected"); continue; }
 
-            string phase = b.Eliminated ? "out" : (b.Cleared ? "cleared" : "wave " + b.Wave);
+            string phase = b.Absent ? "reconnecting..."
+                : b.Eliminated ? "out"
+                : (b.Cleared ? "cleared" : "wave " + b.Wave);
             rb.SetStatus(phase + "   |   " + b.Lives + " lives");
         }
     }
@@ -301,6 +376,44 @@ public partial class TDGameManager
         if (!mpActive) return;
         DrawMpScoreboard();
         DrawMpChat();
+        DrawMpReconnect();
+    }
+
+    /// <summary>Mid-match link outage: the board keeps simulating underneath,
+    /// so this is a status overlay, not a dead end. Auto-retry runs in the
+    /// background; the player can force a retry now or abandon the match.</summary>
+    void DrawMpReconnect()
+    {
+        NetworkSession ns = NetworkSession.Instance;
+        if (ns == null || !ns.Reconnecting) return;
+        if (State != GameState.Playing || paused) return;
+
+        float w = 460f, h = 190f;
+        float x = (Screen.width - w) * 0.5f;
+        float y = Screen.height * 0.30f;
+
+        Color old = GUI.color;
+        GUI.color = new Color(0.03f, 0.04f, 0.07f, 0.92f);
+        GUI.DrawTexture(new Rect(x, y, w, h), Texture2D.whiteTexture);
+        GUI.color = old;
+
+        GUI.Label(new Rect(x, y + 12f, w, 34f), "CONNECTION LOST",
+            Style(26, TextAnchor.MiddleCenter, new Color(1f, 0.62f, 0.4f)));
+        GUI.Label(new Rect(x + 20f, y + 52f, w - 40f, 44f),
+            "Retrying (" + Mathf.FloorToInt(ns.ReconnectingSeconds) + "s) - your game continues underneath.",
+            Style(14, TextAnchor.MiddleCenter, new Color(0.88f, 0.9f, 0.94f)));
+
+        GUIStyle btn = PaperButton(18);
+        if (GUI.Button(new Rect(x + 30f, y + 108f, 180f, 44f), "Retry now", btn))
+        {
+            Click();
+            ns.RetryNow();
+        }
+        if (GUI.Button(new Rect(x + w - 210f, y + 108f, 180f, 44f), "Leave match", btn))
+        {
+            Click();
+            LeaveMultiplayer();
+        }
     }
 
     /// <summary>Collapsible scoreboard docked top-right: a small tab when
@@ -358,8 +471,10 @@ public partial class TDGameManager
             string nm = string.IsNullOrEmpty(b.Name) ? ("Player " + b.ClientId) : b.Name;
             if (mine) nm += " (you)";
             if (b.Eliminated) nm = "OUT " + nm;
+            else if (b.Absent) nm = "... " + nm;
 
             Color c = b.Eliminated ? new Color(0.8f, 0.62f, 0.62f)
+                    : b.Absent ? new Color(0.65f, 0.68f, 0.72f)
                     : mine ? new Color(1f, 0.9f, 0.5f)
                     : new Color(0.88f, 0.92f, 1f);
             GUIStyle st = Style(12, TextAnchor.MiddleLeft, c);
@@ -369,6 +484,13 @@ public partial class TDGameManager
             GUI.Label(new Rect(x0 + 180f, ry, 62f, 18f), "$" + b.GoldGenerated, st);
             GUI.Label(new Rect(x0 + 244f, ry, 56f, 18f), "$" + b.TowerValue, st);
         }
+
+        // Join code, so a dropped player can re-enter it (auto-rejoin normally
+        // beats them to it, but the code is here if they need it).
+        NetworkSession ns = NetworkSession.Instance;
+        if (ns != null && !string.IsNullOrEmpty(ns.Address))
+            GUI.Label(new Rect(x0, y + 30f + rows * 20f, w, 18f), "Code: " + ns.Address,
+                Style(12, TextAnchor.MiddleLeft, new Color(0.6f, 0.85f, 0.65f)));
     }
 
     /// <summary>Lower-left chat log and input line (issue #27). Shows the last
@@ -466,12 +588,24 @@ public partial class TDGameManager
         GUI.Label(new Rect(0, Screen.height * 0.09f, Screen.width, 60), "MULTIPLAYER",
             Style(44, TextAnchor.MiddleCenter, new Color(1f, 0.85f, 0.4f)));
 
-        // A session that failed drops us back to the menu screen with an error.
+        // A session that failed drops us back with an error. If we were in a
+        // match (host died or grace ran out), land on Join with the last
+        // address prefilled so rejoining is one click.
         if (ns != null && ns.State == NetworkSession.SessionState.Failed)
         {
-            mpError = ns.Error;
-            mpScreen = MpScreen.Menu;
+            if (!failedRouted)
+            {
+                failedRouted = true;
+                mpError = ns.Error;
+                if (!string.IsNullOrEmpty(ns.Address))
+                {
+                    mpJoinInput = ns.Address;
+                    mpScreen = MpScreen.Join;
+                }
+                else mpScreen = MpScreen.Menu;
+            }
         }
+        else failedRouted = false;
 
         switch (mpScreen)
         {

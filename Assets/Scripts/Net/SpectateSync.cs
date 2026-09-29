@@ -87,7 +87,7 @@ public class SpectateSync : MonoBehaviour
 
     void Update()
     {
-        if (NetworkSession.Instance == null || !NetworkSession.Instance.InLobby) return;
+        if (NetworkSession.Instance == null || !NetworkSession.Instance.InSession) return;
 
         timer -= Time.deltaTime;
         if (timer > 0f) return;
