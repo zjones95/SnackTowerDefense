@@ -5,9 +5,10 @@ after building the first five (Apple, Carrot, Pear, Banana, Watermelon boss), wh
 are the reference implementation. See `MobRoster.md` for *what* each mob is and
 `ARCHITECTURE.md` for the wider codebase.
 
-> **Status:** the first five have Blender-authored, rigged, walk-animated models.
-> The other 29 built mobs are still static GLBs from the earlier pass. Granola Mom
-> deliberately uses the procedural `ChildModel` humanoid instead.
+> **Status:** all 35 mobs have Blender-authored, rigged, walk-animated GLBs.
+> Waves 31–35 are authored in `tools/blender/mobs_wave31_35.py`. Granola Mom
+> now has a dedicated humanoid rig; the other mobs use the shared six-bone rig.
+> All 35 pass the Unity batch walk check. Movement-speed playback still needs play-testing.
 
 ---
 
@@ -108,8 +109,24 @@ root
 - **Feet must counter-rotate.** With feet rigidly on the leg bone, the toe tilted
   into the ground by ~3 cm during the swing (caught by `MobWalkCheck`). The foot bones
   key the *negative* of the leg swing so feet stay flat.
+- **Wide, low body parts are levers.** Body roll rotates about the forward axis, so
+  anything sticking far out in ±X swings down by `x · sin(roll)` (the Cauliflower's
+  low leaves dipped 5 cm underground with roll 6.5°). Keep wide attachments high,
+  shorten them, or lower that mob's roll.
 
 ## Walk cycle
+
+### Granola Mom humanoid extension
+
+The final-batch script wraps the shared rig with seven extra bones: `head`,
+`arm_a/b`, `forearm_a/b`, and `shin_a/b` (13 total including root).
+`leg_a/b` are thighs; each foot is parented to its shin. Arms counter-swing
+against the corresponding thighs, knees bend during recovery, and foot rotation
+cancels the combined thigh/shin angle. Head and long hair share rigid weights.
+The shortened tunic leaves knees clear. This is a custom skeleton exported with
+a baked Legacy clip, not a Unity Humanoid/Avatar retargeting setup.
+`MobWalkCheck` additionally checks required bones, opposing arm swing, and knee motion.
+Run the final script in a fresh Blender background process; it replaces its active scene.
 
 - **24 frames at 24 fps**, keyed 0-24. **Frame 24 equals frame 0** so the loop has no
   pop when it wraps (do not drop the duplicate end key).

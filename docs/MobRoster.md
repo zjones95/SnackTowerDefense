@@ -87,8 +87,8 @@ new (fast, low HP, spawned in large numbers).
   is now `1.13^(wave-1)` and each wave is a single spawn group.
 - ✅ **`Swarm` archetype** plus boss behaviours (regen / armour / slow-immunity /
   enrage / dash) are wired into `Mob`.
-- ✅ **Models** — 34 of 35 built in Blender. **Granola Mom deliberately uses the
-  procedural humanoid** (`ChildModel`) with long hair, so she gets the walk cycle.
+- ✅ **Models** — all 35 built and walk-animated in Blender. **Granola Mom uses a
+  dedicated 13-bone humanoid rig** with long hair, arm swing, and bending knees.
 - ⚠️ **Balance is untuned.** The curve, tower DPS and the economy have never been
   play-tested across a full 35-wave run.
 - ⚠️ **Swarm scale is `0.42`**, rendering Raspberry (0.32 tall) at ~0.2 units —

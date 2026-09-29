@@ -12,7 +12,11 @@ using UnityEngine;
 public static class MobWalkCheck
 {
     static readonly string[] Mobs = { "Apple", "Carrot", "Pear", "Banana", "Watermelon", "Cherry",
-        "Potato", "Orange", "Grapes", "Pumpkin", "Corn", "Tomato" };
+        "Potato", "Orange", "Grapes", "Pumpkin", "Corn", "Tomato",
+        "Broccoli", "Strawberry", "Pineapple", "Peach", "Blueberry", "Cucumber",
+        "Plum", "Durian", "Onion", "Radish", "Eggplant", "Kiwi",
+        "Coconut", "Mango", "Raspberry", "Cauliflower", "Beetroot", "Dragonfruit",
+        "Avocado", "Lychee", "Turnip", "Papaya", "GranolaMom" };
 
     public static void Verify()
     {
@@ -58,6 +62,16 @@ public static class MobWalkCheck
         state.speed = 0f;
         float minY = float.MaxValue, maxY = float.MinValue, minX = float.MaxValue, maxX = float.MinValue;
         float legAMax = 0f, legBMax = 0f, aBack = 0f, bBack = 0f;
+        Transform armA = null, armB = null, knee = null;
+        float armMax = 0f, kneeMax = 0f;
+        if (id == "GranolaMom")
+        {
+            armA = Find(root.transform, "arm_a"); armB = Find(root.transform, "arm_b");
+            knee = Find(root.transform, "shin_a");
+            if (armA == null || armB == null || knee == null || Find(root.transform, "shin_b") == null
+                || Find(root.transform, "forearm_a") == null || Find(root.transform, "forearm_b") == null
+                || Find(root.transform, "head") == null) throw new Exception(id + ": humanoid bones missing");
+        }
         const int N = 12;
         for (int i = 0; i < N; i++)
         {
@@ -83,9 +97,21 @@ public static class MobWalkCheck
             float sa = Mathf.Sign(legA.localRotation.x), sb = Mathf.Sign(legB.localRotation.x);
             if (a > 5f && b > 5f && sa == sb) throw new Exception(id + ": legs swing the same way at t=" + state.time);
             aBack += sa; bBack += sb;
+            if (armA != null)
+            {
+                float aa = Quaternion.Angle(Quaternion.identity, armA.localRotation);
+                armMax = Mathf.Max(armMax, aa);
+                kneeMax = Mathf.Max(kneeMax, Quaternion.Angle(Quaternion.identity, knee.localRotation));
+                if (aa > 5f && Mathf.Sign(armA.localRotation.x) == sa)
+                    throw new Exception(id + ": arm does not counter-swing against leg");
+                if (aa > 5f && Mathf.Sign(armA.localRotation.x) == Mathf.Sign(armB.localRotation.x))
+                    throw new Exception(id + ": arms swing together");
+            }
         }
 
         if (legAMax < 8f || legBMax < 8f) throw new Exception(id + ": legs barely move (" + legAMax + "/" + legBMax + " deg)");
+        if (armA != null && (armMax < 8f || kneeMax < 15f))
+            throw new Exception(id + ": humanoid arm/knee motion too small");
         if (minY < stageY - 0.02f) throw new Exception(id + ": feet sink " + (stageY - minY) + " below ground");
         float cx = (minX + maxX) * 0.5f;
         if (Mathf.Abs(cx - 4f) > 0.12f) throw new Exception(id + ": mob drifts off centre (cx=" + cx + ")");
