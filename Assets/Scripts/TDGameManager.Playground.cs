@@ -114,8 +114,10 @@ public partial class TDGameManager
         float cell = map.Cell;
         float W = gw * cell, H = gh * cell;
 
-        // off-white board (top face flush with y = 0)
-        TDVisuals.Box(parent, "Board", new Vector3(0f, -0.08f, 0f), new Vector3(W + 2f, 0.16f, H + 2f),
+        // off-white board. Top sits at y = -0.02 so the tiles (tops at 0.00+)
+        // never go coplanar with it — coplanar faces are what shimmered when
+        // the camera rotated.
+        TDVisuals.Box(parent, "Board", new Vector3(0f, -0.10f, 0f), new Vector3(W + 2f, 0.16f, H + 2f),
             TDVisuals.Mat(new Color(0.93f, 0.92f, 0.89f), 0f, 0.5f));
 
         Material path = TDVisuals.Mat(new Color(0.72f, 0.72f, 0.75f), 0f, 0.5f);
@@ -167,7 +169,7 @@ public partial class TDGameManager
         if (Selected != null)
         {
             SetHoverMat(hoverSelected);
-            hover.position = map.CellCenter(Selected.CellX, Selected.CellY) + Vector3.up * 0.05f;
+            hover.position = map.CellCenter(Selected.CellX, Selected.CellY) + Vector3.up * 0.08f;
             hover.gameObject.SetActive(true);
             return;
         }
@@ -187,7 +189,7 @@ public partial class TDGameManager
         int idx = map.Idx(x, y);
         bool ok = pgDeleting ? towers.ContainsKey(idx) : map.IsBuildable(x, y) && !towers.ContainsKey(idx);
         SetHoverMat(ok ? hoverValid : hoverInvalid);
-        hover.position = map.CellCenter(x, y) + Vector3.up * 0.05f;
+        hover.position = map.CellCenter(x, y) + Vector3.up * 0.08f;
         hover.gameObject.SetActive(true);
     }
 
@@ -333,14 +335,42 @@ public partial class TDGameManager
     }
 
     // --------------------------------------------------------------------- GUI
+    // Crisp flat button background. The default GUI.skin.button texture is a
+    // small rounded-corner bitmap that goes blurry when stretched over our
+    // larger panel buttons — a plain white texture tinted via
+    // GUI.backgroundColor stays pixel-sharp at any size.
+    static Texture2D pgFlatBg;
+    static Texture2D PgFlatBg()
+    {
+        if (pgFlatBg != null) return pgFlatBg;
+        pgFlatBg = new Texture2D(4, 4, TextureFormat.RGBA32, false);
+        pgFlatBg.filterMode = FilterMode.Point;
+        pgFlatBg.wrapMode = TextureWrapMode.Clamp;
+        Color[] px = new Color[16];
+        for (int i = 0; i < px.Length; i++) px[i] = Color.white;
+        pgFlatBg.SetPixels(px);
+        pgFlatBg.Apply();
+        return pgFlatBg;
+    }
+
     GUIStyle TronButton(int size)
     {
         GUIStyle s = new GUIStyle(GUI.skin.button);
         s.fontSize = size;
+        s.fontStyle = FontStyle.Bold;
         s.alignment = TextAnchor.MiddleCenter;
         s.normal.textColor = new Color(0.55f, 0.95f, 1f);
         s.hover.textColor = Color.white;
         s.active.textColor = new Color(0.35f, 0.75f, 0.85f);
+        s.focused.textColor = new Color(0.55f, 0.95f, 1f);
+        Texture2D bg = PgFlatBg();
+        s.normal.background = bg;
+        s.hover.background = bg;
+        s.active.background = bg;
+        s.focused.background = bg;
+        s.onNormal.background = bg;
+        s.onHover.background = bg;
+        s.onActive.background = bg;
         s.padding = new RectOffset(6, 6, 4, 4);
         s.margin = new RectOffset(2, 2, 2, 2);
         s.border = new RectOffset(0, 0, 0, 0);
@@ -349,7 +379,14 @@ public partial class TDGameManager
 
     bool PgButton(Rect r, string label, bool active, int size)
     {
-        Color prev = GUI.backgroundColor;
+        // 1px darker outline behind the button so the flat fill reads as a
+        // deliberate panel control rather than floating text.
+        Color prev = GUI.color;
+        GUI.color = new Color(0.04f, 0.22f, 0.27f);
+        GUI.DrawTexture(new Rect(r.x - 1f, r.y - 1f, r.width + 2f, r.height + 2f), PgFlatBg());
+        GUI.color = prev;
+
+        prev = GUI.backgroundColor;
         GUI.backgroundColor = active ? new Color(0.10f, 0.45f, 0.55f) : new Color(0.02f, 0.06f, 0.09f);
         bool hit = GUI.Button(r, label, TronButton(size));
         GUI.backgroundColor = prev;
