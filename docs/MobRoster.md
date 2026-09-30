@@ -50,17 +50,17 @@ vegetable, possibly spawned in several staggered bursts.
 | 32 | Lychee | Swarm | ✔ | Final swarm push |
 | 33 | Turnip | Tank | ✔ | Very tough |
 | 34 | Papaya | Tank | ✔ | Tough + faster |
-| 35 | **BOSS — Granola Mom** | Boss | ✔ | See boss table |
+| 35 | **BOSS — Blackberry Bramble** | Boss | ✘ | See boss table |
 | 36 | Lemon | Fast | ✘ | Quick citrus |
 | 37 | Lettuce | Swarm | ✘ | Leafy swarm |
 | 38 | Zucchini | Tank | ✘ | Tough |
 | 39 | Chili Pepper | Fast | ✘ | Hot and quick |
-| 40 | **BOSS — Blackberry Bramble** | Boss | ✘ | See boss table |
+| 40 | **BOSS — Rot King Cabbage** | Boss | ✘ | See boss table |
 | 41 | Button Mushroom | Swarm | ✘ | Dense swarm |
 | 42 | Garlic | Tank | ✘ | Pungent and tough |
 | 43 | Grapefruit | Basic | ✘ | Standard |
 | 44 | Kale | Swarm | ✘ | Final swarm push |
-| 45 | **BOSS — Rot King Cabbage** | Boss | ✘ | Final boss |
+| 45 | **BOSS — Granola Mom** | Boss | ✔ | Final boss |
 
 **Archetypes used:** Basic, Fast, Tank, Swarm, Boss.
 The game currently only has **Basic / Fast / Tank / Boss** — **Swarm** would be
@@ -78,9 +78,9 @@ new (fast, low HP, spawned in large numbers).
 | 20 | Durian | Foul and furious | **Enrages** — gets faster as its health drops |
 | 25 | Coconut | Hard shell | **Immune to slow**, extremely high HP, very slow |
 | 30 | Dragonfruit | Exotic | **Phases** — dashes forward periodically |
-| 35 | Granola Mom | Crunchy, organic, anti-snack | Mid-run boss. **Resists slow** — no processed sugar, no effect. **Enrages** — speeds up in her last third on green-smoothie energy. **Dashes** periodically. Leak = instant loss. |
-| 40 | Blackberry Bramble | Thorny tangle | **Enrages** hard (0.8) — gets much faster as its health drops. **Dashes** every 4s. |
-| 45 | Rot King Cabbage | Rotting monarch | **Final boss.** **Armoured** (6 flat reduction). **Resists slow** (0.6). **Enrages** (0.55). **Dashes** every 5s. Leak = instant loss. Highest HP in the game (1100 base). |
+| 35 | Blackberry Bramble | Thorny tangle | Mid-run boss. **Enrages** (0.7). **Dashes** every 5s. Tuned below old Granola Mom (750 base HP). |
+| 40 | Rot King Cabbage | Rotting monarch | **Armoured** (6 flat reduction). **Resists slow** (0.6). **Enrages** (0.55). **Dashes** every 5s. Leak = instant loss. 1100 base HP. |
+| 45 | Granola Mom | Crunchy, organic, anti-snack | **Final boss.** **Resists slow** — no processed sugar, no effect. **Enrages** (0.7) on green-smoothie energy. **Dashes** every 5s. Leak = instant loss. Highest HP in game (1300 base). Dedicated 13-bone humanoid rig with long hair. |
 
 ### Stretch ideas (swap in if you want more variety)
 - **Artichoke** — layered armour: damage reduction drops in stages as you peel it.
@@ -100,9 +100,10 @@ new (fast, low HP, spawned in large numbers).
 - ✅ **`Swarm` archetype** plus boss behaviours (regen / armour / slow-immunity /
   enrage / dash) are wired into `Mob`.
 - ✅ **Models** — the original 35 built and walk-animated in Blender. **Granola Mom uses a
-  dedicated 13-bone humanoid rig** with long hair, arm swing, and bending knees.
-  Waves 36–45 are procedural fallback until their `.glb` art lands
-  (`Lemon, Lettuce, Zucchini, Chili, Blackberry, Mushroom, Garlic, Grapefruit, Kale, RotKing`).
+  dedicated 13-bone humanoid rig** with long hair, arm swing, and bending knees,
+  and she is the final boss again (wave 45). Waves 35–44 are procedural fallback
+  until their `.glb` art lands
+  (`Blackberry, Lemon, Lettuce, Zucchini, Chili, RotKing, Mushroom, Garlic, Grapefruit, Kale`).
 - ⚠️ **Balance is untuned.** The curve, tower DPS and the economy have never been
   play-tested across a full 45-wave run.
 - ⚠️ **Swarm scale is `0.42`**, rendering Raspberry (0.32 tall) at ~0.2 units —

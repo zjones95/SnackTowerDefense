@@ -69,17 +69,17 @@ public static class MobCatalog
         Make("Lychee", MobArchetype.Swarm),
         Make("Turnip", MobArchetype.Tank),
         Make("Papaya", MobArchetype.Tank),
-        Make("GranolaMom", MobArchetype.Boss),        // 35
+        Make("Blackberry", MobArchetype.Boss),          // 35
         Make("Lemon", MobArchetype.Fast),               // 36
         Make("Lettuce", MobArchetype.Swarm),            // 37
         Make("Zucchini", MobArchetype.Tank),            // 38
         Make("Chili", MobArchetype.Fast),               // 39
-        Make("Blackberry", MobArchetype.Boss),          // 40
+        Make("RotKing", MobArchetype.Boss),             // 40
         Make("Mushroom", MobArchetype.Swarm),           // 41
         Make("Garlic", MobArchetype.Tank),              // 42
         Make("Grapefruit", MobArchetype.Basic),         // 43
         Make("Kale", MobArchetype.Swarm),               // 44
-        Make("RotKing", MobArchetype.Boss),             // 45 — final boss
+        Make("GranolaMom", MobArchetype.Boss),        // 45 — final boss
         Make("TestDummy", MobArchetype.Boss),         // end-of-run Damage Test only (issue #9)
     };
 
@@ -127,8 +127,8 @@ public static class MobCatalog
             case "Durian": d.health = 540f; d.enrage = 0.85f; break;
             case "Coconut": d.health = 700f; d.speed = 0.68f; d.slowResist = 0.5f; break;
             case "Dragonfruit": d.health = 620f; d.dashEvery = 4.5f; break;
-            case "GranolaMom": d.health = 820f; d.slowResist = 0.5f; d.enrage = 0.6f; d.dashEvery = 6f; d.longHair = true; d.instantLossOnLeak = true; break;
-            case "Blackberry": d.health = 900f; d.enrage = 0.8f; d.dashEvery = 4f; break;
+            case "GranolaMom": d.health = 1300f; d.slowResist = 0.5f; d.enrage = 0.7f; d.dashEvery = 5f; d.longHair = true; d.instantLossOnLeak = true; break;
+            case "Blackberry": d.health = 750f; d.enrage = 0.7f; d.dashEvery = 5f; break;
             case "RotKing": d.health = 1100f; d.armour = 6f; d.slowResist = 0.6f; d.enrage = 0.55f; d.dashEvery = 5f; d.instantLossOnLeak = true; break;
             // Damage Test target: huge health pool, no boss traits, cannot die and
             // must not cost lives when it walks off the end of the path.

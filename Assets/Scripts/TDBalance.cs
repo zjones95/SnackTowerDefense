@@ -175,17 +175,17 @@ public static class TDBalance
         W("Lychee", 38, 0.25f),
         W("Turnip", 20, 1.00f),
         W("Papaya", 22, 0.85f),
-        B("GranolaMom"),                       // 35
+        B("Blackberry"),                       // 35
         W("Lemon", 24, 0.50f),
         W("Lettuce", 36, 0.28f),
         W("Zucchini", 18, 1.00f),
         W("Chili", 22, 0.45f),
-        B("Blackberry"),                       // 40
+        B("RotKing"),                          // 40
         W("Mushroom", 40, 0.25f),
         W("Garlic", 20, 0.90f),
         W("Grapefruit", 24, 0.55f),
         W("Kale", 36, 0.30f),
-        B("RotKing"),                          // 45 — final boss
+        B("GranolaMom"),                       // 45 — final boss
     };
 
     // Income. Rounds pay a FLAT $50 so cash is predictable; kills pay a token $1.
