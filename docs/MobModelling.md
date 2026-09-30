@@ -5,10 +5,12 @@ after building the first five (Apple, Carrot, Pear, Banana, Watermelon boss), wh
 are the reference implementation. See `MobRoster.md` for *what* each mob is and
 `ARCHITECTURE.md` for the wider codebase.
 
-> **Status:** all 35 mobs have Blender-authored, rigged, walk-animated GLBs.
-> Waves 31–35 are authored in `tools/blender/mobs_wave31_35.py`. Granola Mom
-> now has a dedicated humanoid rig; the other mobs use the shared six-bone rig.
-> All 35 pass the Unity batch walk check. Movement-speed playback still needs play-testing.
+> **Status:** all 45 mobs have Blender-authored, rigged, walk-animated GLBs.
+> Waves 31–34 plus Granola Mom (now wave 45) are authored in
+> `tools/blender/mobs_wave31_35.py`. Waves 35–44 are authored in
+> `tools/blender/mobs_wave35_44.py`. Granola Mom has a dedicated humanoid rig;
+> the other mobs use the shared six-bone rig. Movement-speed playback still
+> needs play-testing.
 
 ---
 
@@ -17,6 +19,7 @@ are the reference implementation. See `MobRoster.md` for *what* each mob is and
 | Path | Purpose |
 |---|---|
 | `tools/blender/mobs_first5.py` | Authoring script for the first five: geometry, rig, walk cycle, export |
+| `tools/blender/mobs_wave35_44.py` | Authoring script for ten late-game mobs, six-bone walk, export |
 | `Assets/Resources/Snack/Mobs/<id>.glb` | Runtime model, loaded by `Snack/Mobs/<MobDef.id>` |
 | `Assets/Models/Mobs/<id>.glb` | Source mirror. Always export to **both** |
 | `Assets/Scripts/MobWalkAnimation.cs` | Plays the baked clip at a speed matched to real movement |

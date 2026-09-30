@@ -16,7 +16,9 @@ public static class MobWalkCheck
         "Broccoli", "Strawberry", "Pineapple", "Peach", "Blueberry", "Cucumber",
         "Plum", "Durian", "Onion", "Radish", "Eggplant", "Kiwi",
         "Coconut", "Mango", "Raspberry", "Cauliflower", "Beetroot", "Dragonfruit",
-        "Avocado", "Lychee", "Turnip", "Papaya", "GranolaMom" };
+        "Avocado", "Lychee", "Turnip", "Papaya", "Blackberry", "Lemon",
+        "Lettuce", "Zucchini", "Chili", "RotKing", "Mushroom", "Garlic",
+        "Grapefruit", "Kale", "GranolaMom" };
 
     public static void Verify()
     {

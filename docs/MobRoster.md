@@ -50,16 +50,16 @@ vegetable, possibly spawned in several staggered bursts.
 | 32 | Lychee | Swarm | ✔ | Final swarm push |
 | 33 | Turnip | Tank | ✔ | Very tough |
 | 34 | Papaya | Tank | ✔ | Tough + faster |
-| 35 | **BOSS — Blackberry Bramble** | Boss | ✘ | See boss table |
-| 36 | Lemon | Fast | ✘ | Quick citrus |
-| 37 | Lettuce | Swarm | ✘ | Leafy swarm |
-| 38 | Zucchini | Tank | ✘ | Tough |
-| 39 | Chili Pepper | Fast | ✘ | Hot and quick |
-| 40 | **BOSS — Rot King Cabbage** | Boss | ✘ | See boss table |
-| 41 | Button Mushroom | Swarm | ✘ | Dense swarm |
-| 42 | Garlic | Tank | ✘ | Pungent and tough |
-| 43 | Grapefruit | Basic | ✘ | Standard |
-| 44 | Kale | Swarm | ✘ | Final swarm push |
+| 35 | **BOSS — Blackberry Bramble** | Boss | ✔ | See boss table |
+| 36 | Lemon | Fast | ✔ | Quick citrus |
+| 37 | Lettuce | Swarm | ✔ | Leafy swarm |
+| 38 | Zucchini | Tank | ✔ | Tough |
+| 39 | Chili Pepper | Fast | ✔ | Hot and quick |
+| 40 | **BOSS — Rot King Cabbage** | Boss | ✔ | See boss table |
+| 41 | Button Mushroom | Swarm | ✔ | Dense swarm |
+| 42 | Garlic | Tank | ✔ | Pungent and tough |
+| 43 | Grapefruit | Basic | ✔ | Standard |
+| 44 | Kale | Swarm | ✔ | Final swarm push |
 | 45 | **BOSS — Granola Mom** | Boss | ✔ | Final boss |
 
 **Archetypes used:** Basic, Fast, Tank, Swarm, Boss.
@@ -99,11 +99,10 @@ new (fast, low HP, spawned in large numbers).
   is now `1.13^(wave-1)` and each wave is a single spawn group.
 - ✅ **`Swarm` archetype** plus boss behaviours (regen / armour / slow-immunity /
   enrage / dash) are wired into `Mob`.
-- ✅ **Models** — the original 35 built and walk-animated in Blender. **Granola Mom uses a
+- ✅ **Models** — all 45 built and walk-animated in Blender. **Granola Mom uses a
   dedicated 13-bone humanoid rig** with long hair, arm swing, and bending knees,
-  and she is the final boss again (wave 45). Waves 35–44 are procedural fallback
-  until their `.glb` art lands
-  (`Blackberry, Lemon, Lettuce, Zucchini, Chili, RotKing, Mushroom, Garlic, Grapefruit, Kale`).
+  and she is the final boss again (wave 45). Waves 35–44 use the six-bone walk rig;
+  sources live in `tools/blender/mobs_wave35_44.py`.
 - ⚠️ **Balance is untuned.** The curve, tower DPS and the economy have never been
   play-tested across a full 45-wave run.
 - ⚠️ **Swarm scale is `0.42`**, rendering Raspberry (0.32 tall) at ~0.2 units —
