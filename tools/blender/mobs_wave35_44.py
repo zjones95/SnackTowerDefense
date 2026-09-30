@@ -134,7 +134,10 @@ def build_chili():
     b.add(tube_g([(0,0,1.0),(.06,.01,1.13)],[.045,.025]),green)
     # Small red cheek on body, plus a flat face in front of curved spine.
     visage(b,OffsetFront(-.223,-.07),.60,.075)
-    two_feet(b,red,b.mat('feet','#A92826'),.11)
+    # Banana's long legs reach into the fruit instead of stopping just below
+    # the narrow tip. Use that same hip/ankle spacing and forward foot offset.
+    feet(b,red,b.mat('feet','#A92826'),(-.07,.07),leg_r=.05,
+         leg_h=.24,leg_z=.07,foot_sc=(.10,.18,.07),foot_y=-.05,leg_y=-.02)
     return b
 
 
