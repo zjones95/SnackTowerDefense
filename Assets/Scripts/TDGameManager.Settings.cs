@@ -73,7 +73,7 @@ public partial class TDGameManager
     // ------------------------------------------------------------ pause menu
     void DrawPauseMenu()
     {
-        if (!paused || State != GameState.Playing) return;
+        if (!paused || (State != GameState.Playing && !SpectatingAfterResult)) return;
         if (settingsOpen && settingsFromPause) return;   // the settings overlay covers the pause menu
 
         Color old = GUI.color;
@@ -81,7 +81,7 @@ public partial class TDGameManager
         GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.whiteTexture);
         GUI.color = old;
 
-        GUI.Label(new Rect(0f, Screen.height * 0.26f, Screen.width, 60f), "PAUSED",
+        GUI.Label(new Rect(0f, Screen.height * 0.26f, Screen.width, 60f), SpectatingAfterResult ? "SPECTATING" : "PAUSED",
             Style(44, TextAnchor.MiddleCenter, new Color(1f, 0.85f, 0.4f)));
 
         float bw = 300f, bh = 52f, gap = 14f;
@@ -105,7 +105,7 @@ public partial class TDGameManager
             QuitGame();
         }
 
-        GUI.Label(new Rect(0f, Screen.height - 30f, Screen.width, 24f), "Esc to resume",
+        GUI.Label(new Rect(0f, Screen.height - 30f, Screen.width, 24f), SpectatingAfterResult ? "Esc to return to spectating" : "Esc to resume",
             Style(13, TextAnchor.MiddleCenter, new Color(0.78f, 0.8f, 0.84f)));
     }
 

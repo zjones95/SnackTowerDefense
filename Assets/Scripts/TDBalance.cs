@@ -54,7 +54,7 @@ public static class TDBalance
     /// <summary>Global mob-health knob, applied once in <see cref="Mob.Init"/>.
     /// Stacked on top of the per-wave and difficulty multipliers (never inside
     /// HealthMultiplier, so it is not double-applied).</summary>
-    public const float MobHealthScale = 1.25f;
+    public const float MobHealthScale = 1.375f; // +10% across all waves/difficulties
 
     /// <summary>Mob health multiplier for the chosen difficulty.</summary>
     public static float HealthMultiplier(Difficulty d)

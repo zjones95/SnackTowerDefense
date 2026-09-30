@@ -7,8 +7,9 @@ using UnityEngine;
 /// Minimal relay chat (issue #27).
 ///
 /// A client sends its line to the host ("td.chat"); the host prefixes the
-/// sender's name and fans it out to everyone ("td.chatall"). The host shows its
-/// own line locally and broadcasts it directly. There is no persistence and no
+/// sender's name, records it locally and fans it out to everyone ("td.chatall").
+/// Clients show the echoed line once; the host shows its own line locally and
+/// broadcasts it directly. There is no persistence and no
 /// long-term storage: each peer keeps the last <see cref="HistorySize"/> lines
 /// in memory only.
 ///
@@ -147,9 +148,10 @@ public class ChatSync : MonoBehaviour
             return;
         }
 
-        // Only open during a live match (not the lobby or an end screen).
+        // Spectators remain in the match and can keep chatting after dismissing
+        // their result. The undismissed end screen and lobby don't accept input.
         TDGameManager gm = TDGameManager.Instance;
-        if (gm == null || gm.State != GameState.Playing || gm.Paused) return;
+        if (gm == null || (gm.State != GameState.Playing && !gm.SpectatingAfterResult) || gm.Paused) return;
         if (Input.GetKeyDown(KeyCode.T) || Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
         {
             Open = true;
@@ -159,18 +161,20 @@ public class ChatSync : MonoBehaviour
     }
 
     // ---------------------------------------------------------------- send
-    /// <summary>Sends a line (rate-limited). The local copy shows immediately.</summary>
+    /// <summary>Sends a line (rate-limited). Clients display the host's echo
+    /// instead of an optimistic local copy, so each line appears once.</summary>
     public void SendLocal(string text)
     {
         text = (text ?? "").Trim();
         if (text.Length == 0) return;
         if (text.Length > MaxLength) text = text.Substring(0, MaxLength);
+        NetworkSession ns = NetworkSession.Instance;
+        if (ns == null || !ns.LinkUp) { SendSystem("Chat unavailable while disconnected."); return; }
         if (Time.unscaledTime - lastSend < RateLimit) return;
         lastSend = Time.unscaledTime;
 
         string name = LocalName();
-        AddLine(name, text, false);
-        if (host) Broadcast(name, text);
+        if (host) { AddLine(name, text, false); Broadcast(name, text); }
         else SendToServer(text);
     }
 
@@ -203,7 +207,9 @@ public class ChatSync : MonoBehaviour
         reader.ReadValueSafe(out string text);
         if (string.IsNullOrEmpty(text)) return;
         if (text.Length > MaxLength) text = text.Substring(0, MaxLength);
-        Broadcast(NameFor(sender), text);
+        string name = NameFor(sender);
+        AddLine(name, text, false);
+        Broadcast(name, text);
     }
 
     void OnChatAllMessage(ulong sender, FastBufferReader reader)

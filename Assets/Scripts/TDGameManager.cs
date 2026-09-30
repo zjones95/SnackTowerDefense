@@ -611,13 +611,26 @@ public partial class TDGameManager : MonoBehaviour
             HideHover();
 
             // Settings can be opened over the main menu; Esc closes it there.
-            if (settingsOpen && Input.GetKeyDown(KeyCode.Escape)) CloseSettings();
+            if (settingsOpen && Input.GetKeyDown(KeyCode.Escape))
+            {
+                CloseSettings();
+                return; // don't also resume spectating on the same keypress
+            }
 
             // Per-player MP results: a finished board keeps rendering the live
             // match behind its (possibly dismissed) end screen. Own sim is done;
             // only camera + remote boards + spectate input keep ticking.
             if (mpActive && (State == GameState.GameOver || State == GameState.Victory))
             {
+                if (SpectatingAfterResult)
+                {
+                    if (paused) { HandlePauseInput(); return; }
+                    if (Input.GetKeyDown(KeyCode.Escape) && !ChatSync.IsTyping)
+                    {
+                        OpenPause();
+                        return;
+                    }
+                }
                 UpdateCamera(Time.deltaTime);
                 UpdateRemoteBoards();
                 UpdateSpectate();

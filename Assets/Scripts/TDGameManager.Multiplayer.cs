@@ -37,6 +37,8 @@ public partial class TDGameManager
     public bool Eliminated => eliminated;
     public bool ViewingOwnBoard => !mpActive || viewSlot == mySlot;
     public bool Paused => paused;
+    public bool SpectatingAfterResult => mpActive && mpEndDismissed &&
+        (State == GameState.GameOver || State == GameState.Victory);
 
     /// <summary>Total money invested in every tower still on this board. Relayed
     /// as the scoreboard's Tower Value column (see MatchSync.BoardState).</summary>
@@ -529,7 +531,7 @@ public partial class TDGameManager
     /// few lines whenever a match is live; the input row appears while typing.</summary>
     void DrawMpChat()
     {
-        if (State != GameState.Playing || paused) return;
+        if ((State != GameState.Playing && !SpectatingAfterResult) || paused) return;
         ChatSync chat = ChatSync.Instance;
         if (chat == null) return;
 
