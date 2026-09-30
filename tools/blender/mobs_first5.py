@@ -387,7 +387,7 @@ def build_pear():
     return b
 
 
-def build_banana():
+def build_banana(top_stem_color=None):
     b = Builder('Banana')
     yellow = b.mat('yellow', '#F6D62F', .55)
     brown = b.mat('brown', '#5A3A18', .7)
@@ -401,7 +401,8 @@ def build_banana():
     b.add(tube_g(pts, rad, BananaSurf.SIDES, frames, start=0.0), yellow)
     # stem (top, up-back) and tip (bottom)
     Tt = (S.center(1) - S.center(.97)).normalized()
-    b.add(frustum_g(4, .07, .055, .13), brown, X(S.center(1) - Tt * .01, Vector((0, 0, 1)).rotation_difference(Tt).to_euler()))
+    stem = b.mat('top_stem', top_stem_color) if top_stem_color else brown
+    b.add(frustum_g(4, .07, .055, .13), stem, X(S.center(1) - Tt * .01, Vector((0, 0, 1)).rotation_difference(Tt).to_euler()))
     Tb = (S.center(.03) - S.center(0)).normalized()
     b.add(frustum_g(5, .055, .035, .06), brown, X(S.center(0) + Tb * .01, Vector((0, 0, 1)).rotation_difference(-Tb).to_euler()))
     # static standing legs + flat feet, no arms (matches the other mobs)

@@ -113,7 +113,7 @@ def build_chili():
     # Use the shipped Banana mesh *and* its six-bone foot/leg weights verbatim.
     # Recolour material instances; leave Banana's arched tube, face orientation,
     # feet geometry and hip/ankle pivots exactly as authored and verified.
-    b=build_banana()
+    b=build_banana(top_stem_color='#549344')
     b.name='Chili'
     for key, colour in (('yellow','#D9332D'), ('brown','#9F2923'),
                         ('mouth','#57231D')):
