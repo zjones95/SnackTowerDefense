@@ -119,15 +119,21 @@ def build_zucchini():
 def build_chili():
     b=Builder('Chili'); red=b.mat('red','#D9332D'); bright=b.mat('highlight','#F4523D')
     green=b.mat('calyx','#549344')
-    # Curved pepper body; plane facing -Y stays readable in snapshots.
-    pts=[(0,0,.93),(-.09,0,.84),(-.16,0,.69),(-.18,-.01,.51),(-.13,-.07,.34),
-         (-.01,-.10,.23),(.17,-.11,.24),(.30,-.12,.33)]
-    radii=[.09,.14,.19,.21,.19,.16,.105,.018]
-    b.add(tube_g(pts,radii,sides=10),red)
+    # Ring profile bends into a pepper crescent while keeping every ring
+    # horizontal. That gives a clean taper above the legs, without the
+    # twisting cross-section the old tube made as it curled at the bottom.
+    p=[(0,.20),(.07,.23),(.14,.31),(.20,.44),(.22,.60),(.18,.77),
+       (.10,.90),(0,.96)]
+    v,f,_=lathe_g(p,10)
+    def bend(z):
+        if z<.44: return .07 - .07*(z-.20)/.24
+        if z<.70: return -.12*(z-.44)/.26
+        return -.12 + .12*(z-.70)/.26
+    b.add(([(x+bend(z),y,z) for x,y,z in v],f),red)
     b.add(frustum_g(7,.18,.035,.10),green,X((0,0,.93)))
     b.add(tube_g([(0,0,1.0),(.06,.01,1.13)],[.045,.025]),green)
     # Small red cheek on body, plus a flat face in front of curved spine.
-    visage(b,OffsetFront(-.214,-.15),.60,.075)
+    visage(b,OffsetFront(-.223,-.07),.60,.075)
     two_feet(b,red,b.mat('feet','#A92826'),.11)
     return b
 
