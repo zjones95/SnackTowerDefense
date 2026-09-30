@@ -35,6 +35,7 @@ Written so a **fresh session** can pick this project up fast. Read this first, t
 | Audio | fully procedural SFX + a **deep-house** looping track (122 BPM, 8 bars); `M` toggles mute |
 | Menus | Orbiting board backdrop, construction-paper buttons, **Settings** (music/SFX), in-game **pause** menu |
 | Multiplayer | Lobby (8 players), one board each, **Unity Relay (UGS)**; **independent per-board waves** (#7), live board sync (~20 Hz) with remote projectiles + FX, collapsible scoreboard, relay chat (**T**), version gate (#30) |
+| Board themes | `BoardTheme` (`Bedroom` / `ArcticOutpost` / `VolcanicCaldera`) reskins tiles + room via `TDBoardBuilder` + `TDRoom`; **`Layout`/`Route` are never changed by a theme** — only visuals. Switch with `TDGameManager.ActiveTheme`. |
 | WebGL | `WebGLBuild.Build` → `build/WebGL`; live at <https://zjones95.github.io/SnackTowerDefense/>; publish with `tools\publish-webgl.ps1` → `webgl` branch (**licence-free**); share zip `C:\Users\Desktop\SnackTowerDefense-WebGL.zip` |
 | CI | `unity-ci.yml` now **passes** (the Unity credentials were corrected); the WebGL deploy is licence-free (see below) |
 

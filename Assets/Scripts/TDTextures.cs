@@ -208,6 +208,122 @@ public static class TDTextures
         return t;
     }
 
+    // ----------------------------------------------------- volcanic theme
+    static Texture2D basalt, lavaFlow, lavaCross;
+
+    /// <summary>Cooled basalt slab for tower plots: near-black rock with a
+    /// faint ember-crack border. Deliberately much darker than the path, so
+    /// buildable plots read as shadowed ground rather than walkable lava.</summary>
+    public static Texture2D Basalt()
+    {
+        if (basalt != null) return basalt;
+        int S = 128;
+        Texture2D t = New(S);
+        Color rock = new Color(0.34f, 0.33f, 0.35f);
+        Color dark = new Color(0.21f, 0.20f, 0.22f);
+        Color ember = new Color(0.85f, 0.34f, 0.10f);
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float n = (N(x, y) - 0.5f) * 0.07f;
+                float blotch = (N(x / 9 + 4, y / 9 + 7) - 0.5f) * 0.10f;
+                Color c = dark + new Color(n, n * 0.97f, n) + new Color(blotch, blotch, blotch);
+
+                // slab bevel: lighter toward the centre so each plot reads as a
+                // cut stone block rather than a flat dark square
+                float bx = Mathf.Abs(x - S * 0.5f) / (S * 0.5f);
+                float by = Mathf.Abs(y - S * 0.5f) / (S * 0.5f);
+                float bevel = Mathf.Clamp01(1f - Mathf.Max(bx, by));
+                c += new Color(bevel * 0.05f, bevel * 0.05f, bevel * 0.055f);
+
+                // a couple of hairline cracks with an ember glow inside
+                float c1 = Mathf.Abs((y - 34) - Mathf.Sin(x * 0.09f) * 6f);
+                float c2 = Mathf.Abs((x - 96) - Mathf.Cos(y * 0.11f) * 5f);
+                float crack = Mathf.Min(c1, c2);
+                if (crack < 1.6f) c = Color.Lerp(c, ember, (1.6f - crack) * 0.85f);
+                if (x < 4 || y < 4 || x >= S - 4 || y >= S - 4) c = Color.Lerp(c, rock, 0.6f);
+                t.SetPixel(x, y, c);
+            }
+        }
+        t.Apply();
+        basalt = t;
+        return t;
+    }
+
+    /// <summary>Cooled lava channel: black basalt crust with bright orange
+    /// magma cracks running along the flow (the mob path).</summary>
+    public static Texture2D LavaFlow()
+    {
+        if (lavaFlow != null) return lavaFlow;
+        int S = 128;
+        Texture2D t = New(S);
+        Color crust = new Color(0.17f, 0.15f, 0.15f);
+        Color magma = new Color(1.00f, 0.45f, 0.06f);
+        Color hot = new Color(1.00f, 0.84f, 0.35f);
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float n = (N(x, y) - 0.5f) * 0.09f;
+                Color c = crust + new Color(n * 0.5f, n * 0.4f, n * 0.4f);
+
+                // two molten channels running along the tile, with a wavy edge
+                float wob = Mathf.Sin(x * 0.10f) * 3.5f;
+                float d0 = Mathf.Abs((y - 40) - wob);
+                float d1 = Mathf.Abs((y - 88) + wob);
+                float seam = Mathf.Min(d0, d1);
+                if (seam < 9f)
+                {
+                    float glow = Mathf.Clamp01(1f - seam / 9f);
+                    Color m = Color.Lerp(magma, hot, glow * glow);
+                    c = Color.Lerp(c, m, Mathf.Clamp01(glow * 1.35f));
+                }
+                // thin side cracks
+                float sc = Mathf.Min(Mathf.Abs(y - 24), Mathf.Abs(y - 104));
+                if (sc < 1.4f) c = Color.Lerp(c, magma, (1.4f - sc) * 0.6f);
+                t.SetPixel(x, y, c);
+            }
+        }
+        t.Apply();
+        lavaFlow = t;
+        return t;
+    }
+
+    public static Texture2D LavaCross()
+    {
+        if (lavaCross != null) return lavaCross;
+        int S = 128;
+        Texture2D t = New(S);
+        Color crust = new Color(0.17f, 0.15f, 0.15f);
+        Color magma = new Color(1.00f, 0.45f, 0.06f);
+        Color hot = new Color(1.00f, 0.84f, 0.35f);
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float n = (N(x, y) - 0.5f) * 0.09f;
+                Color c = crust + new Color(n * 0.5f, n * 0.4f, n * 0.4f);
+
+                float wy = Mathf.Sin(x * 0.10f) * 3.5f;
+                float wx = Mathf.Sin(y * 0.10f) * 3.5f;
+                float d = Mathf.Min(
+                    Mathf.Min(Mathf.Abs((y - 40) - wy), Mathf.Abs((y - 88) + wy)),
+                    Mathf.Min(Mathf.Abs((x - 40) - wx), Mathf.Abs((x - 88) + wx)));
+                if (d < 9f)
+                {
+                    float glow = Mathf.Clamp01(1f - d / 9f);
+                    Color m = Color.Lerp(magma, hot, glow * glow);
+                    c = Color.Lerp(c, m, Mathf.Clamp01(glow * 1.35f));
+                }
+                t.SetPixel(x, y, c);
+            }
+        }
+        t.Apply();
+        lavaCross = t;
+        return t;
+    }
+
     // ------------------------------------------------------------ paper (UI)
     static Texture2D paper, paperHover, paperPressed, menuFade;
 

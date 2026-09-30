@@ -55,7 +55,7 @@ public partial class TDGameManager : MonoBehaviour
         new Vector2Int(3, 0)
     };
 
-    public static BoardTheme ActiveTheme = BoardTheme.ArcticOutpost;
+    public static BoardTheme ActiveTheme = BoardTheme.VolcanicCaldera;
 
     public Transform ProjectilesRoot { get; private set; }
     public Tower Selected { get; private set; }
@@ -149,8 +149,9 @@ public partial class TDGameManager : MonoBehaviour
         cam.backgroundColor = new Color(0.12f, 0.14f, 0.17f);
 
         // warm, dimmer sunlight (override any default scene light)
-        // ArcticOutpost uses a cooler sun so the snow reads white, not beige.
+        // Arctic reads cool/white; Volcanic reads hot and low-key.
         bool arctic = ActiveTheme == BoardTheme.ArcticOutpost;
+        bool volcanic = ActiveTheme == BoardTheme.VolcanicCaldera;
         Light sun = null;
         var lights = Object.FindObjectsByType<Light>(FindObjectsSortMode.None);
         for (int i = 0; i < lights.Length; i++)
@@ -163,10 +164,12 @@ public partial class TDGameManager : MonoBehaviour
             sun = lg.AddComponent<Light>();
             sun.type = LightType.Directional;
         }
-        sun.color = arctic ? new Color(0.86f, 0.92f, 1.0f) : new Color(1f, 0.86f, 0.66f);
-        sun.intensity = arctic ? 0.85f : 0.95f;
+        sun.color = arctic ? new Color(0.86f, 0.92f, 1.0f)
+                  : volcanic ? new Color(1.00f, 0.72f, 0.48f)
+                  : new Color(1f, 0.86f, 0.66f);
+        sun.intensity = arctic ? 0.85f : volcanic ? 0.78f : 0.95f;
         sun.shadows = LightShadows.Soft;
-        sun.shadowStrength = 0.40f;                                // much lighter, softer shadows
+        sun.shadowStrength = volcanic ? 0.65f : 0.40f;             // deeper shadows on the caldera
         sun.shadowBias = 0.05f;
         sun.shadowNormalBias = 0.4f;
         sun.transform.rotation = Quaternion.Euler(33f, 35f, 0f);   // lower sun: longer, gentler shadows
@@ -175,13 +178,17 @@ public partial class TDGameManager : MonoBehaviour
         GameObject fillGO = new GameObject("Fill");
         Light fill = fillGO.AddComponent<Light>();
         fill.type = LightType.Directional;
-        fill.color = arctic ? new Color(0.60f, 0.70f, 0.90f) : new Color(0.55f, 0.62f, 0.78f);
-        fill.intensity = arctic ? 0.30f : 0.16f;
+        fill.color = arctic ? new Color(0.60f, 0.70f, 0.90f)
+                   : volcanic ? new Color(0.95f, 0.32f, 0.10f)     // ember bounce
+                   : new Color(0.55f, 0.62f, 0.78f);
+        fill.intensity = arctic ? 0.30f : volcanic ? 0.22f : 0.16f;
         fill.shadows = LightShadows.None;
         fillGO.transform.rotation = Quaternion.Euler(28f, -140f, 0f);
 
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-        RenderSettings.ambientLight = arctic ? new Color(0.17f, 0.19f, 0.22f) : new Color(0.19f, 0.18f, 0.17f);
+        RenderSettings.ambientLight = arctic ? new Color(0.17f, 0.19f, 0.22f)
+                                   : volcanic ? new Color(0.14f, 0.10f, 0.09f)
+                                   : new Color(0.19f, 0.18f, 0.17f);
         RenderSettings.ambientIntensity = 1f;
     }
 

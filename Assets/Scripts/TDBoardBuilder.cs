@@ -5,7 +5,7 @@ using UnityEngine;
 /// so the same code can produce the local board and inert remote boards.
 /// Layout/Route are never changed here — themes only reskin tiles + room.
 /// </summary>
-public enum BoardTheme { Bedroom, ArcticOutpost }
+public enum BoardTheme { Bedroom, ArcticOutpost, VolcanicCaldera }
 
 public static class TDBoardBuilder
 {
@@ -31,6 +31,7 @@ public static class TDBoardBuilder
         }
 
         if (theme == BoardTheme.ArcticOutpost) { BuildTilesArctic(parent, map, layout, gw, gh); return; }
+        if (theme == BoardTheme.VolcanicCaldera) { BuildTilesVolcanic(parent, map, layout, gw, gh); return; }
 
         Color[] tileCols =
         {
@@ -103,6 +104,53 @@ public static class TDBoardBuilder
         Material voidMat = TDVisuals.Mat(new Color(0.80f, 0.85f, 0.90f), 0f, 0.25f);
         Material startMat = TDVisuals.Mat(new Color(0.55f, 0.85f, 0.65f), 0f, 0.3f);
         Material endMat = TDVisuals.Mat(new Color(0.85f, 0.38f, 0.36f), 0f, 0.3f);
+
+        float cell = map.Cell;
+        for (int ly = 0; ly < gh; ly++)
+        {
+            for (int x = 0; x < gw; x++)
+            {
+                char c = layout[ly][x];
+                Vector3 pos = map.CellCenter(x, ly) - Vector3.up * 0.05f;
+                Vector3 scale = new Vector3(cell * 0.97f, 0.10f, cell * 0.97f);
+                if (c == 'm')
+                {
+                    int o = PathOrientation(map, x, ly);
+                    GameObject tile = TDVisuals.Box(parent, "Tile", pos, scale, o == 2 ? crossMat : pathMat);
+                    if (o == 1) tile.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+                }
+                else
+                {
+                    Material m = voidMat;
+                    if (c == 't') m = tileMats[(x + ly) % tileMats.Length];
+                    else if (c == 's') m = startMat;
+                    else if (c == 'e') m = endMat;
+                    TDVisuals.Box(parent, "Tile", pos, scale, m);
+                }
+            }
+        }
+    }
+
+    static void BuildTilesVolcanic(Transform parent, TDMap map, string[] layout, int gw, int gh)
+    {
+        // Plots are dark cooled basalt; the path is the glowing lava channel,
+        // so the walkable route is by far the brightest thing on the board.
+        Color[] tileCols =
+        {
+            new Color(0.30f, 0.28f, 0.30f),
+            new Color(0.25f, 0.24f, 0.27f),
+            new Color(0.35f, 0.32f, 0.33f),
+            new Color(0.22f, 0.21f, 0.24f)
+        };
+        Material[] tileMats = new Material[tileCols.Length];
+        for (int i = 0; i < tileCols.Length; i++)
+            tileMats[i] = TDVisuals.TexturedMat(TDTextures.Basalt(), tileCols[i], Vector2.one);
+
+        Material pathMat = TDVisuals.TexturedMat(TDTextures.LavaFlow(), Color.white, Vector2.one);
+        Material crossMat = TDVisuals.TexturedMat(TDTextures.LavaCross(), Color.white, Vector2.one);
+        Material voidMat = TDVisuals.Mat(new Color(0.14f, 0.13f, 0.14f), 0f, 0.2f);
+        Material startMat = TDVisuals.Mat(new Color(0.30f, 0.85f, 0.38f), 0f, 0.35f);
+        Material endMat = TDVisuals.Mat(new Color(0.95f, 0.30f, 0.10f), 0f, 0.35f);
 
         float cell = map.Cell;
         for (int ly = 0; ly < gh; ly++)

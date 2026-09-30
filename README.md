@@ -66,6 +66,21 @@ tower/mob characters are modelled in Blender and imported as glTF (`.glb`).
   the spent tower is the price. Max-tier towers can re-roll too.
 - Mobs that reach the end drain lives; reaching 0 ends the run.
 
+## Board themes
+
+The gameplay grid (`Layout` / `Route` in `TDGameManager`) never changes — a **theme**
+only reskins the play-mat tiles and the surrounding room, so balance and routing are
+identical across boards. Pick one with `TDGameManager.ActiveTheme`:
+
+| Theme | Path | Tower plots | Surroundings |
+|---|---|---|---|
+| `Bedroom` (default) | Toy train track | Coloured play-mat squares | Kid's room: bed, shelf, chest, lamp |
+| `ArcticOutpost` | Packed snowmobile track | Frosted ice tiles | Ice cliff rim, crate, sled, antenna, pines |
+| `VolcanicCaldera` | Glowing lava channel | Dark basalt slabs | Ash plain, crater rim, obsidian spires, lava pools |
+
+`TDBoardBuilder.BuildTiles(...)` and `TDRoom.Build(...)` take the theme; both are also
+used by remote boards and the editor previews, so every board in a match looks the same.
+
 ## Towers
 
 8 types (7 random-build + the economy-only Gold Coin). The 7 random types have
