@@ -290,6 +290,9 @@ public partial class TDGameManager
     public void OnMatchOver(bool victory)
     {
         if (!mpActive) return;
+        // Per-player results: the first result sticks. A later global defeat
+        // (all remaining boards eliminated) must not override an earned Victory.
+        if (State == GameState.Victory || State == GameState.GameOver) return;
         if (ChatSync.Instance != null) ChatSync.Instance.Close();
         RestoreTimeScale();
         State = victory ? GameState.Victory : GameState.GameOver;

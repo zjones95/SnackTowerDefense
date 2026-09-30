@@ -17,10 +17,13 @@ using UnityEngine;
 ///     client -> host : "td.state"  (on change, plus a periodic keep-alive)
 ///     host   -> all  : "td.boards" (the full roster)
 ///
-/// WIN CONDITION: the match is won as a group the instant ANY board clears all
-/// <see cref="TDBalance.TotalWaves"/> waves. Elimination still only ends that
-/// player's own board -- they keep spectating. If every board is eventually
-/// eliminated the host ends the match as a defeat (nobody can win any more).
+/// PER-PLAYER RESULTS: clearing all <see cref="TDBalance.TotalWaves"/> waves
+/// finishes only THAT player's own board (their end screen shows Victory;
+/// they stop playing while the match continues for everyone else).
+/// Elimination still only ends that player's own board -- they keep
+/// spectating. The host ends the match as a defeat (Over, Victory=false)
+/// only once every board is eliminated or gone; each client applies only its
+/// OWN row for its end screen and ignores other boards' clears.
 /// </summary>
 public class MatchSync : MonoBehaviour
 {
@@ -65,6 +68,7 @@ public class MatchSync : MonoBehaviour
     private bool localPrep;          // opening prep only; later waves start at once
     private float localPrepTimer;
     private bool localEliminated;
+    private bool localCleared;       // this board cleared every wave (own victory; match continues)
     private float sendTimer;
     private float pruneTimer;
 
@@ -92,6 +96,7 @@ public class MatchSync : MonoBehaviour
         localPrep = true;
         localPrepTimer = TDBalance.PrepDuration;
         localEliminated = false;
+        localCleared = false;
         sendTimer = 0f; pruneTimer = 0f;
 
         Boards.Clear();
@@ -162,7 +167,7 @@ public class MatchSync : MonoBehaviour
     // -------------------------------------------------------- local wave flow
     void BeginLocalWave(int wave)
     {
-        if (Over || localEliminated) return;
+        if (Over || localEliminated || localCleared) return;
         LocalWave = wave;
         if (TDGameManager.Instance != null) TDGameManager.Instance.BeginWaveFromMatch();
         PublishLocal();
@@ -174,9 +179,12 @@ public class MatchSync : MonoBehaviour
     {
         if (clearedWave >= TDBalance.TotalWaves)
         {
-            // Cleared every wave: that is the whole group's victory.
+            // Per-player victory: only this board is done. The match
+            // continues for everyone else (global Over stays false).
             LocalWave = clearedWave;
-            EndMatch(true);
+            localCleared = true;
+            localPrep = false;
+            EndLocal(true);
             return;
         }
 
@@ -200,6 +208,15 @@ public class MatchSync : MonoBehaviour
         if (TDGameManager.Instance != null) TDGameManager.Instance.OnMatchOver(victory);
     }
 
+    /// <summary>Per-player finish: shows this peer's own end screen without
+    /// ending the match for anyone else. The final row is still relayed so
+    /// the scoreboard marks this board cleared/out.</summary>
+    void EndLocal(bool victory)
+    {
+        PublishLocal();   // relay our final row (Over stays false)
+        if (TDGameManager.Instance != null) TDGameManager.Instance.OnMatchOver(victory);
+    }
+
     // ------------------------------------------------------------ reporting
     /// <summary>Called by the local board whenever its state changes (clear,
     /// life lost, elimination). A clear advances this board immediately.
@@ -208,7 +225,7 @@ public class MatchSync : MonoBehaviour
     public void ReportLocal(int lives, int money, int wave, bool cleared, bool eliminated,
                             int goldGenerated = -1, int towerValue = -1)
     {
-        if (cleared && !eliminated && !localEliminated)
+        if (cleared && !eliminated && !localEliminated && !localCleared)
         {
             AdvanceLocal(wave);
         }
@@ -393,10 +410,25 @@ public class MatchSync : MonoBehaviour
         // keep this peer's row live from the local board.
         MarkLocalBoard();
 
-        if (over && !Over)
+        // Per-player results: only our OWN row drives our end screen. Another
+        // board's clear must never finish us; the global Over now means defeat
+        // only (every board eliminated) and applies to survivors still playing.
+        // (Own-row victory is normally applied immediately in AdvanceLocal;
+        // this echo covers a missed/stale local report.)
+        if (!Over)
         {
-            Over = true; Victory = victory;
-            if (TDGameManager.Instance != null) TDGameManager.Instance.OnMatchOver(victory);
+            BoardState own = LocalBoard();
+            if (own != null && !own.Eliminated && own.Cleared && own.Wave >= TDBalance.TotalWaves)
+            {
+                localCleared = true;
+                localPrep = false;
+                if (TDGameManager.Instance != null) TDGameManager.Instance.OnMatchOver(true);
+            }
+            else if (over)
+            {
+                Over = true; Victory = false;
+                if (TDGameManager.Instance != null) TDGameManager.Instance.OnMatchOver(false);
+            }
         }
     }
 
@@ -405,17 +437,9 @@ public class MatchSync : MonoBehaviour
     {
         if (Over) return;
 
-        // Shared victory: any single board clearing all waves wins it for all.
-        for (int i = 0; i < Boards.Count; i++)
-        {
-            BoardState b = Boards[i];
-            if (!b.Eliminated && b.Cleared && b.Wave >= TDBalance.TotalWaves)
-            {
-                EndMatch(true);
-                return;
-            }
-        }
-
+        // Per-player results: a clear finishes only that board (handled
+        // locally in AdvanceLocal / OnBoardsMessage, never here). The host
+        // ends the match as a defeat only once every board is out.
         // Nobody can win once every board is out (absent boards count as out:
         // their sim died with their link from the host's point of view).
         if (AllEliminated()) EndMatch(false);

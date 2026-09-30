@@ -14,7 +14,7 @@ public static class TDBalance
     public const int StartMoney = 100;
     public const int StartLives = 10;
     public const float PrepDuration = 10f;
-    public const int TotalWaves = 35;
+    public const int TotalWaves = 45;
     /// <summary>Length of the solo Damage Test scenario (issue #9).</summary>
     public const float DamageTestDuration = 60f;
 
@@ -104,7 +104,7 @@ public static class TDBalance
 
     // Mob health: growth starts at 13%/wave and eases toward 10% by the final
     // wave, so the late game ramps less steeply than a straight exponential
-    // (1.00, 1.13, 1.28, ... ~41x by wave 35 instead of ~64x).
+    // (1.00, 1.13, 1.28, ... ~122x by wave 45 instead of ~64x).
     public static float HealthMult(int wave)
     {
         int n = Mathf.Max(0, wave - 1);
@@ -119,7 +119,7 @@ public static class TDBalance
     public static float SpeedMult(int wave) { return 1f + 0.02f * (wave - 1); }
 
     // ------------------------------------------------------------------ waves
-    // One mob type per wave, 35 waves. Every 5th is a standalone boss.
+    // One mob type per wave, 45 waves. Every 5th is a standalone boss.
     public struct WaveDef
     {
         public string mob;
@@ -176,6 +176,16 @@ public static class TDBalance
         W("Turnip", 20, 1.00f),
         W("Papaya", 22, 0.85f),
         B("GranolaMom"),                       // 35
+        W("Lemon", 24, 0.50f),
+        W("Lettuce", 36, 0.28f),
+        W("Zucchini", 18, 1.00f),
+        W("Chili", 22, 0.45f),
+        B("Blackberry"),                       // 40
+        W("Mushroom", 40, 0.25f),
+        W("Garlic", 20, 0.90f),
+        W("Grapefruit", 24, 0.55f),
+        W("Kale", 36, 0.30f),
+        B("RotKing"),                          // 45 — final boss
     };
 
     // Income. Rounds pay a FLAT $50 so cash is predictable; kills pay a token $1.

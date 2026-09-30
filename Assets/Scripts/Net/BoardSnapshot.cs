@@ -9,7 +9,7 @@ using UnityEngine;
 /// </summary>
 public class BoardSnapshot
 {
-    public struct MobSnap { public ushort Id; public byte Type; public short X; public short Z; public byte Hp; public byte Status; public byte Stacks; }
+    public struct MobSnap { public ushort Id; public byte Type; public short X; public short Z; public byte Hp; public byte Status; public byte Stacks; public byte Yaw; }
     public struct TowerSnap { public byte Type; public byte Tier; public short Cx; public short Cy; public byte Yaw; }
     public struct ProjSnap { public int Id; public byte Type; public short X; public short Y; public short Z; }
 
@@ -46,7 +46,8 @@ public class BoardSnapshot
                 Z = Enc(p.z),
                 Hp = (byte)Mathf.Clamp(Mathf.RoundToInt(hf * 255f), 0, 255),
                 Status = status,
-                Stacks = (byte)Mathf.Clamp(m.PoisonStacks, 0, 255)
+                Stacks = (byte)Mathf.Clamp(m.PoisonStacks, 0, 255),
+                Yaw = (byte)Mathf.Clamp(Mathf.RoundToInt(m.transform.eulerAngles.y / 360f * 255f), 0, 255)
             });
         }
 
@@ -109,6 +110,7 @@ public class BoardSnapshot
             w.WriteValueSafe(m.Hp);
             w.WriteValueSafe(m.Status);
             w.WriteValueSafe(m.Stacks);
+            w.WriteValueSafe(m.Yaw);
         }
 
         w.WriteValueSafe((ushort)Towers.Count);
@@ -149,6 +151,7 @@ public class BoardSnapshot
             r.ReadValueSafe(out m.Hp);
             r.ReadValueSafe(out m.Status);
             r.ReadValueSafe(out m.Stacks);
+            r.ReadValueSafe(out m.Yaw);
             Mobs.Add(m);
         }
 

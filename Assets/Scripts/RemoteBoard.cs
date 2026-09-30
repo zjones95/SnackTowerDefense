@@ -26,6 +26,7 @@ public class RemoteBoard : MonoBehaviour
         public MobDef Def;
         public float HpFraction;
         public Vector3 Target;
+        public float TargetYaw;   // degrees; the body slerps toward this each frame
         public byte Status;
         public byte Stacks;
     }
@@ -208,11 +209,14 @@ public class RemoteBoard : MonoBehaviour
                 go.transform.position = p;
 
                 rm = new RemoteMob { Go = go, HpRoot = hpRoot, Fill = fill, Def = def, Target = p,
+                                     TargetYaw = BoardSnapshot.YawDeg(ms.Yaw),
                                      Icons = MobStatusIcons.Get(hpRoot) };
                 mobs[ms.Id] = rm;
+                go.transform.rotation = Quaternion.Euler(0f, rm.TargetYaw, 0f);
             }
 
             rm.Target = BoardOffset + new Vector3(BoardSnapshot.Dec(ms.X), 0f, BoardSnapshot.Dec(ms.Z));
+            rm.TargetYaw = BoardSnapshot.YawDeg(ms.Yaw);   // smoothed in Update
             rm.HpFraction = ms.Hp / 255f;
             MobVisual.SetFill(rm.Fill, rm.HpFraction);
 
@@ -356,6 +360,8 @@ public class RemoteBoard : MonoBehaviour
             RemoteMob rm = kv.Value;
             if (rm.Go == null) continue;
             rm.Go.transform.position = Vector3.Lerp(rm.Go.transform.position, rm.Target, Mathf.Clamp01(k));
+            rm.Go.transform.rotation = Quaternion.Slerp(rm.Go.transform.rotation,
+                Quaternion.Euler(0f, rm.TargetYaw, 0f), Mathf.Clamp01(k));
 
             if (rm.HpRoot != null && Camera.main != null)
             {

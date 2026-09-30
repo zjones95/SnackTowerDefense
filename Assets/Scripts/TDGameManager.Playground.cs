@@ -3,12 +3,12 @@ using UnityEngine;
 // Debug Playground: a bright, high-contrast sandbox board for testing towers,
 // waves and boss behaviours in isolation. Reached from the main menu.
 //
-//   - pick any wave (1-35) and send it on demand (no auto-wave)
+//   - pick any wave (1-45) and send it on demand (no auto-wave)
 //   - place any tower at any tier for free (unlimited money)
 //   - delete / clear towers, clear mobs, speed up time (1x/2x/4x)
 //   - leaks never cost lives
 //
-// The normal 35-wave run is untouched: this is a standalone GameState that
+// The normal 45-wave run is untouched: this is a standalone GameState that
 // reuses the existing map layout (off-white board, light-grey path, raised
 // dark-grey buildable pads, pastel start/end) and the shared SpawnMob /
 // CreateTower paths so it exercises the exact same gameplay code.
@@ -479,7 +479,7 @@ public partial class TDGameManager
 
     void DrawPlaygroundWaveGrid()
     {
-        int cols = 7, rows = 5;
+        int cols = 7, rows = 7;
         float cellW = 44f, cellH = 34f, gap = 6f;
         float w = cols * cellW + (cols - 1) * gap + 24f;
         float h = rows * cellH + (rows - 1) * gap + 48f;
