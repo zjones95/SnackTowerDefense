@@ -83,6 +83,9 @@ identical across boards. Pick one with `TDGameManager.ActiveTheme`:
 | `SewerSubway` | Steel rails on dark ballast | Concrete slabs with hazard-yellow borders | Tiled tunnel walls, pipes and valves, floor grate, drainage channel, ladder |
 | `MedievalCastle` | Cobblestone road with timber edging | Heraldic red / blue / gold / green banners | Crenellated stone walls, torches, barrels, catapult, banner poles, straw bales |
 | `FactoryFloor` | Conveyor belt with safety stripe | Safety-painted machine plates | Checker-plate floor, corrugated walls, control consoles, crates, chain hoist |
+| `SunkenReef` | Plank wreck with rope edging | Coral pink / anemone purple / algae green / shell white | Seabed sand, coral outcrops, kelp, treasure chest, anchor, starfish, bubbles |
+| `ZenGarden` | Stepping stones on raked sand | Raked gravel in stone / moss / maple / straw | Bamboo fence, standing stones, stone lantern, bonsai, water spout |
+| `ClassroomDesk` | Ruled notebook paper with pencil rails | Sticky notes: yellow / pink / blue / green | Desk surface, stacked-book border, giant pencil, eraser, ruler, crayons, globe |
 
 `TDBoardBuilder.BuildTiles(...)` and `TDRoom.Build(...)` take the theme; both are also
 used by remote boards and the editor previews, so every board in a match looks the same.

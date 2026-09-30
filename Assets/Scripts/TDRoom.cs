@@ -14,6 +14,9 @@ public static class TDRoom
         if (theme == BoardTheme.SewerSubway) { BuildSewer(parent, map); return; }
         if (theme == BoardTheme.MedievalCastle) { BuildCastle(parent, map); return; }
         if (theme == BoardTheme.FactoryFloor) { BuildFactory(parent, map); return; }
+        if (theme == BoardTheme.SunkenReef) { BuildReef(parent, map); return; }
+        if (theme == BoardTheme.ZenGarden) { BuildZen(parent, map); return; }
+        if (theme == BoardTheme.ClassroomDesk) { BuildClassroom(parent, map); return; }
         BuildBedroom(parent, map);
     }
 
@@ -749,5 +752,237 @@ public static class TDRoom
         face.transform.localRotation = Quaternion.Euler(-30f, 0f, 0f);
         TDVisuals.Sphere(parent, "ConsoleLight", basePos + new Vector3(-0.5f, 1.5f, -0.5f), 0.22f, green);
         TDVisuals.Box(parent, "ConsoleBase", basePos + new Vector3(0f, 0.1f, 0f), new Vector3(2.2f, 0.2f, 1.4f), steel);
+    }
+
+    // ----------------------------------------------------------- reef theme
+    static void BuildReef(Transform parent, TDMap map)
+    {
+        Material sand = TDVisuals.Mat(new Color(0.88f, 0.85f, 0.76f), 0f, 0.35f);
+        Material rock = TDVisuals.Mat(new Color(0.34f, 0.50f, 0.54f), 0f, 0.4f);
+        Material coralPink = TDVisuals.Mat(new Color(0.94f, 0.52f, 0.58f), 0f, 0.45f);
+        Material coralPurple = TDVisuals.Mat(new Color(0.62f, 0.48f, 0.88f), 0f, 0.45f);
+        Material coralTeal = TDVisuals.Mat(new Color(0.42f, 0.72f, 0.68f), 0f, 0.45f);
+        Material kelp = TDVisuals.Mat(new Color(0.22f, 0.52f, 0.34f), 0f, 0.5f);
+        Material wood = TDVisuals.Mat(new Color(0.38f, 0.28f, 0.20f), 0f, 0.4f);
+        Material gold = TDVisuals.Mat(new Color(0.95f, 0.80f, 0.28f), 0.7f, 0.6f);
+        Material iron = TDVisuals.Mat(new Color(0.42f, 0.46f, 0.46f), 0.5f, 0.4f);
+        Material bubble = TDVisuals.Mat(new Color(0.82f, 0.94f, 0.96f), 0f, 0.6f);
+
+        float halfX = map.Width * map.Cell * 0.5f + 6f;
+        float halfZ = map.Height * map.Cell * 0.5f + 6f;
+
+        // seabed
+        TDVisuals.Box(parent, "RoomFloor", new Vector3(0f, -0.15f, 0f), new Vector3(halfX * 2f, 0.2f, halfZ * 2f), sand);
+
+        // low reef rock rim
+        float wh = 2.2f, wt = 1.0f;
+        TDVisuals.Box(parent, "WallN", new Vector3(0f, wh * 0.5f, halfZ), new Vector3(halfX * 2f + wt, wh, wt), rock);
+        TDVisuals.Box(parent, "WallS", new Vector3(0f, wh * 0.5f, -halfZ), new Vector3(halfX * 2f + wt, wh, wt), rock);
+        TDVisuals.Box(parent, "WallE", new Vector3(halfX, wh * 0.5f, 0f), new Vector3(wt, wh, halfZ * 2f + wt), rock);
+        TDVisuals.Box(parent, "WallW", new Vector3(-halfX, wh * 0.5f, 0f), new Vector3(wt, wh, halfZ * 2f + wt), rock);
+
+        float westX = -halfX + 3.0f;
+        float eastX = halfX - 3.0f;
+
+        // coral outcrops on the rim and floor
+        Material[] corals = { coralPink, coralPurple, coralTeal };
+        for (int i = 0; i < 6; i++)
+        {
+            float cx = -13f + i * 5.2f;
+            BuildCoral(parent, new Vector3(cx, wh, halfZ), corals[i % corals.Length]);
+        }
+        BuildCoral(parent, new Vector3(westX - 0.6f, 0f, 9f), coralPink);
+        BuildCoral(parent, new Vector3(eastX + 0.4f, 0f, -10f), coralPurple);
+        BuildCoral(parent, new Vector3(eastX - 0.2f, 0f, 6f), coralTeal);
+
+        // kelp fronds
+        for (int i = 0; i < 5; i++)
+            BuildKelp(parent, new Vector3(westX - 1.2f + i * 0.5f, 0f, -12f + i * 1.6f), kelp);
+
+        // treasure chest
+        TDVisuals.Box(parent, "ChestBase", new Vector3(westX, 0.55f, 12f), new Vector3(1.8f, 1.0f, 1.3f), wood);
+        TDVisuals.Box(parent, "ChestLid", new Vector3(westX, 1.15f, 12f), new Vector3(1.9f, 0.3f, 1.4f), wood);
+        TDVisuals.Box(parent, "ChestGold", new Vector3(westX, 1.32f, 12f), new Vector3(1.5f, 0.2f, 1.0f), gold);
+
+        // barnacled anchor (east)
+        TDVisuals.Box(parent, "AnchorShaft", new Vector3(eastX + 0.6f, 1.2f, 12f), new Vector3(0.24f, 2.4f, 0.24f), iron);
+        TDVisuals.Box(parent, "AnchorArm", new Vector3(eastX + 0.6f, 0.35f, 12f), new Vector3(1.8f, 0.24f, 0.24f), iron);
+        TDVisuals.Cyl(parent, "AnchorRing", new Vector3(eastX + 0.6f, 2.5f, 12f), 0.35f, 0.16f, iron);
+
+        // starfish and rising bubbles
+        GameObject star = TDVisuals.Sphere(parent, "Starfish", new Vector3(3.5f, 0.12f, -12f), 0.9f, coralPink);
+        star.transform.localScale = new Vector3(0.9f, 0.22f, 0.9f);
+        for (int i = 0; i < 6; i++)
+            TDVisuals.Sphere(parent, "Bubble" + i, new Vector3(-8f + i * 3.4f, 2.6f + (i % 3) * 0.6f, 14.5f), 0.35f, bubble);
+    }
+
+    static void BuildCoral(Transform parent, Vector3 basePos, Material m)
+    {
+        TDVisuals.Sphere(parent, "CoralHead", basePos + new Vector3(0f, 0.5f, 0f), 1.1f, m);
+        TDVisuals.Cyl(parent, "CoralBranch0", basePos + new Vector3(-0.4f, 1.3f, 0f), 0.12f, 1.2f, m);
+        TDVisuals.Cyl(parent, "CoralBranch1", basePos + new Vector3(0.35f, 1.5f, 0.2f), 0.10f, 1.5f, m);
+        TDVisuals.Cyl(parent, "CoralBranch2", basePos + new Vector3(0.05f, 1.2f, -0.35f), 0.10f, 1.1f, m);
+    }
+
+    static void BuildKelp(Transform parent, Vector3 basePos, Material m)
+    {
+        TDVisuals.Box(parent, "KelpStalk", basePos + new Vector3(0f, 1.8f, 0f), new Vector3(0.22f, 3.6f, 0.22f), m);
+        GameObject blade = TDVisuals.Box(parent, "KelpBlade", basePos + new Vector3(0.35f, 2.6f, 0f), new Vector3(0.7f, 0.1f, 0.35f), m);
+        blade.transform.localRotation = Quaternion.Euler(0f, 0f, -22f);
+    }
+
+    // ------------------------------------------------------------ zen theme
+    static void BuildZen(Transform parent, TDMap map)
+    {
+        Material gravel = TDVisuals.Mat(new Color(0.90f, 0.89f, 0.86f), 0f, 0.3f);
+        Material bamboo = TDVisuals.Mat(new Color(0.72f, 0.66f, 0.36f), 0f, 0.4f);
+        Material bambooDark = TDVisuals.Mat(new Color(0.58f, 0.52f, 0.28f), 0f, 0.4f);
+        Material stone = TDVisuals.Mat(new Color(0.56f, 0.56f, 0.54f), 0f, 0.35f);
+        Material stoneDark = TDVisuals.Mat(new Color(0.42f, 0.42f, 0.41f), 0f, 0.35f);
+        Material pot = TDVisuals.Mat(new Color(0.42f, 0.30f, 0.24f), 0f, 0.4f);
+        Material pine = TDVisuals.Mat(new Color(0.20f, 0.38f, 0.24f), 0f, 0.45f);
+        Material water = TDVisuals.Mat(new Color(0.50f, 0.62f, 0.66f), 0f, 0.65f);
+
+        float halfX = map.Width * map.Cell * 0.5f + 6f;
+        float halfZ = map.Height * map.Cell * 0.5f + 6f;
+
+        // raked gravel ground
+        TDVisuals.Box(parent, "RoomFloor", new Vector3(0f, -0.15f, 0f), new Vector3(halfX * 2f, 0.2f, halfZ * 2f), gravel);
+
+        // bamboo fence on the north and west edges
+        float wh = 2.0f, wt = 0.4f;
+        for (int i = 0; i < 13; i++)
+        {
+            float fx = -15f + i * 2.5f;
+            TDVisuals.Cyl(parent, "FencePostN" + i, new Vector3(fx, wh * 0.5f, halfZ - 0.3f), 0.13f, wh, bamboo);
+        }
+        TDVisuals.Box(parent, "FenceRailN0", new Vector3(0f, 1.5f, halfZ - 0.3f), new Vector3(halfX * 2f, 0.14f, 0.14f), bambooDark);
+        TDVisuals.Box(parent, "FenceRailN1", new Vector3(0f, 0.8f, halfZ - 0.3f), new Vector3(halfX * 2f, 0.14f, 0.14f), bambooDark);
+        for (int i = 0; i < 9; i++)
+        {
+            float fz = -14f + i * 3.5f;
+            TDVisuals.Cyl(parent, "FencePostW" + i, new Vector3(-halfX + 0.3f, wh * 0.5f, fz), 0.13f, wh, bamboo);
+        }
+        TDVisuals.Box(parent, "FenceRailW0", new Vector3(-halfX + 0.3f, 1.5f, 0f), new Vector3(0.14f, 0.14f, halfZ * 2f), bambooDark);
+        TDVisuals.Box(parent, "FenceRailW1", new Vector3(-halfX + 0.3f, 0.8f, 0f), new Vector3(0.14f, 0.14f, halfZ * 2f), bambooDark);
+        // low berm on the other two sides so the board is still enclosed
+        TDVisuals.Box(parent, "BermS", new Vector3(0f, 0.3f, -halfZ), new Vector3(halfX * 2f + wt, 0.6f, wt), stoneDark);
+        TDVisuals.Box(parent, "BermE", new Vector3(halfX, 0.3f, 0f), new Vector3(wt, 0.6f, halfZ * 2f + wt), stoneDark);
+
+        float westX = -halfX + 3.0f;
+        float eastX = halfX - 3.0f;
+
+        // standing stones
+        BuildStandingStone(parent, new Vector3(westX - 0.8f, 0f, -6f), 2.6f, stone, stoneDark);
+        BuildStandingStone(parent, new Vector3(westX - 1.4f, 0f, -3.2f), 1.8f, stone, stoneDark);
+        BuildStandingStone(parent, new Vector3(eastX + 0.6f, 0f, 9f), 2.2f, stone, stoneDark);
+
+        // stone lantern
+        TDVisuals.Box(parent, "LanternBase", new Vector3(eastX, 0.3f, -9f), new Vector3(1.1f, 0.6f, 1.1f), stone);
+        TDVisuals.Cyl(parent, "LanternPost", new Vector3(eastX, 1.2f, -9f), 0.22f, 1.3f, stone);
+        TDVisuals.Box(parent, "LanternBody", new Vector3(eastX, 2.1f, -9f), new Vector3(0.9f, 0.7f, 0.9f), stoneDark);
+        TDVisuals.Box(parent, "LanternRoof", new Vector3(eastX, 2.6f, -9f), new Vector3(1.3f, 0.25f, 1.3f), stone);
+
+        // bonsai in a pot
+        TDVisuals.Cyl(parent, "BonsaiPot", new Vector3(westX, 0.35f, 11.5f), 0.85f, 0.7f, pot);
+        TDVisuals.Cyl(parent, "BonsaiTrunk", new Vector3(westX, 1.1f, 11.5f), 0.14f, 1.0f, pot);
+        TDVisuals.Sphere(parent, "BonsaiFoliage0", new Vector3(westX - 0.3f, 1.75f, 11.5f), 1.1f, pine);
+        TDVisuals.Sphere(parent, "BonsaiFoliage1", new Vector3(westX + 0.45f, 1.5f, 11.2f), 0.85f, pine);
+
+        // bamboo water spout
+        TDVisuals.Cyl(parent, "SpoutPost", new Vector3(eastX - 0.5f, 0.9f, 13.5f), 0.16f, 1.8f, bamboo);
+        TDVisuals.Cyl(parent, "SpoutCane", new Vector3(eastX - 0.5f, 1.75f, 13.5f), 0.12f, 1.2f, bambooDark);
+        TDVisuals.Box(parent, "SpoutBasin", new Vector3(eastX - 0.5f, 0.15f, 12.4f), new Vector3(1.0f, 0.3f, 1.0f), water);
+    }
+
+    static void BuildStandingStone(Transform parent, Vector3 basePos, float height, Material stone, Material dark)
+    {
+        GameObject s = TDVisuals.Box(parent, "Stone", basePos + new Vector3(0f, height * 0.5f, 0f),
+            new Vector3(1.0f, height, 0.8f), stone);
+        s.transform.localRotation = Quaternion.Euler(0f, 12f, 0f);
+        GameObject cap = TDVisuals.Box(parent, "StoneCap", basePos + new Vector3(0f, height + 0.15f, 0f),
+            new Vector3(0.85f, 0.3f, 0.7f), dark);
+        cap.transform.localRotation = Quaternion.Euler(0f, 12f, 0f);
+    }
+
+    // ------------------------------------------------------ classroom theme
+    static void BuildClassroom(Transform parent, TDMap map)
+    {
+        Material desk = TDVisuals.Mat(new Color(0.70f, 0.53f, 0.33f), 0f, 0.4f);
+        Material bookRed = TDVisuals.Mat(new Color(0.72f, 0.26f, 0.24f), 0f, 0.45f);
+        Material bookBlue = TDVisuals.Mat(new Color(0.26f, 0.40f, 0.70f), 0f, 0.45f);
+        Material bookGreen = TDVisuals.Mat(new Color(0.30f, 0.58f, 0.36f), 0f, 0.45f);
+        Material bookYellow = TDVisuals.Mat(new Color(0.88f, 0.76f, 0.28f), 0f, 0.45f);
+        Material pencilBody = TDVisuals.Mat(new Color(0.94f, 0.78f, 0.24f), 0f, 0.5f);
+        Material pencilWood = TDVisuals.Mat(new Color(0.82f, 0.68f, 0.48f), 0f, 0.4f);
+        Material graphite = TDVisuals.Mat(new Color(0.24f, 0.24f, 0.26f), 0f, 0.5f);
+        Material eraser = TDVisuals.Mat(new Color(0.94f, 0.60f, 0.66f), 0f, 0.45f);
+        Material metal = TDVisuals.Mat(new Color(0.70f, 0.72f, 0.74f), 0.6f, 0.5f);
+        Material globeSea = TDVisuals.Mat(new Color(0.30f, 0.55f, 0.78f), 0f, 0.5f);
+        Material globeLand = TDVisuals.Mat(new Color(0.40f, 0.66f, 0.38f), 0f, 0.5f);
+        Color[] crayonCols =
+        {
+            new Color(0.88f, 0.28f, 0.26f), new Color(0.92f, 0.66f, 0.20f),
+            new Color(0.30f, 0.56f, 0.84f), new Color(0.40f, 0.72f, 0.40f),
+            new Color(0.60f, 0.36f, 0.74f)
+        };
+        Material[] crayons = new Material[crayonCols.Length];
+        for (int i = 0; i < crayonCols.Length; i++) crayons[i] = TDVisuals.Mat(crayonCols[i], 0f, 0.45f);
+
+        float halfX = map.Width * map.Cell * 0.5f + 6f;
+        float halfZ = map.Height * map.Cell * 0.5f + 6f;
+
+        // desk surface
+        TDVisuals.Box(parent, "RoomFloor", new Vector3(0f, -0.15f, 0f), new Vector3(halfX * 2f, 0.2f, halfZ * 2f), desk);
+
+        // stacked books form the low border
+        float wt = 1.2f;
+        Material[] books = { bookRed, bookBlue, bookGreen, bookYellow };
+        for (int i = 0; i < 4; i++)
+            TDVisuals.Box(parent, "WallN" + i, new Vector3(0f, 0.35f + i * 0.35f, halfZ), new Vector3(halfX * 2f + wt, 0.35f, wt), books[i]);
+        for (int i = 0; i < 4; i++)
+            TDVisuals.Box(parent, "WallS" + i, new Vector3(0f, 0.35f + i * 0.35f, -halfZ), new Vector3(halfX * 2f + wt, 0.35f, wt), books[(i + 1) % 4]);
+        for (int i = 0; i < 4; i++)
+            TDVisuals.Box(parent, "WallE" + i, new Vector3(halfX, 0.35f + i * 0.35f, 0f), new Vector3(wt, 0.35f, halfZ * 2f + wt), books[(i + 2) % 4]);
+        for (int i = 0; i < 4; i++)
+            TDVisuals.Box(parent, "WallW" + i, new Vector3(-halfX, 0.35f + i * 0.35f, 0f), new Vector3(wt, 0.35f, halfZ * 2f + wt), books[(i + 3) % 4]);
+
+        float westX = -halfX + 3.0f;
+        float eastX = halfX - 3.0f;
+
+        // giant pencil along the west edge
+        BuildPencil(parent, new Vector3(westX - 0.5f, 0f, 2f), 12f, pencilBody, pencilWood, graphite);
+
+        // eraser and ruler
+        TDVisuals.Box(parent, "Eraser", new Vector3(westX + 0.4f, 0.4f, -9f), new Vector3(2.2f, 0.8f, 1.2f), eraser);
+        TDVisuals.Box(parent, "Ruler", new Vector3(0f, 0.1f, -halfZ + 2.2f), new Vector3(16f, 0.16f, 1.0f), pencilWood);
+        for (int i = 0; i < 16; i++)
+            TDVisuals.Box(parent, "RulerMark" + i, new Vector3(-7.5f + i * 1.0f, 0.2f, -halfZ + 2.2f), new Vector3(0.06f, 0.06f, 0.5f), graphite);
+
+        // crayon box
+        TDVisuals.Box(parent, "CrayonBox", new Vector3(eastX, 0.5f, 8f), new Vector3(3.0f, 1.0f, 2.0f), bookYellow);
+        for (int i = 0; i < 5; i++)
+            TDVisuals.Cyl(parent, "Crayon" + i, new Vector3(eastX - 1.0f + i * 0.5f, 1.25f, 8f), 0.16f, 1.0f, crayons[i]);
+
+        // globe on a stand
+        TDVisuals.Cyl(parent, "GlobeStand", new Vector3(eastX, 0.3f, -10f), 0.7f, 0.6f, metal);
+        TDVisuals.Cyl(parent, "GlobeArm", new Vector3(eastX, 1.1f, -10f), 0.1f, 1.0f, metal);
+        TDVisuals.Sphere(parent, "Globe", new Vector3(eastX, 1.9f, -10f), 1.8f, globeSea);
+        TDVisuals.Sphere(parent, "GlobeLand", new Vector3(eastX - 0.35f, 2.1f, -10f), 0.9f, globeLand);
+
+        // paperclips
+        TDVisuals.Box(parent, "Clip0", new Vector3(4f, 0.1f, -13f), new Vector3(0.7f, 0.08f, 0.16f), metal);
+        TDVisuals.Box(parent, "Clip1", new Vector3(6.5f, 0.1f, -12.4f), new Vector3(0.7f, 0.08f, 0.16f), metal);
+        TDVisuals.Box(parent, "Clip2", new Vector3(9f, 0.1f, -13.2f), new Vector3(0.7f, 0.08f, 0.16f), metal);
+    }
+
+    static void BuildPencil(Transform parent, Vector3 basePos, float length, Material body, Material wood, Material lead)
+    {
+        GameObject shaft = TDVisuals.Cyl(parent, "PencilBody", basePos + new Vector3(0f, 0.35f, 0f), 0.35f, length, body);
+        shaft.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+        GameObject tip = TDVisuals.Cyl(parent, "PencilTip", basePos + new Vector3(0f, 0.35f, -length * 0.5f - 0.4f), 0.35f, 0.9f, wood);
+        tip.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+        GameObject point = TDVisuals.Cyl(parent, "PencilLead", basePos + new Vector3(0f, 0.35f, -length * 0.5f - 0.95f), 0.18f, 0.35f, lead);
+        point.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
     }
 }

@@ -893,6 +893,261 @@ public static class TDTextures
         return t;
     }
 
+    // --------------------------------------------------------- reef theme
+    static Texture2D seabed, shipWreck, shipWreckCross;
+
+    /// <summary>Seabed tile for tower plots: matte sand with scattered grit and
+    /// shell flecks. Kept light so tints read as coral / anemone / algae / shell.</summary>
+    public static Texture2D Seabed()
+    {
+        if (seabed != null) return seabed;
+        int S = 128;
+        Texture2D t = New(S);
+        Color baseC = new Color(0.94f, 0.93f, 0.91f);
+        Color grit = new Color(0.82f, 0.80f, 0.78f);
+        Color shell = new Color(0.99f, 0.99f, 0.98f);
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float n = (N(x, y) - 0.5f) * 0.05f;
+                float mot = (N(x / 8 + 4, y / 8 + 9) - 0.5f) * 0.07f;
+                Color c = baseC + new Color(n, n, n) + new Color(mot, mot, mot);
+                if (N(x * 19 + 7, y * 19 + 2) > 0.972f) c = grit;
+                if (N(x * 7 + 11, y * 7 + 6) > 0.988f) c = shell;
+                if (x < 3 || y < 3 || x >= S - 3 || y >= S - 3) c = Color.Lerp(c, grit, 0.6f);
+                t.SetPixel(x, y, c);
+            }
+        }
+        t.Apply();
+        seabed = t;
+        return t;
+    }
+
+    /// <summary>Sunken wreck walkway (the mob path): weathered dark planks laid
+    /// across the route with pale frayed rope lines along both edges.</summary>
+    public static Texture2D ShipWreck()
+    {
+        if (shipWreck != null) return shipWreck;
+        int S = 128;
+        Texture2D t = New(S);
+        Color plank = new Color(0.30f, 0.24f, 0.19f);
+        Color plankAlt = new Color(0.23f, 0.18f, 0.14f);
+        Color gap = new Color(0.15f, 0.12f, 0.10f);
+        Color rope = new Color(0.86f, 0.79f, 0.60f);
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float n = (N(x, y) - 0.5f) * 0.06f;
+                Color c = (((x / 22) % 2 == 0) ? plank : plankAlt) + new Color(n, n * 0.9f, n * 0.8f);
+                if ((x % 22) < 2) c = gap;
+                float d = Mathf.Min(Mathf.Abs(y - 20f), Mathf.Abs(y - 108f));
+                if (d < 5f) c = Color.Lerp(c, rope, Mathf.Clamp01(1f - d / 5f));
+                t.SetPixel(x, y, c);
+            }
+        }
+        t.Apply();
+        shipWreck = t;
+        return t;
+    }
+
+    public static Texture2D ShipWreckCross()
+    {
+        if (shipWreckCross != null) return shipWreckCross;
+        int S = 128;
+        Texture2D t = New(S);
+        Color plank = new Color(0.30f, 0.24f, 0.19f);
+        Color plankAlt = new Color(0.23f, 0.18f, 0.14f);
+        Color rope = new Color(0.86f, 0.79f, 0.60f);
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float n = (N(x, y) - 0.5f) * 0.06f;
+                Color c = ((((x + y) / 22) % 2 == 0) ? plank : plankAlt) + new Color(n, n * 0.9f, n * 0.8f);
+                float d = Mathf.Min(
+                    Mathf.Min(Mathf.Abs(y - 20f), Mathf.Abs(y - 108f)),
+                    Mathf.Min(Mathf.Abs(x - 20f), Mathf.Abs(x - 108f)));
+                if (d < 5f) c = Color.Lerp(c, rope, Mathf.Clamp01(1f - d / 5f));
+                t.SetPixel(x, y, c);
+            }
+        }
+        t.Apply();
+        shipWreckCross = t;
+        return t;
+    }
+
+    // ---------------------------------------------------------- zen theme
+    static Texture2D rakedGravel, steppingPath, steppingPathCross;
+
+    /// <summary>Raked gravel plot tile: fine wavy rake lines over pale sand.</summary>
+    public static Texture2D RakedGravel()
+    {
+        if (rakedGravel != null) return rakedGravel;
+        int S = 128;
+        Texture2D t = New(S);
+        Color sand = new Color(0.95f, 0.94f, 0.91f);
+        Color groove = new Color(0.80f, 0.79f, 0.76f);
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float n = (N(x, y) - 0.5f) * 0.03f;
+                Color c = sand + new Color(n, n, n);
+                float wave = Mathf.Sin(y * 0.45f + Mathf.Sin(x * 0.08f) * 1.4f) * 0.5f + 0.5f;
+                c = Color.Lerp(c, groove, wave * 0.55f);
+                if (x < 4 || y < 4 || x >= S - 4 || y >= S - 4) c = Color.Lerp(c, groove, 0.85f);
+                t.SetPixel(x, y, c);
+            }
+        }
+        t.Apply();
+        rakedGravel = t;
+        return t;
+    }
+
+    /// <summary>Stepping-stone walkway (the mob path): pale raked sand with a
+    /// band of dark irregular stone slabs down the middle, edged in timber.</summary>
+    public static Texture2D SteppingPath()
+    {
+        if (steppingPath != null) return steppingPath;
+        int S = 128;
+        Texture2D t = New(S);
+        Color sand = new Color(0.96f, 0.95f, 0.90f);
+        Color sandGroove = new Color(0.84f, 0.83f, 0.78f);
+        Color stone = new Color(0.40f, 0.41f, 0.42f);
+        Color stoneLit = new Color(0.52f, 0.53f, 0.54f);
+        Color wood = new Color(0.50f, 0.37f, 0.24f);
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float n = (N(x, y) - 0.5f) * 0.04f;
+                Color c = sand + new Color(n, n, n);
+                c = Color.Lerp(c, sandGroove, (Mathf.Sin(y * 0.5f) * 0.5f + 0.5f) * 0.5f);
+
+                float halfBand = 30f + Mathf.Sin(x * 0.18f) * 5f;
+                if (Mathf.Abs(y - 64f) < halfBand)
+                {
+                    c = stone + new Color(n, n, n);
+                    if (Mathf.Abs(y - 64f) < 8f) c = Color.Lerp(c, stoneLit, 0.4f);
+                }
+                if (y < 6 || y >= S - 6) c = wood;
+                t.SetPixel(x, y, c);
+            }
+        }
+        t.Apply();
+        steppingPath = t;
+        return t;
+    }
+
+    public static Texture2D SteppingPathCross()
+    {
+        if (steppingPathCross != null) return steppingPathCross;
+        int S = 128;
+        Texture2D t = New(S);
+        Color sand = new Color(0.96f, 0.95f, 0.90f);
+        Color sandGroove = new Color(0.84f, 0.83f, 0.78f);
+        Color stone = new Color(0.40f, 0.41f, 0.42f);
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float n = (N(x, y) - 0.5f) * 0.04f;
+                Color c = sand + new Color(n, n, n);
+                c = Color.Lerp(c, sandGroove, (Mathf.Sin((x + y) * 0.5f) * 0.5f + 0.5f) * 0.5f);
+                if (Mathf.Abs(y - 64f) < 26f || Mathf.Abs(x - 64f) < 26f) c = stone + new Color(n, n, n);
+                t.SetPixel(x, y, c);
+            }
+        }
+        t.Apply();
+        steppingPathCross = t;
+        return t;
+    }
+
+    // ---------------------------------------------------- classroom theme
+    static Texture2D notePaper, notebook, notebookCross;
+
+    /// <summary>Sticky-note plot tile: flat paper with a soft fibre and a folded
+    /// lower corner. Kept near-white so tints read as bright notes.</summary>
+    public static Texture2D NotePaper()
+    {
+        if (notePaper != null) return notePaper;
+        int S = 128;
+        Texture2D t = New(S);
+        Color paper = new Color(0.97f, 0.97f, 0.96f);
+        Color fibre = new Color(0.93f, 0.93f, 0.92f);
+        Color edge = new Color(0.82f, 0.81f, 0.80f);
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float n = (N(x, y) - 0.5f) * 0.03f;
+                float fib = (N(x / 2 + 3, y * 3 + 5) - 0.5f) * 0.03f;
+                Color c = paper + new Color(n, n, n) + new Color(fib, fib, fib);
+                if (x + y > 2 * S - 32) c = Color.Lerp(c, fibre, 0.75f);   // dog-eared corner
+                if (x < 3 || y < 3 || x >= S - 3 || y >= S - 3) c = edge;
+                t.SetPixel(x, y, c);
+            }
+        }
+        t.Apply();
+        notePaper = t;
+        return t;
+    }
+
+    /// <summary>Ruled notebook sheet (the mob path): white paper with blue rules,
+    /// a red margin and grey pencil rails along both edges.</summary>
+    public static Texture2D Notebook()
+    {
+        if (notebook != null) return notebook;
+        int S = 128;
+        Texture2D t = New(S);
+        Color paper = new Color(0.98f, 0.98f, 0.97f);
+        Color rule = new Color(0.70f, 0.79f, 0.90f);
+        Color margin = new Color(0.86f, 0.55f, 0.55f);
+        Color pencil = new Color(0.62f, 0.58f, 0.52f);
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float n = (N(x, y) - 0.5f) * 0.02f;
+                Color c = paper + new Color(n, n, n);
+                if ((y % 16) < 2) c = rule;                       // ruled lines
+                if (Mathf.Abs(x - 18) < 2) c = margin;            // red margin
+                if (y < 7 || y >= S - 7) c = pencil;              // pencil rails
+                t.SetPixel(x, y, c);
+            }
+        }
+        t.Apply();
+        notebook = t;
+        return t;
+    }
+
+    public static Texture2D NotebookCross()
+    {
+        if (notebookCross != null) return notebookCross;
+        int S = 128;
+        Texture2D t = New(S);
+        Color paper = new Color(0.98f, 0.98f, 0.97f);
+        Color rule = new Color(0.70f, 0.79f, 0.90f);
+        Color pencil = new Color(0.62f, 0.58f, 0.52f);
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float n = (N(x, y) - 0.5f) * 0.02f;
+                Color c = paper + new Color(n, n, n);
+                if ((y % 16) < 2 || (x % 16) < 2) c = rule;
+                bool rail = y < 7 || y >= S - 7 || x < 7 || x >= S - 7;
+                if (rail) c = pencil;
+                t.SetPixel(x, y, c);
+            }
+        }
+        t.Apply();
+        notebookCross = t;
+        return t;
+    }
+
     // ------------------------------------------------------------ paper (UI)
     static Texture2D paper, paperHover, paperPressed, menuFade;
 

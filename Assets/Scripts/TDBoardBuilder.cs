@@ -15,7 +15,10 @@ public enum BoardTheme
     CandyShop,
     SewerSubway,
     MedievalCastle,
-    FactoryFloor
+    FactoryFloor,
+    SunkenReef,
+    ZenGarden,
+    ClassroomDesk
 }
 
 public static class TDBoardBuilder
@@ -31,7 +34,10 @@ public static class TDBoardBuilder
         BoardTheme.CandyShop,
         BoardTheme.SewerSubway,
         BoardTheme.MedievalCastle,
-        BoardTheme.FactoryFloor
+        BoardTheme.FactoryFloor,
+        BoardTheme.SunkenReef,
+        BoardTheme.ZenGarden,
+        BoardTheme.ClassroomDesk
     };
 
     public static string ThemeName(BoardTheme t)
@@ -46,6 +52,9 @@ public static class TDBoardBuilder
             case BoardTheme.SewerSubway: return "Sewer / Subway";
             case BoardTheme.MedievalCastle: return "Medieval Castle";
             case BoardTheme.FactoryFloor: return "Factory Floor";
+            case BoardTheme.SunkenReef: return "Sunken Reef";
+            case BoardTheme.ZenGarden: return "Zen Rock Garden";
+            case BoardTheme.ClassroomDesk: return "Classroom Desk";
             default: return "Kid's Bedroom";
         }
     }
@@ -70,6 +79,12 @@ public static class TDBoardBuilder
                 return "A cobbled road crosses heraldic banners in a torchlit courtyard.";
             case BoardTheme.FactoryFloor:
                 return "A conveyor belt snakes between safety-painted machine plates.";
+            case BoardTheme.SunkenReef:
+                return "A plank wreck walkway crosses the coral beds of a sunken reef.";
+            case BoardTheme.ZenGarden:
+                return "Stepping stones cross raked gravel in a quiet temple garden.";
+            case BoardTheme.ClassroomDesk:
+                return "Ruled notebook paper threads between bright sticky notes.";
             default:
                 return "The original play-mat: a toy train track weaving through a kid's bedroom.";
         }
@@ -116,6 +131,9 @@ public static class TDBoardBuilder
         if (theme == BoardTheme.SewerSubway) { BuildTilesSewer(parent, map, layout, gw, gh); return; }
         if (theme == BoardTheme.MedievalCastle) { BuildTilesCastle(parent, map, layout, gw, gh); return; }
         if (theme == BoardTheme.FactoryFloor) { BuildTilesFactory(parent, map, layout, gw, gh); return; }
+        if (theme == BoardTheme.SunkenReef) { BuildTilesReef(parent, map, layout, gw, gh); return; }
+        if (theme == BoardTheme.ZenGarden) { BuildTilesZen(parent, map, layout, gw, gh); return; }
+        if (theme == BoardTheme.ClassroomDesk) { BuildTilesClassroom(parent, map, layout, gw, gh); return; }
 
         Color[] tileCols =
         {
@@ -512,6 +530,141 @@ public static class TDBoardBuilder
         Material voidMat = TDVisuals.Mat(new Color(0.48f, 0.50f, 0.53f), 0.3f, 0.5f);   // checker plate
         Material startMat = TDVisuals.Mat(new Color(0.35f, 0.80f, 0.40f), 0f, 0.45f);
         Material endMat = TDVisuals.Mat(new Color(0.85f, 0.25f, 0.22f), 0f, 0.45f);
+
+        float cell = map.Cell;
+        for (int ly = 0; ly < gh; ly++)
+        {
+            for (int x = 0; x < gw; x++)
+            {
+                char c = layout[ly][x];
+                Vector3 pos = map.CellCenter(x, ly) - Vector3.up * 0.05f;
+                Vector3 scale = new Vector3(cell * 0.97f, 0.10f, cell * 0.97f);
+                if (c == 'm')
+                {
+                    int o = PathOrientation(map, x, ly);
+                    GameObject tile = TDVisuals.Box(parent, "Tile", pos, scale, o == 2 ? crossMat : pathMat);
+                    if (o == 1) tile.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+                }
+                else
+                {
+                    Material m = voidMat;
+                    if (c == 't') m = tileMats[(x + ly) % tileMats.Length];
+                    else if (c == 's') m = startMat;
+                    else if (c == 'e') m = endMat;
+                    TDVisuals.Box(parent, "Tile", pos, scale, m);
+                }
+            }
+        }
+    }
+
+    static void BuildTilesReef(Transform parent, TDMap map, string[] layout, int gw, int gh)
+    {
+        Color[] tileCols =
+        {
+            new Color(0.98f, 0.55f, 0.58f),   // coral pink
+            new Color(0.66f, 0.50f, 0.95f),   // anemone purple
+            new Color(0.50f, 0.88f, 0.60f),   // algae green
+            new Color(0.97f, 0.96f, 0.92f)    // shell white
+        };
+        Material[] tileMats = new Material[tileCols.Length];
+        for (int i = 0; i < tileCols.Length; i++)
+            tileMats[i] = TDVisuals.TexturedMat(TDTextures.Seabed(), tileCols[i], Vector2.one);
+
+        Material pathMat = TDVisuals.TexturedMat(TDTextures.ShipWreck(), Color.white, Vector2.one);
+        Material crossMat = TDVisuals.TexturedMat(TDTextures.ShipWreckCross(), Color.white, Vector2.one);
+        Material voidMat = TDVisuals.Mat(new Color(0.78f, 0.76f, 0.68f), 0f, 0.3f);     // open seabed sand
+        Material startMat = TDVisuals.Mat(new Color(0.35f, 0.85f, 0.50f), 0f, 0.45f);
+        Material endMat = TDVisuals.Mat(new Color(0.90f, 0.30f, 0.28f), 0f, 0.45f);
+
+        float cell = map.Cell;
+        for (int ly = 0; ly < gh; ly++)
+        {
+            for (int x = 0; x < gw; x++)
+            {
+                char c = layout[ly][x];
+                Vector3 pos = map.CellCenter(x, ly) - Vector3.up * 0.05f;
+                Vector3 scale = new Vector3(cell * 0.97f, 0.10f, cell * 0.97f);
+                if (c == 'm')
+                {
+                    int o = PathOrientation(map, x, ly);
+                    GameObject tile = TDVisuals.Box(parent, "Tile", pos, scale, o == 2 ? crossMat : pathMat);
+                    if (o == 1) tile.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+                }
+                else
+                {
+                    Material m = voidMat;
+                    if (c == 't') m = tileMats[(x + ly) % tileMats.Length];
+                    else if (c == 's') m = startMat;
+                    else if (c == 'e') m = endMat;
+                    TDVisuals.Box(parent, "Tile", pos, scale, m);
+                }
+            }
+        }
+    }
+
+    static void BuildTilesZen(Transform parent, TDMap map, string[] layout, int gw, int gh)
+    {
+        Color[] tileCols =
+        {
+            new Color(0.74f, 0.74f, 0.72f),   // stone grey
+            new Color(0.62f, 0.74f, 0.55f),   // moss green
+            new Color(0.78f, 0.42f, 0.38f),   // maple red
+            new Color(0.90f, 0.82f, 0.56f)    // straw gold
+        };
+        Material[] tileMats = new Material[tileCols.Length];
+        for (int i = 0; i < tileCols.Length; i++)
+            tileMats[i] = TDVisuals.TexturedMat(TDTextures.RakedGravel(), tileCols[i], Vector2.one);
+
+        Material pathMat = TDVisuals.TexturedMat(TDTextures.SteppingPath(), Color.white, Vector2.one);
+        Material crossMat = TDVisuals.TexturedMat(TDTextures.SteppingPathCross(), Color.white, Vector2.one);
+        Material voidMat = TDVisuals.Mat(new Color(0.90f, 0.89f, 0.86f), 0f, 0.3f);     // open raked gravel
+        Material startMat = TDVisuals.Mat(new Color(0.45f, 0.70f, 0.45f), 0f, 0.4f);
+        Material endMat = TDVisuals.Mat(new Color(0.76f, 0.28f, 0.26f), 0f, 0.4f);
+
+        float cell = map.Cell;
+        for (int ly = 0; ly < gh; ly++)
+        {
+            for (int x = 0; x < gw; x++)
+            {
+                char c = layout[ly][x];
+                Vector3 pos = map.CellCenter(x, ly) - Vector3.up * 0.05f;
+                Vector3 scale = new Vector3(cell * 0.97f, 0.10f, cell * 0.97f);
+                if (c == 'm')
+                {
+                    int o = PathOrientation(map, x, ly);
+                    GameObject tile = TDVisuals.Box(parent, "Tile", pos, scale, o == 2 ? crossMat : pathMat);
+                    if (o == 1) tile.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+                }
+                else
+                {
+                    Material m = voidMat;
+                    if (c == 't') m = tileMats[(x + ly) % tileMats.Length];
+                    else if (c == 's') m = startMat;
+                    else if (c == 'e') m = endMat;
+                    TDVisuals.Box(parent, "Tile", pos, scale, m);
+                }
+            }
+        }
+    }
+
+    static void BuildTilesClassroom(Transform parent, TDMap map, string[] layout, int gw, int gh)
+    {
+        Color[] tileCols =
+        {
+            new Color(0.98f, 0.88f, 0.35f),   // sticky yellow
+            new Color(0.98f, 0.55f, 0.68f),   // sticky pink
+            new Color(0.45f, 0.72f, 0.95f),   // sticky blue
+            new Color(0.55f, 0.88f, 0.52f)    // sticky green
+        };
+        Material[] tileMats = new Material[tileCols.Length];
+        for (int i = 0; i < tileCols.Length; i++)
+            tileMats[i] = TDVisuals.TexturedMat(TDTextures.NotePaper(), tileCols[i], Vector2.one);
+
+        Material pathMat = TDVisuals.TexturedMat(TDTextures.Notebook(), Color.white, Vector2.one);
+        Material crossMat = TDVisuals.TexturedMat(TDTextures.NotebookCross(), Color.white, Vector2.one);
+        Material voidMat = TDVisuals.Mat(new Color(0.80f, 0.75f, 0.66f), 0f, 0.3f);     // kraft desk paper
+        Material startMat = TDVisuals.Mat(new Color(0.35f, 0.80f, 0.45f), 0f, 0.4f);
+        Material endMat = TDVisuals.Mat(new Color(0.88f, 0.28f, 0.26f), 0f, 0.4f);
 
         float cell = map.Cell;
         for (int ly = 0; ly < gh; ly++)

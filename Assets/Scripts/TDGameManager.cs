@@ -207,6 +207,21 @@ public partial class TDGameManager : MonoBehaviour
                 fillCol = new Color(0.60f, 0.70f, 0.85f); fillI = 0.26f;
                 ambCol = new Color(0.16f, 0.18f, 0.21f); shadow = 0.40f;
                 break;
+            case BoardTheme.SunkenReef:                          // dim blue-green, hazy
+                keyCol = new Color(0.70f, 0.92f, 0.95f); keyI = 0.72f;
+                fillCol = new Color(0.30f, 0.60f, 0.75f); fillI = 0.35f;
+                ambCol = new Color(0.15f, 0.22f, 0.26f); shadow = 0.50f;
+                break;
+            case BoardTheme.ZenGarden:                           // soft overcast daylight
+                keyCol = new Color(0.95f, 0.95f, 0.94f); keyI = 0.82f;
+                fillCol = new Color(0.62f, 0.66f, 0.72f); fillI = 0.25f;
+                ambCol = new Color(0.24f, 0.24f, 0.23f); shadow = 0.30f;
+                break;
+            case BoardTheme.ClassroomDesk:                       // bright even classroom daylight
+                keyCol = new Color(1.00f, 0.97f, 0.90f); keyI = 1.00f;
+                fillCol = new Color(0.70f, 0.76f, 0.86f); fillI = 0.25f;
+                ambCol = new Color(0.23f, 0.22f, 0.21f); shadow = 0.35f;
+                break;
             default:                                             // Kid's Bedroom: warm afternoon
                 keyCol = new Color(1.00f, 0.86f, 0.66f); keyI = 0.95f;
                 fillCol = new Color(0.55f, 0.62f, 0.78f); fillI = 0.16f;
