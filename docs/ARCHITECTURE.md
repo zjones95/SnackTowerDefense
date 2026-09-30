@@ -153,7 +153,10 @@ sparkle — never a stall or a desync.
 | `td.boards` | host → all | full per-board state roster |
 | `td.chat` | client → host | chat line |
 | `td.chatall` | host → all | sender name + chat line |
-| `td.hello` / `td.lobby` / `td.start` | session | handshake / lobby roster / match start |
+| `td.hello` | client → host | handshake ping carrying the joiner's board theme |
+| `td.theme` | client → host | changed lobby board theme |
+| `td.lobby` | host → all | roster (name, host flag, **board theme**) + difficulty |
+| `td.start` | host → all | match start |
 
 **`BoardSnapshot` layout** (`Net/BoardSnapshot.cs`):
 - `MobSnap { ushort Id; byte Type; short X, Z; byte Hp, Status, Stacks }` — `Status` bits: 0 slowed/stunned, 1 stunned, 2 tar.
@@ -165,6 +168,8 @@ sparkle — never a stall or a desync.
 - **Any change to `BoardSnapshot` (or the lobby/match state) bumps `NetConfig.GameVersion`.**
 - **Cosmetic FX lives on a separate message** (`FxSync`) with its own format — it can change or be dropped/throttled without touching the sim version or risking a desync.
 - The join handshake compares `NetConfig.FullVersion` (`<scheme>+<git sha>`); peers on different builds/commits are refused at connection approval.
+- **Per-player board theme** rides the *lobby roster*, not the snapshot: each peer picks its own `BoardTheme`, the host is authoritative (`td.hello` seeds it, `td.theme` updates it), and `td.lobby` republishes it. A remote board is built once at match start from its owner's theme (`TDGameManager.BuildRemoteBoards`), so no per-frame theme data is sent. Because the roster changed, this bumped `GameVersion` to `0.10.0`.
+- Lighting is **global** (one sun/fill/ambient per scene), so a remote board renders the right tiles and props but under the *local* player's light tint. Per-board lighting would need render layers plus per-light culling masks.
 
 ## Conventions
 

@@ -223,6 +223,10 @@ The main menu now splits into **Single Player** and **Multiplayer**.
 
 - One board per player, laid out side by side. Other boards show a nameplate with
   the player's name, lives and status (their current wave / `cleared` / `out`).
+- **Per-player board theme** — in the lobby every player picks **their own** board
+  with a `Your board: < >` selector. The roster shows each player's choice, and
+  in-game the remote boards are built from their owners' themes. The board you pick
+  in the lobby also becomes your single-player board (it's the same setting).
 - Waves are **independent per board** (#7): each board gets a 10s prep on its
   opening wave, then clearing your wave starts your next one immediately — you never
   wait for another player.

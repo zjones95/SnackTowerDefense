@@ -11,8 +11,9 @@ public static class NetConfig
 
     /// <summary>Bumped when the wire protocol changes; mismatched builds are
     /// refused before the match starts. Builds append "+&lt;git sha&gt;" via
-    /// Assets/Editor/BuildVersion.cs (see <see cref="FullVersion"/>).</summary>
-    public const string GameVersion = "0.9.0";
+    /// Assets/Editor/BuildVersion.cs (see <see cref="FullVersion"/>).
+    /// 0.10.0: per-player board theme added to the lobby roster + Hello payload.</summary>
+    public const string GameVersion = "0.10.0";
 
     /// <summary>Relay join codes are 6 characters; direct targets look like "1.2.3.4:7777".</summary>
     public const int RelayCodeLength = 6;

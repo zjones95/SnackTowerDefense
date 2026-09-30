@@ -29,7 +29,10 @@ public static class TDSpectatePreview
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
         RenderSettings.ambientLight = new Color(0.12f, 0.11f, 0.10f);
 
-        RemoteBoard rb = RemoteBoard.Create(null, Vector3.zero, 7, "Zach");
+        // A remote board renders its owner's chosen theme; this preview shows the
+        // Arctic board so the spectate view can be eyeballed against a non-default one.
+        RemoteBoard rb = RemoteBoard.Create(null, Vector3.zero, 7, "Zach",
+            TDBoardBuilder.ThemeIndex(BoardTheme.ArcticOutpost));
         rb.SetStatus("wave 3   |   14 lives");
 
         TDMap map = TDBoardBuilder.CreateMap(TDGameManager.Layout, TDGameManager.Route, 2f, Vector3.zero);

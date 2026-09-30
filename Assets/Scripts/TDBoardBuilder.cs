@@ -94,6 +94,21 @@ public static class TDBoardBuilder
     public static BoardTheme NextTheme(BoardTheme t) { return ShiftTheme(t, 1); }
     public static BoardTheme PrevTheme(BoardTheme t) { return ShiftTheme(t, -1); }
 
+    /// <summary>Index of a theme in the picker ring (0 when it isn't listed).</summary>
+    public static int ThemeIndex(BoardTheme t)
+    {
+        int i = System.Array.IndexOf(PickerThemes, t);
+        return i < 0 ? 0 : i;
+    }
+
+    /// <summary>Maps a theme index off the wire back to a theme, falling back to
+    /// the original board for anything unknown (a peer on a newer build).</summary>
+    public static BoardTheme ClampTheme(int index)
+    {
+        if (index < 0 || index >= PickerThemes.Length) return BoardTheme.Bedroom;
+        return PickerThemes[index];
+    }
+
     static BoardTheme ShiftTheme(BoardTheme t, int dir)
     {
         int n = PickerThemes.Length;

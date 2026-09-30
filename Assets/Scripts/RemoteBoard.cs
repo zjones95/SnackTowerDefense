@@ -11,8 +11,12 @@ public class RemoteBoard : MonoBehaviour
     public ulong ClientId;
     public string PlayerName = "Player";
     public Vector3 BoardOffset;
+    /// <summary>Index into <see cref="TDBoardBuilder.PickerThemes"/>: the board
+    /// its owner picked. Rebuilds the static dressing if it ever changes.</summary>
+    public int Theme;
 
     private TDMap map;
+    private Transform staticRoot;
     private Transform nameplate;
     private TextMesh plateText;
     private Transform liveRoot;
@@ -81,7 +85,7 @@ public class RemoteBoard : MonoBehaviour
         return g;
     }
 
-    public static RemoteBoard Create(Transform parent, Vector3 offset, ulong clientId, string playerName)
+    public static RemoteBoard Create(Transform parent, Vector3 offset, ulong clientId, string playerName, int theme)
     {
         GameObject go = new GameObject("RemoteBoard_" + playerName);
         go.transform.SetParent(parent, false);
@@ -89,10 +93,7 @@ public class RemoteBoard : MonoBehaviour
         rb.ClientId = clientId;
         rb.PlayerName = playerName;
         rb.BoardOffset = offset;
-
-        rb.map = TDBoardBuilder.CreateMap(TDGameManager.Layout, TDGameManager.Route, 2f, offset);
-        TDBoardBuilder.BuildTiles(go.transform, rb.map, TDGameManager.ActiveTheme);
-        TDBoardBuilder.BuildRoom(go.transform, rb.map, offset, TDGameManager.ActiveTheme);
+        rb.BuildStatic(TDBoardBuilder.ClampTheme(theme));
 
         GameObject live = new GameObject("Live");
         live.transform.SetParent(go.transform, false);
@@ -100,6 +101,23 @@ public class RemoteBoard : MonoBehaviour
 
         rb.BuildNameplate(offset);
         return rb;
+    }
+
+    /// <summary>Builds (or rebuilds) the board's static dressing — tiles and room
+    /// — for the owner's chosen theme. Kept on its own child so a theme change can
+    /// swap it without touching the live mobs/towers/projectiles.</summary>
+    void BuildStatic(BoardTheme theme)
+    {
+        Theme = TDBoardBuilder.ThemeIndex(theme);
+        if (staticRoot != null) Destroy(staticRoot.gameObject);
+
+        GameObject go = new GameObject("Static");
+        go.transform.SetParent(transform, false);
+        staticRoot = go.transform;
+
+        map = TDBoardBuilder.CreateMap(TDGameManager.Layout, TDGameManager.Route, 2f, BoardOffset);
+        TDBoardBuilder.BuildTiles(go.transform, map, theme);
+        TDBoardBuilder.BuildRoom(go.transform, map, BoardOffset, theme);
     }
 
     void BuildNameplate(Vector3 offset)
@@ -131,17 +149,19 @@ public class RemoteBoard : MonoBehaviour
     public void SetStatus(string status)
     {
         if (plateText == null) return;
-        string s = PlayerName + "\n" + status;
+        string s = PlayerName + "\n" + TDBoardBuilder.ThemeName(TDBoardBuilder.ClampTheme(Theme)) + "\n" + status;
         if (plateText.text != s) plateText.text = s;
     }
 
     /// <summary>Repoints this board at a new ClientId (a rejoin carries a fresh
-    /// one). Position and rendered content stay; snapshots resume under the id.</summary>
-    public void Reassign(ulong clientId, string playerName)
+    /// one). Position and rendered content stay; snapshots resume under the id.
+    /// A changed board choice rebuilds the static dressing.</summary>
+    public void Reassign(ulong clientId, string playerName, int theme)
     {
         ClientId = clientId;
         PlayerName = playerName ?? PlayerName;
         gameObject.name = "RemoteBoard_" + PlayerName;
+        if (theme != Theme) BuildStatic(TDBoardBuilder.ClampTheme(theme));
     }
 
     // ------------------------------------------------------------- rendering

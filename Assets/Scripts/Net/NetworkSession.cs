@@ -34,6 +34,7 @@ public class NetworkSession : MonoBehaviour
         public const string Hello = "td.hello";
         public const string Lobby = "td.lobby";
         public const string Start = "td.start";
+        public const string Theme = "td.theme";   // client -> host: chosen board
     }
 
     public enum SessionState { Idle, Hosting, Connecting, InLobby, Reconnecting, Failed }
@@ -51,6 +52,42 @@ public class NetworkSession : MonoBehaviour
         if (!IsHost) return;
         MatchDifficulty = d;
         BroadcastLobby();
+    }
+
+    /// <summary>This peer's chosen board theme (index into
+    /// <see cref="TDBoardBuilder.PickerThemes"/>). Kept in step with
+    /// <see cref="TDGameManager.ActiveTheme"/> and replicated via the roster so
+    /// every player can see it and remote boards render the right theme.</summary>
+    public int LocalTheme { get; private set; }
+
+    /// <summary>Publishes this peer's board choice. On the host it updates the
+    /// local roster row directly; on a client it messages the host (optimistically
+    /// updating the local copy first so the lobby reacts instantly).</summary>
+    public void SetTheme(int theme)
+    {
+        LocalTheme = theme;
+        ApplyLocalTheme(theme);
+
+        if (IsHost) { BroadcastLobby(); return; }
+
+        if (Manager == null || Manager.CustomMessagingManager == null || !LinkUp) return;
+        using var w = new FastBufferWriter(4, Allocator.Temp);
+        w.WriteValueSafe((byte)theme);
+        Manager.CustomMessagingManager.SendNamedMessage(Msg.Theme, NetworkManager.ServerClientId, w);
+    }
+
+    void ApplyLocalTheme(int theme)
+    {
+        ulong me = LocalClientId;
+        for (int i = 0; i < Players.Count; i++)
+        {
+            if (Players[i].ClientId != me) continue;
+            var p = Players[i];
+            p.Theme = theme;
+            Players[i] = p;
+            break;
+        }
+        LobbyChanged?.Invoke();
     }
 
     /// <summary>Authoritative on the host; populated from messages on clients.</summary>
@@ -280,6 +317,7 @@ public class NetworkSession : MonoBehaviour
         cm.RegisterNamedMessageHandler(Msg.Hello, OnHelloMessage);
         cm.RegisterNamedMessageHandler(Msg.Lobby, OnLobbyMessage);
         cm.RegisterNamedMessageHandler(Msg.Start, OnStartMessage);
+        cm.RegisterNamedMessageHandler(Msg.Theme, OnThemeMessage);
 
         for (int i = 0; i < matchNames.Length; i++)
         {
@@ -333,7 +371,8 @@ public class NetworkSession : MonoBehaviour
         Players.Clear();
         namesByClient.Clear();
         namesByClient[Manager.LocalClientId] = localName;
-        Players.Add(new LobbyPlayerInfo { ClientId = Manager.LocalClientId, Name = localName, IsHost = true });
+        LocalTheme = (int)TDGameManager.ActiveTheme;
+        Players.Add(new LobbyPlayerInfo { ClientId = Manager.LocalClientId, Name = localName, IsHost = true, Theme = LocalTheme });
         BroadcastLobby();
     }
 
@@ -366,6 +405,7 @@ public class NetworkSession : MonoBehaviour
     public async void JoinGame(string target, string playerName)
     {
         localName = SanitizeName(playerName);
+        LocalTheme = (int)TDGameManager.ActiveTheme;
         Error = ""; Address = ""; AddressIsRelay = false;
         leaving = false;
         EnsureManager();
@@ -473,7 +513,7 @@ public class NetworkSession : MonoBehaviour
         LobbyChanged?.Invoke();
         if (!IsHost || Manager.CustomMessagingManager == null) return;
 
-        using var writer = new FastBufferWriter(4 + NetConfig.MaxPlayers * 48, Allocator.Temp);
+        using var writer = new FastBufferWriter(8 + NetConfig.MaxPlayers * 56, Allocator.Temp);
         writer.WriteValueSafe(Players.Count);
         writer.WriteValueSafe((byte)MatchDifficulty);
         for (int i = 0; i < Players.Count; i++)
@@ -481,6 +521,7 @@ public class NetworkSession : MonoBehaviour
             writer.WriteValueSafe(Players[i].ClientId);
             writer.WriteValueSafe(Players[i].Name ?? "");
             writer.WriteValueSafe(Players[i].IsHost);
+            writer.WriteValueSafe((byte)Players[i].Theme);
         }
         Manager.CustomMessagingManager.SendNamedMessageToAll(Msg.Lobby, writer);
     }
@@ -496,7 +537,9 @@ public class NetworkSession : MonoBehaviour
             reader.ReadValueSafe(out ulong id);
             reader.ReadValueSafe(out string name);
             reader.ReadValueSafe(out bool isHost);
-            Players.Add(new LobbyPlayerInfo { ClientId = id, Name = name, IsHost = isHost });
+            byte theme = 0;
+            if (reader.Length - reader.Position >= 1) reader.ReadValueSafe(out theme);
+            Players.Add(new LobbyPlayerInfo { ClientId = id, Name = name, IsHost = isHost, Theme = theme });
         }
         LobbyChanged?.Invoke();
         Debug.Log("[net] roster: " + Players.Count + " player(s)");
@@ -510,7 +553,39 @@ public class NetworkSession : MonoBehaviour
 
     void OnHelloMessage(ulong sender, FastBufferReader reader)
     {
-        if (IsHost) BroadcastLobby();
+        if (!IsHost) return;
+        // The hello carries the joiner's board choice; adopt it before the first
+        // roster broadcast so nobody sees a default and then a flip.
+        if (reader.Length - reader.Position >= 1)
+        {
+            reader.ReadValueSafe(out byte theme);
+            for (int i = 0; i < Players.Count; i++)
+            {
+                if (Players[i].ClientId != sender) continue;
+                var p = Players[i];
+                p.Theme = theme;
+                Players[i] = p;
+                break;
+            }
+        }
+        BroadcastLobby();
+    }
+
+    /// <summary>Host side of a lobby board change.</summary>
+    void OnThemeMessage(ulong sender, FastBufferReader reader)
+    {
+        if (!IsHost) return;
+        if (reader.Length - reader.Position < 1) return;
+        reader.ReadValueSafe(out byte theme);
+        for (int i = 0; i < Players.Count; i++)
+        {
+            if (Players[i].ClientId != sender) continue;
+            var p = Players[i];
+            p.Theme = theme;
+            Players[i] = p;
+            break;
+        }
+        BroadcastLobby();
     }
 
     // ---------------------------------------------------------- connections
@@ -604,7 +679,8 @@ public class NetworkSession : MonoBehaviour
             Debug.Log("[net] connected to host as client " + id + (wasRejoin ? " (rejoin)" : ""));
             if (Manager.CustomMessagingManager != null)
             {
-                using var writer = new FastBufferWriter(1, Allocator.Temp);
+                using var writer = new FastBufferWriter(4, Allocator.Temp);
+                writer.WriteValueSafe((byte)LocalTheme);
                 Manager.CustomMessagingManager.SendNamedMessage(Msg.Hello, NetworkManager.ServerClientId, writer);
             }
             // The game resyncs from live state (no wave reset, no board reset).

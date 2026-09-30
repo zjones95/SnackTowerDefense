@@ -1439,8 +1439,13 @@ public partial class TDGameManager : MonoBehaviour
         if (mpActive)
             GUI.Label(new Rect(Screen.width - 240, 82, 228, 24), "Multiplayer: " + mpPlayerCount, Style(16, TextAnchor.MiddleRight, new Color(0.65f, 0.85f, 1f)));
         if (mpActive && !ViewingOwnBoard)
-            GUI.Label(new Rect(0, 84, Screen.width, 26), "SPECTATING " + SpectateName() + "   -   press 0 for your board",
+        {
+            string bd = ThemeNameFor(CurrentViewClientId());
+            GUI.Label(new Rect(0, 84, Screen.width, 26),
+                "SPECTATING " + SpectateName() + (string.IsNullOrEmpty(bd) ? "" : "   [" + bd + "]") +
+                "   -   press 0 for your board",
                 Style(18, TextAnchor.MiddleCenter, new Color(1f, 0.85f, 0.5f)));
+        }
 
         if (State == GameState.Playing)
         {

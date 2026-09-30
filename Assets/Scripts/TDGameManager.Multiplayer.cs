@@ -67,6 +67,15 @@ public partial class TDGameManager
         return "player";
     }
 
+    /// <summary>Client id of the board the camera is on (for its board name).</summary>
+    ulong CurrentViewClientId()
+    {
+        NetworkSession ns = NetworkSession.Instance;
+        if (ns != null && viewSlot >= 0 && viewSlot < ns.Players.Count)
+            return ns.Players[viewSlot].ClientId;
+        return ulong.MaxValue;
+    }
+
     void UpdateSpectate()
     {
         NetworkSession ns = NetworkSession.Instance;
@@ -198,9 +207,20 @@ public partial class TDGameManager
         {
             if (i == mySlot) continue;
             RemoteBoard rb = RemoteBoard.Create(worldRoot, BoardLayout.Position(i, count),
-                ns.Players[i].ClientId, ns.Players[i].Name);
+                ns.Players[i].ClientId, ns.Players[i].Name, ns.Players[i].Theme);
             remoteBoards.Add(rb);
         }
+    }
+
+    /// <summary>Board choice a player picked in the lobby, by client id (0 when
+    /// unknown). Used when a board is adopted after a rejoin.</summary>
+    int ThemeForClient(ulong id)
+    {
+        NetworkSession ns = NetworkSession.Instance;
+        if (ns != null)
+            for (int i = 0; i < ns.Players.Count; i++)
+                if (ns.Players[i].ClientId == id) return ns.Players[i].Theme;
+        return 0;
     }
 
     /// <summary>Mid-match link return: the board kept simulating through the
@@ -245,7 +265,7 @@ public partial class TDGameManager
                 if (rb.PlayerName == b.Name) { orphan = rb; break; }
             }
             RemoteBoard target = orphan ?? anyOrphan;
-            if (target != null) target.Reassign(b.ClientId, b.Name);
+            if (target != null) target.Reassign(b.ClientId, b.Name, ThemeForClient(b.ClientId));
         }
 
         // Rebuild once after our own rejoin lands a fresh roster with our new id.
@@ -582,6 +602,29 @@ public partial class TDGameManager
         PlayerPrefs.Save();
     }
 
+    /// <summary>Lobby board choice: swaps this peer's own theme and tells the
+    /// host so the roster (and every remote board) follows. Other players'
+    /// boards are untouched.</summary>
+    void SelectLocalTheme(int dir)
+    {
+        BoardTheme next = dir >= 0 ? TDBoardBuilder.NextTheme(ActiveTheme)
+                                   : TDBoardBuilder.PrevTheme(ActiveTheme);
+        SetTheme(next);                                            // local board + lighting + persistence
+        NetworkSession ns = NetworkSession.Instance;
+        if (ns != null && ns.InSession) ns.SetTheme(TDBoardBuilder.ThemeIndex(next));
+    }
+
+    /// <summary>Board choice of another player, for display.</summary>
+    string ThemeNameFor(ulong clientId)
+    {
+        NetworkSession ns = NetworkSession.Instance;
+        if (ns != null)
+            for (int i = 0; i < ns.Players.Count; i++)
+                if (ns.Players[i].ClientId == clientId)
+                    return TDBoardBuilder.ThemeName(TDBoardBuilder.ClampTheme(ns.Players[i].Theme));
+        return "-";
+    }
+
     // ------------------------------------------------------------------- UI
     void DrawMultiplayer()
     {
@@ -793,8 +836,34 @@ public partial class TDGameManager
             if (players[i].IsHost) nm += "  (host)";
             if (players[i].ClientId == NetworkManagerLocalClientId()) nm += "   (you)";
             GUI.Label(new Rect(cx - 200f, listY + 30f + i * 24f, 400f, 22f),
-                "• " + nm, Style(16, TextAnchor.MiddleLeft, new Color(0.9f, 0.92f, 0.95f)));
+                "• " + nm + "  -  " + TDBoardBuilder.ThemeName(TDBoardBuilder.ClampTheme(players[i].Theme)),
+                Style(16, TextAnchor.MiddleLeft, new Color(0.9f, 0.92f, 0.95f)));
         }
+
+        // ---- your board (every player picks their own) -------------------
+        // Sits to the left of the roster column so it doesn't fight the list
+        // length for vertical space.
+        float bbw = 44f, bbh = 38f;
+        float bbx = cx - 500f;
+        GUI.Label(new Rect(bbx, listY, 244f, 26f), "Your board:", Style(17, TextAnchor.MiddleLeft, new Color(0.75f, 0.8f, 0.85f)));
+        if (GUI.Button(new Rect(bbx, listY + 30f, bbw, bbh), "<", PaperButton(18)))
+        {
+            Click();
+            SelectLocalTheme(-1);
+        }
+        GUI.Label(new Rect(bbx + bbw + 8f, listY + 30f, 160f, bbh),
+            TDBoardBuilder.ThemeName(ActiveTheme), Style(17, TextAnchor.MiddleCenter, new Color(0.6f, 1f, 0.7f)));
+        if (GUI.Button(new Rect(bbx + bbw + 176f, listY + 30f, bbw, bbh), ">", PaperButton(18)))
+        {
+            Click();
+            SelectLocalTheme(1);
+        }
+        GUIStyle boardBlurb = Style(12, TextAnchor.UpperLeft, new Color(0.72f, 0.76f, 0.82f));
+        boardBlurb.wordWrap = true;
+        GUI.Label(new Rect(bbx, listY + 76f, 268f, 62f), TDBoardBuilder.ThemeBlurb(ActiveTheme), boardBlurb);
+        GUI.Label(new Rect(bbx, listY + 140f, 268f, 44f),
+            "Only your own board changes - everyone else keeps theirs.",
+            Style(12, TextAnchor.UpperLeft, new Color(0.6f, 0.63f, 0.68f)));
 
         // ---- difficulty ----
         float dy = Screen.height * 0.63f;
