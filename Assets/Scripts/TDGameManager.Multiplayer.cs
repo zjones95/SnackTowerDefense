@@ -415,8 +415,10 @@ public partial class TDGameManager
     void DrawMpReconnect()
     {
         NetworkSession ns = NetworkSession.Instance;
-        if (ns == null || !ns.Reconnecting) return;
+        if (ns == null || (!ns.Reconnecting && ns.State != NetworkSession.SessionState.Failed)) return;
         if (State != GameState.Playing || paused) return;
+
+        bool failed = ns.State == NetworkSession.SessionState.Failed;
 
         float w = 460f, h = 190f;
         float x = (Screen.width - w) * 0.5f;
@@ -427,14 +429,14 @@ public partial class TDGameManager
         GUI.DrawTexture(new Rect(x, y, w, h), Texture2D.whiteTexture);
         GUI.color = old;
 
-        GUI.Label(new Rect(x, y + 12f, w, 34f), "CONNECTION LOST",
+        GUI.Label(new Rect(x, y + 12f, w, 34f), failed ? "RECONNECTION FAILED" : "CONNECTION LOST",
             Style(26, TextAnchor.MiddleCenter, new Color(1f, 0.62f, 0.4f)));
         GUI.Label(new Rect(x + 20f, y + 52f, w - 40f, 44f),
-            "Retrying (" + Mathf.FloorToInt(ns.ReconnectingSeconds) + "s) - your game continues underneath.",
+            failed ? ns.Error : "Retrying (" + Mathf.FloorToInt(ns.ReconnectingSeconds) + "s) - your game continues underneath.",
             Style(14, TextAnchor.MiddleCenter, new Color(0.88f, 0.9f, 0.94f)));
 
         GUIStyle btn = PaperButton(18);
-        if (GUI.Button(new Rect(x + 30f, y + 108f, 180f, 44f), "Retry now", btn))
+        if (!failed && GUI.Button(new Rect(x + 30f, y + 108f, 180f, 44f), "Retry now", btn))
         {
             Click();
             ns.RetryNow();

@@ -217,6 +217,7 @@ public class NetworkSession : MonoBehaviour
     private float reconnectTimer;
     private float reconnectStart;
     private float reconnectAttemptStart;
+    private int reconnectAttemptId;
 
     public const float ReconnectGraceSeconds = 300f;
     const float ReconnectRetrySeconds = 4f;
@@ -271,14 +272,21 @@ public class NetworkSession : MonoBehaviour
             {
                 if (Time.unscaledTime - reconnectAttemptStart > ConnectTimeoutSeconds)
                 {
+                    Debug.LogWarning("[net] reconnect attempt " + reconnectAttemptId + " timed out; resetting transport");
+                    reconnectAttemptId++; // invalidate any Relay join still awaiting a response
                     reconnectBusy = false;
                     reconnectTimer = ReconnectRetrySeconds;
+                    StopReconnectTransport();
                 }
             }
             else
             {
                 reconnectTimer -= Time.unscaledDeltaTime;
-                if (reconnectTimer <= 0f) TryReconnect();
+                // NGO's Shutdown is deferred to a network update. StartClient
+                // while it is still listening would just fail on every retry.
+                if (reconnectTimer <= 0f && Manager != null &&
+                    !Manager.IsListening && !Manager.ShutdownInProgress)
+                    TryReconnect();
             }
         }
     }
@@ -304,6 +312,7 @@ public class NetworkSession : MonoBehaviour
         Manager.ConnectionApprovalCallback += OnConnectionApproval;
         Manager.OnClientConnectedCallback += OnClientConnected;
         Manager.OnClientDisconnectCallback += OnClientDisconnected;
+        Manager.OnTransportFailure += OnTransportFailure;
         EnsureHandlers();
         return Manager;
     }
@@ -330,6 +339,12 @@ public class NetworkSession : MonoBehaviour
         }
 
         handlersReady = true;
+    }
+
+    void OnTransportFailure()
+    {
+        Debug.LogWarning("[net] transport failure; host=" + IsHost + " state=" + State +
+                         " t=" + Time.unscaledTime.ToString("0.0"));
     }
 
     // ------------------------------------------------------------------ host
@@ -668,7 +683,8 @@ public class NetworkSession : MonoBehaviour
             if (!exists)
                 Players.Add(new LobbyPlayerInfo { ClientId = id, Name = name, IsHost = id == Manager.LocalClientId, Guid = guid });
             if (!matchLive) BroadcastLobby();
-            Debug.Log("[net] client " + id + " connected (" + Players.Count + " in lobby)");
+            Debug.Log("[net] client " + id + " connected (" + Players.Count +
+                      " in lobby) t=" + Time.unscaledTime.ToString("0.0"));
         }
         else if (id == Manager.LocalClientId)
         {
@@ -676,6 +692,7 @@ public class NetworkSession : MonoBehaviour
             bool wasRejoin = State == SessionState.Reconnecting;
             State = SessionState.InLobby;
             reconnectBusy = false;
+            reconnectAttemptId++;
             Debug.Log("[net] connected to host as client " + id + (wasRejoin ? " (rejoin)" : ""));
             if (Manager.CustomMessagingManager != null)
             {
@@ -697,7 +714,8 @@ public class NetworkSession : MonoBehaviour
             // Mid-match the roster seat is kept (the board row is tombstoned by
             // MatchSync instead), so survivors' slots never shift. Pre-match a
             // departure still removes the seat as before.
-            if (matchLive) { Debug.Log("[net] client " + id + " dropped mid-match (seat held)"); return; }
+            if (matchLive) { Debug.Log("[net] client " + id + " dropped mid-match (seat held) t=" +
+                                       Time.unscaledTime.ToString("0.0")); return; }
             for (int i = Players.Count - 1; i >= 0; i--)
                 if (Players[i].ClientId == id) Players.RemoveAt(i);
             namesByClient.Remove(id);
@@ -709,9 +727,17 @@ public class NetworkSession : MonoBehaviour
         {
             if (matchLive)
             {
+                string rejoinReason = Manager.DisconnectReason;
+                if (!string.IsNullOrEmpty(rejoinReason) && rejoinReason.StartsWith("Version mismatch:", StringComparison.Ordinal))
+                {
+                    Error = rejoinReason;
+                    pendingLeave = true; // leave outside NGO's disconnect callback
+                    return;
+                }
                 // Our board keeps simulating locally (per-peer sim needs no
                 // link); park in Reconnecting and retry the last address.
-                Debug.Log("[net] link lost mid-match - holding board, retrying " + Address);
+                Debug.Log("[net] link lost mid-match - holding board, retrying " + Address +
+                          " reason=" + (string.IsNullOrEmpty(rejoinReason) ? "transport" : rejoinReason));
                 EnterReconnecting();
                 return;
             }
@@ -728,11 +754,22 @@ public class NetworkSession : MonoBehaviour
     /// sends drop silently (LinkUp) until the link is back.</summary>
     void EnterReconnecting()
     {
-        if (Manager != null && Manager.IsListening) Manager.Shutdown();
+        bool firstDrop = State != SessionState.Reconnecting;
+        reconnectAttemptId++;
+        StopReconnectTransport();
         State = SessionState.Reconnecting;
         reconnectBusy = false;
-        reconnectTimer = 0f;
-        reconnectStart = Time.unscaledTime;
+        reconnectTimer = firstDrop ? 0f : ReconnectRetrySeconds;
+        if (firstDrop) reconnectStart = Time.unscaledTime;
+    }
+
+    void StopReconnectTransport()
+    {
+        // NGO discards CustomMessagingManager during shutdown. The next client
+        // start must register all named handlers against its replacement.
+        handlersReady = false;
+        if (Manager != null && Manager.IsListening && !Manager.ShutdownInProgress)
+            Manager.Shutdown(true);
     }
 
     /// <summary>One rejoin attempt against the last address (relay gets a fresh
@@ -742,6 +779,9 @@ public class NetworkSession : MonoBehaviour
         if (Manager == null || string.IsNullOrEmpty(Address)) { Fail("Could not reconnect to the match."); return; }
         reconnectBusy = true;
         reconnectAttemptStart = Time.unscaledTime;
+        int attempt = ++reconnectAttemptId;
+        Debug.Log("[net] reconnect attempt " + attempt + " to " + Address +
+                  " t=" + reconnectAttemptStart.ToString("0.0"));
 
         bool started = false;
         try
@@ -751,7 +791,9 @@ public class NetworkSession : MonoBehaviour
                 if (!await EnsureServices()) { Debug.Log("[net] rejoin: services unavailable"); }
                 else
                 {
+                    if (State != SessionState.Reconnecting || attempt != reconnectAttemptId) return;
                     var join = await RelayService.Instance.JoinAllocationAsync(Address.ToUpperInvariant());
+                    if (State != SessionState.Reconnecting || attempt != reconnectAttemptId) return;
                     RelayServerEndpoint ep = PickEndpoint(join.ServerEndpoints, RelayConnectionType());
                     if (ep == null) Debug.Log("[net] rejoin: no usable endpoint.");
                     else
@@ -760,6 +802,7 @@ public class NetworkSession : MonoBehaviour
                         leaving = false;
                         Manager.NetworkConfig.ConnectionData = Encoding.UTF8.GetBytes(ConnectionPayload(localName, LocalGuid));
                         started = Manager.StartClient();
+                        if (started) EnsureHandlers();
                     }
                 }
             }
@@ -770,14 +813,18 @@ public class NetworkSession : MonoBehaviour
                 leaving = false;
                 Manager.NetworkConfig.ConnectionData = Encoding.UTF8.GetBytes(ConnectionPayload(localName, LocalGuid));
                 started = Manager.StartClient();
+                if (started) EnsureHandlers();
             }
         }
         catch (Exception e)
         {
-            Debug.Log("[net] rejoin attempt failed: " + e.Message);
+            Debug.LogWarning("[net] reconnect attempt " + attempt + " failed: " + e.Message);
         }
 
+        if (State != SessionState.Reconnecting || attempt != reconnectAttemptId) return;
         if (started) return;   // OnClientConnected (or the attempt timeout) resolves it
+        Debug.LogWarning("[net] reconnect attempt " + attempt + " could not start; retrying");
+        StopReconnectTransport();
         reconnectBusy = false;
         reconnectTimer = ReconnectRetrySeconds;
     }
@@ -803,6 +850,7 @@ public class NetworkSession : MonoBehaviour
         handlersReady = false;
         matchLive = false;
         reconnectBusy = false;
+        reconnectAttemptId++;
 
         if (Manager != null && Manager.IsListening) Manager.Shutdown();
         if (Manager != null) Destroy(Manager.gameObject);
