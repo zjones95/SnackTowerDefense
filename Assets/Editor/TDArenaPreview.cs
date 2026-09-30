@@ -8,12 +8,6 @@ public static class TDArenaPreview
         string dir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "opencode");
         System.IO.Directory.CreateDirectory(dir);
 
-        string[] layout = TDGameManager.Layout;
-        Vector2Int[] route = TDGameManager.Route;
-        float cell = 2f;
-        int gw = layout[0].Length, gh = layout.Length;
-        TDMap map = new TDMap(layout, route, cell, new Vector3(-gw * cell * 0.5f, 0f, -gh * cell * 0.5f));
-
         // Batch mode never runs Awake, so ActiveTheme sits at its declared default.
         // TD_PREVIEW_THEME lets a headless render target any board without a rebuild:
         //   TD_PREVIEW_THEME=SpaceStation  ->  map_preview.png for that theme.
@@ -23,6 +17,11 @@ public static class TDArenaPreview
             try { TDGameManager.ActiveTheme = (BoardTheme)System.Enum.Parse(typeof(BoardTheme), themeEnv, true); }
             catch { Debug.LogWarning("TDArenaPreview: unknown TD_PREVIEW_THEME '" + themeEnv + "', using " + TDGameManager.ActiveTheme); }
         }
+
+        bool tropical = TDGameManager.ActiveTheme == BoardTheme.TropicalIsland;
+        string[] layout = tropical ? TropicalMap.Layout : TDGameManager.Layout;
+        Vector2Int[] route = tropical ? TropicalMap.Route : TDGameManager.Route;
+        TDMap map = TDBoardBuilder.CreateMap(layout, route, 2f, Vector3.zero);
 
         // Same per-theme light table the game uses, so the preview matches a run.
         Color keyCol, fillCol, ambCol;
@@ -84,6 +83,11 @@ public static class TDArenaPreview
                 fillCol = new Color(0.70f, 0.76f, 0.86f); fillI = 0.25f;
                 ambCol = new Color(0.23f, 0.22f, 0.21f);
                 break;
+            case BoardTheme.TropicalIsland:
+                keyCol = new Color(1.00f, 0.96f, 0.82f); keyI = 1.05f;
+                fillCol = new Color(0.52f, 0.84f, 0.88f); fillI = 0.27f;
+                ambCol = new Color(0.26f, 0.32f, 0.25f);
+                break;
             default:
                 keyCol = new Color(1.00f, 0.86f, 0.66f); keyI = 0.72f;
                 fillCol = new Color(0.55f, 0.62f, 0.78f); fillI = 0.10f;
@@ -119,10 +123,10 @@ public static class TDArenaPreview
         camGO.tag = "MainCamera";
         Camera cam = camGO.AddComponent<Camera>();
         cam.orthographic = true;
-        cam.orthographicSize = 20f;
+        cam.orthographicSize = tropical ? 31f : 20f;
         cam.clearFlags = CameraClearFlags.SolidColor;
         cam.backgroundColor = new Color(0.10f, 0.11f, 0.13f);
-        cam.transform.position = new Vector3(-20f, 30f, -32f);
+        cam.transform.position = tropical ? new Vector3(-30f, 45f, -47f) : new Vector3(-20f, 30f, -32f);
         cam.transform.LookAt(new Vector3(0f, 0f, 0f));
 
         int w = 1000, h = 1000;

@@ -4,6 +4,25 @@ using UnityEngine;
 public static class TDTextures
 {
     private static Texture2D sidewalk, road, roadCross;
+    private static Texture2D tropicalSand;
+
+    public static Texture2D TropicalSand()
+    {
+        if (tropicalSand != null) return tropicalSand;
+        const int size = 64;
+        Texture2D t = New(size);
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float n = (N(x, y) - 0.5f) * 0.13f;
+                bool pebble = N(x / 3 + 17, y / 3 + 23) > 0.97f && x % 3 == 1 && y % 3 == 1;
+                t.SetPixel(x, y, pebble ? new Color(0.69f, 0.53f, 0.34f) :
+                    new Color(0.85f + n, 0.72f + n, 0.48f + n));
+            }
+        t.Apply();
+        tropicalSand = t;
+        return t;
+    }
 
     static Texture2D New(int size)
     {

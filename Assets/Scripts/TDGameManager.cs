@@ -25,7 +25,7 @@ public partial class TDGameManager : MonoBehaviour
     private ushort nextMobId = 1;
 
     // map layout + ordered waypoints (shared with tools/previews)
-    // Layout/Route are gameplay — themes only reskin visuals, never change these.
+    // Classic gameplay route; TropicalMap defines the larger solo prototype.
     public static readonly string[] Layout =
     {
         "sxxexxxxx",
@@ -222,6 +222,11 @@ public partial class TDGameManager : MonoBehaviour
                 fillCol = new Color(0.70f, 0.76f, 0.86f); fillI = 0.25f;
                 ambCol = new Color(0.23f, 0.22f, 0.21f); shadow = 0.35f;
                 break;
+            case BoardTheme.TropicalIsland:                       // bright tropical sun and sea bounce
+                keyCol = new Color(1.00f, 0.96f, 0.82f); keyI = 1.05f;
+                fillCol = new Color(0.52f, 0.84f, 0.88f); fillI = 0.27f;
+                ambCol = new Color(0.26f, 0.32f, 0.25f); shadow = 0.42f;
+                break;
             default:                                             // Kid's Bedroom: warm afternoon
                 keyCol = new Color(1.00f, 0.86f, 0.66f); keyI = 0.95f;
                 fillCol = new Color(0.55f, 0.62f, 0.78f); fillI = 0.16f;
@@ -270,10 +275,8 @@ public partial class TDGameManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Switches the board theme. Visuals only: <see cref="Layout"/> and
-    /// <see cref="Route"/> are never touched, so balance and pathing are identical
-    /// on every board. Re-applies the theme lighting and rebuilds the menu backdrop
-    /// (and the picker preview) so everything matches immediately.
+    /// Switches the board selection. Tropical Island uses its own solo route;
+    /// the other themes only change the visual dressing of the classic route.
     /// </summary>
     public void SetTheme(BoardTheme theme)
     {
@@ -402,7 +405,7 @@ public partial class TDGameManager : MonoBehaviour
         camFocus = offset;
         camYaw = GameYaw;
         camPitch = GamePitch;
-        camDist = GameDist;
+        camDist = !mpActive && ActiveTheme == BoardTheme.TropicalIsland ? 51f : GameDist;
         message = "";
         // a rebuilt world owns no dummy: drop any Damage Test state with it
         damageTestDummy = null;
@@ -423,8 +426,9 @@ public partial class TDGameManager : MonoBehaviour
         ProjectilesRoot = new GameObject("Projectiles").transform;
         ProjectilesRoot.SetParent(worldRoot, false);
 
-        string[] layout = Layout;
-        Vector2Int[] route = Route;
+        bool tropical = !mpActive && ActiveTheme == BoardTheme.TropicalIsland;
+        string[] layout = tropical ? TropicalMap.Layout : Layout;
+        Vector2Int[] route = tropical ? TropicalMap.Route : Route;
         float cell = 2f;
         int gw = layout[0].Length, gh = layout.Length;
         map = TDBoardBuilder.CreateMap(layout, route, cell, boardOffset);

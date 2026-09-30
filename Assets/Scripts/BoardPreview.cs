@@ -95,9 +95,14 @@ public class BoardPreview : MonoBehaviour
         board = new GameObject("PreviewBoard");
         board.transform.SetParent(root, false);
 
-        // Same layout the game runs — a theme only changes the dressing.
+        // The tropical solo board has its own route; other themes share the classic one.
         float cell = 2f;
-        TDMap map = TDBoardBuilder.CreateMap(TDGameManager.Layout, TDGameManager.Route, cell, Vector3.zero);
+        bool tropical = theme == BoardTheme.TropicalIsland;
+        TDMap map = TDBoardBuilder.CreateMap(tropical ? TropicalMap.Layout : TDGameManager.Layout,
+            tropical ? TropicalMap.Route : TDGameManager.Route, cell, Vector3.zero);
+        cam.orthographicSize = tropical ? 31f : 20f;
+        cam.transform.position = root.position + new Vector3(tropical ? -30f : -20f, tropical ? 45f : 30f, tropical ? -47f : -32f);
+        cam.transform.LookAt(root.position);
         TDBoardBuilder.BuildTiles(board.transform, map, theme);
         TDRoom.Build(board.transform, map, theme);
     }

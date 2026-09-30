@@ -130,6 +130,9 @@ public partial class TDGameManager
     // ------------------------------------------------------------------ flow
     void EnterMultiplayer()
     {
+        // Tropical Island's large route is a solo prototype; independent boards
+        // in multiplayer still use the classic layout.
+        if (ActiveTheme == BoardTheme.TropicalIsland) SetTheme(BoardTheme.Bedroom);
         NetworkSession ns = NetworkSession.Ensure();
         ns.MatchStarted -= OnMatchStarted;
         ns.MatchStarted += OnMatchStarted;
@@ -609,6 +612,8 @@ public partial class TDGameManager
     {
         BoardTheme next = dir >= 0 ? TDBoardBuilder.NextTheme(ActiveTheme)
                                    : TDBoardBuilder.PrevTheme(ActiveTheme);
+        if (next == BoardTheme.TropicalIsland)
+            next = dir >= 0 ? TDBoardBuilder.NextTheme(next) : TDBoardBuilder.PrevTheme(next);
         SetTheme(next);                                            // local board + lighting + persistence
         NetworkSession ns = NetworkSession.Instance;
         if (ns != null && ns.InSession) ns.SetTheme(TDBoardBuilder.ThemeIndex(next));

@@ -3,7 +3,8 @@ using UnityEngine;
 /// <summary>
 /// Builds the static environment of a board (play-mat tiles + the child's room)
 /// so the same code can produce the local board and inert remote boards.
-/// Layout/Route are never changed here — themes only reskin tiles + room.
+/// Layout/Route are supplied by the caller; Tropical Island has a separate
+/// solo layout while multiplayer and other themes use the classic layout.
 /// </summary>
 public enum BoardTheme
 {
@@ -18,7 +19,8 @@ public enum BoardTheme
     FactoryFloor,
     SunkenReef,
     ZenGarden,
-    ClassroomDesk
+    ClassroomDesk,
+    TropicalIsland
 }
 
 public static class TDBoardBuilder
@@ -37,7 +39,8 @@ public static class TDBoardBuilder
         BoardTheme.FactoryFloor,
         BoardTheme.SunkenReef,
         BoardTheme.ZenGarden,
-        BoardTheme.ClassroomDesk
+        BoardTheme.ClassroomDesk,
+        BoardTheme.TropicalIsland
     };
 
     public static string ThemeName(BoardTheme t)
@@ -55,6 +58,7 @@ public static class TDBoardBuilder
             case BoardTheme.SunkenReef: return "Sunken Reef";
             case BoardTheme.ZenGarden: return "Zen Rock Garden";
             case BoardTheme.ClassroomDesk: return "Classroom Desk";
+            case BoardTheme.TropicalIsland: return "Tropical Island";
             default: return "Kid's Bedroom";
         }
     }
@@ -85,6 +89,8 @@ public static class TDBoardBuilder
                 return "Stepping stones cross raked gravel in a quiet temple garden.";
             case BoardTheme.ClassroomDesk:
                 return "Ruled notebook paper threads between bright sticky notes.";
+            case BoardTheme.TropicalIsland:
+                return "An island garden with a winding sandy trail and towers on every patch of grass.";
             default:
                 return "The original play-mat: a toy train track weaving through a kid's bedroom.";
         }
@@ -149,6 +155,7 @@ public static class TDBoardBuilder
         if (theme == BoardTheme.SunkenReef) { BuildTilesReef(parent, map, layout, gw, gh); return; }
         if (theme == BoardTheme.ZenGarden) { BuildTilesZen(parent, map, layout, gw, gh); return; }
         if (theme == BoardTheme.ClassroomDesk) { BuildTilesClassroom(parent, map, layout, gw, gh); return; }
+        if (theme == BoardTheme.TropicalIsland) { BuildTilesTropical(parent, map, gw, gh); return; }
 
         Color[] tileCols =
         {
@@ -201,6 +208,27 @@ public static class TDBoardBuilder
         root.transform.position = boardOffset;
         TDRoom.Build(root.transform, map, theme);
         return root;
+    }
+
+    static void BuildTilesTropical(Transform parent, TDMap map, int gw, int gh)
+    {
+        Material[] grass =
+        {
+            TDVisuals.TexturedMat(TDTextures.Weave(), new Color(0.32f, 0.61f, 0.28f), Vector2.one),
+            TDVisuals.TexturedMat(TDTextures.Weave(), new Color(0.39f, 0.68f, 0.31f), Vector2.one),
+            TDVisuals.TexturedMat(TDTextures.Weave(), new Color(0.35f, 0.64f, 0.29f), Vector2.one)
+        };
+        Material sand = TDVisuals.TexturedMat(TDTextures.TropicalSand(), Color.white, Vector2.one);
+        Material start = TDVisuals.Mat(new Color(0.23f, 0.77f, 0.48f));
+        Material end = TDVisuals.Mat(new Color(0.91f, 0.36f, 0.23f));
+        for (int y = 0; y < gh; y++)
+            for (int x = 0; x < gw; x++)
+            {
+                char c = map.At(x, y);
+                Material mat = c == 'm' ? sand : c == 's' ? start : c == 'e' ? end : grass[(x * 3 + y * 7 + x * y) % grass.Length];
+                TDVisuals.Box(parent, "Tile", map.CellCenter(x, y) - Vector3.up * 0.05f,
+                    new Vector3(map.Cell * 0.97f, 0.1f, map.Cell * 0.97f), mat);
+            }
     }
 
     static void BuildTilesArctic(Transform parent, TDMap map, string[] layout, int gw, int gh)

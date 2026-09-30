@@ -1,7 +1,7 @@
 using UnityEngine;
 
 // Builds environments around the grid map. Bedroom is the original kid's room;
-// the other themes are visual reskins (same Layout/Route, only visuals change).
+// the other classic themes are visual reskins. Tropical Island has a solo layout.
 public static class TDRoom
 {
     public static void Build(Transform parent, TDMap map, BoardTheme theme = BoardTheme.Bedroom)
@@ -17,7 +17,48 @@ public static class TDRoom
         if (theme == BoardTheme.SunkenReef) { BuildReef(parent, map); return; }
         if (theme == BoardTheme.ZenGarden) { BuildZen(parent, map); return; }
         if (theme == BoardTheme.ClassroomDesk) { BuildClassroom(parent, map); return; }
+        if (theme == BoardTheme.TropicalIsland) { BuildTropical(parent, map); return; }
         BuildBedroom(parent, map);
+    }
+
+    static void BuildTropical(Transform parent, TDMap map)
+    {
+        float hx = map.Width * map.Cell * 0.5f;
+        float hz = map.Height * map.Cell * 0.5f;
+        Material sea = TDVisuals.Mat(new Color(0.11f, 0.51f, 0.67f), 0f, 0.72f);
+        Material shore = TDVisuals.Mat(new Color(0.91f, 0.76f, 0.49f));
+        Material trunk = TDVisuals.Mat(new Color(0.43f, 0.29f, 0.16f));
+        Material leaf = TDVisuals.Mat(new Color(0.15f, 0.47f, 0.22f));
+        Material leafLight = TDVisuals.Mat(new Color(0.23f, 0.62f, 0.25f));
+        // All decorations are beyond the rectangular grid. No tower cell is blocked.
+        TDVisuals.Box(parent, "Lagoon", new Vector3(0f, -0.35f, 0f),
+            new Vector3(hx * 2f + 23f, 0.2f, hz * 2f + 23f), sea);
+        TDVisuals.Box(parent, "Beach", new Vector3(0f, -0.18f, 0f),
+            new Vector3(hx * 2f + 7f, 0.2f, hz * 2f + 7f), shore);
+        Palm(parent, new Vector3(-hx - 4.1f, 0f, -hz - 3f), trunk, leaf, leafLight);
+        Palm(parent, new Vector3(hx + 4.1f, 0f, hz + 2f), trunk, leaf, leafLight);
+        Palm(parent, new Vector3(-hx - 4.1f, 0f, hz + 2f), trunk, leaf, leafLight);
+        Palm(parent, new Vector3(hx + 4.1f, 0f, -hz - 2f), trunk, leaf, leafLight);
+        Material rock = TDVisuals.Mat(new Color(0.55f, 0.56f, 0.47f));
+        for (int i = 0; i < 4; i++)
+            TDVisuals.Sphere(parent, "ShoreRock", new Vector3(-hx - 2.4f + i * 1.25f, 0.02f, hz + 2.5f),
+                0.65f + i * 0.12f, rock);
+    }
+
+    static void Palm(Transform parent, Vector3 basePos, Material trunk, Material leaf, Material leafLight)
+    {
+        Vector3 crown = basePos + new Vector3(0.65f, 4.3f, 0.25f);
+        TDVisuals.Limb(parent, "PalmTrunk", basePos + Vector3.up * 0.25f, crown, 0.23f, trunk);
+        for (int i = 0; i < 7; i++)
+        {
+            float a = i * Mathf.PI * 2f / 7f;
+            Vector3 dir = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a));
+            Vector3 tip = crown + dir * 2.4f + Vector3.down * 0.75f;
+            TDVisuals.Limb(parent, "PalmFrond", crown, tip, 0.25f, i % 2 == 0 ? leafLight : leaf);
+            TDVisuals.Sphere(parent, "FrondTip", tip, 0.57f, i % 2 == 0 ? leafLight : leaf);
+        }
+        for (int i = 0; i < 3; i++)
+            TDVisuals.Sphere(parent, "Coconut", crown + new Vector3((i - 1) * 0.35f, -0.30f, -0.22f), 0.43f, trunk);
     }
 
     static void BuildBedroom(Transform parent, TDMap map)
