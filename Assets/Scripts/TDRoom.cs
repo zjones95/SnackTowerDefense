@@ -9,6 +9,7 @@ public static class TDRoom
         if (theme == BoardTheme.ArcticOutpost) { BuildArctic(parent, map); return; }
         if (theme == BoardTheme.VolcanicCaldera) { BuildVolcanic(parent, map); return; }
         if (theme == BoardTheme.SpaceStation) { BuildStation(parent, map); return; }
+        if (theme == BoardTheme.DesertHighway) { BuildDesert(parent, map); return; }
         BuildBedroom(parent, map);
     }
 
@@ -317,5 +318,94 @@ public static class TDRoom
         TDVisuals.Box(parent, "CrateBand", pos, new Vector3(size * 1.02f, size * 0.16f, size * 1.02f), hazard);
         TDVisuals.Box(parent, "CrateLid", pos + new Vector3(0f, size * 0.5f, 0f),
             new Vector3(size * 1.04f, size * 0.1f, size * 1.04f), trim);
+    }
+
+    // ---------------------------------------------------------- desert theme
+    static void BuildDesert(Transform parent, TDMap map)
+    {
+        Material sand = TDVisuals.Mat(new Color(0.86f, 0.71f, 0.46f), 0f, 0.35f);
+        Material rock = TDVisuals.Mat(new Color(0.60f, 0.31f, 0.21f), 0f, 0.35f);
+        Material rockTop = TDVisuals.Mat(new Color(0.72f, 0.41f, 0.28f), 0f, 0.35f);
+        Material boulder = TDVisuals.Mat(new Color(0.66f, 0.43f, 0.31f), 0f, 0.35f);
+        Material cactus = TDVisuals.Mat(new Color(0.26f, 0.50f, 0.27f), 0f, 0.45f);
+        Material cactusDark = TDVisuals.Mat(new Color(0.19f, 0.38f, 0.21f), 0f, 0.45f);
+        Material wood = TDVisuals.Mat(new Color(0.55f, 0.38f, 0.22f), 0f, 0.4f);
+        Material metal = TDVisuals.Mat(new Color(0.58f, 0.56f, 0.52f), 0.5f, 0.4f);
+        Material pumpBody = TDVisuals.Mat(new Color(0.74f, 0.72f, 0.67f), 0f, 0.4f);
+        Material pumpRed = TDVisuals.Mat(new Color(0.72f, 0.22f, 0.16f), 0f, 0.45f);
+        Material brush = TDVisuals.Mat(new Color(0.62f, 0.50f, 0.30f), 0f, 0.3f);
+
+        float halfX = map.Width * map.Cell * 0.5f + 6f;
+        float halfZ = map.Height * map.Cell * 0.5f + 6f;
+
+        // desert sand floor
+        TDVisuals.Box(parent, "RoomFloor", new Vector3(0f, -0.15f, 0f), new Vector3(halfX * 2f, 0.2f, halfZ * 2f), sand);
+
+        // low mesa walls with a lighter sunlit cap
+        float wh = 2.6f, wt = 1.0f;
+        TDVisuals.Box(parent, "WallN", new Vector3(0f, wh * 0.5f, halfZ), new Vector3(halfX * 2f + wt, wh, wt), rock);
+        TDVisuals.Box(parent, "WallS", new Vector3(0f, wh * 0.5f, -halfZ), new Vector3(halfX * 2f + wt, wh, wt), rock);
+        TDVisuals.Box(parent, "WallE", new Vector3(halfX, wh * 0.5f, 0f), new Vector3(wt, wh, halfZ * 2f + wt), rock);
+        TDVisuals.Box(parent, "WallW", new Vector3(-halfX, wh * 0.5f, 0f), new Vector3(wt, wh, halfZ * 2f + wt), rock);
+        TDVisuals.Box(parent, "CapN", new Vector3(0f, wh + 0.25f, halfZ), new Vector3(halfX * 2f + wt + 0.3f, 0.5f, wt + 0.3f), rockTop);
+        TDVisuals.Box(parent, "CapS", new Vector3(0f, wh + 0.25f, -halfZ), new Vector3(halfX * 2f + wt + 0.3f, 0.5f, wt + 0.3f), rockTop);
+        TDVisuals.Box(parent, "CapE", new Vector3(halfX, wh + 0.25f, 0f), new Vector3(wt + 0.3f, 0.5f, halfZ * 2f + wt + 0.3f), rockTop);
+        TDVisuals.Box(parent, "CapW", new Vector3(-halfX, wh + 0.25f, 0f), new Vector3(wt + 0.3f, 0.5f, halfZ * 2f + wt + 0.3f), rockTop);
+        // mesa buttes breaking the rim line
+        TDVisuals.Box(parent, "Butte0", new Vector3(-6f, wh + 0.6f, halfZ), new Vector3(5f, 1.2f, 1.6f), rockTop);
+        TDVisuals.Box(parent, "Butte1", new Vector3(7f, wh + 0.9f, -halfZ), new Vector3(6f, 1.8f, 1.7f), rockTop);
+        TDVisuals.Box(parent, "Butte2", new Vector3(halfX, wh + 0.7f, 6f), new Vector3(1.7f, 1.4f, 5f), rockTop);
+
+        float westX = -halfX + 3.0f;
+        float eastX = halfX - 3.0f;
+
+        // cacti
+        BuildCactus(parent, new Vector3(westX - 0.6f, 0f, -8f), cactus, cactusDark, sand);
+        BuildCactus(parent, new Vector3(eastX + 0.4f, 0f, 8f), cactus, cactusDark, sand);
+        BuildCactus(parent, new Vector3(eastX - 0.4f, 0f, -12f), cactus, cactusDark, sand);
+
+        // derelict gas pumps (west)
+        BuildGasPump(parent, new Vector3(westX, 0f, 10f), pumpBody, pumpRed, metal);
+        BuildGasPump(parent, new Vector3(westX - 0.2f, 0f, 7.6f), pumpBody, pumpRed, metal);
+
+        // wooden crates (west-south)
+        BuildCrate(parent, new Vector3(westX + 0.2f, 0.7f, -3.5f), 1.6f, wood, TDVisuals.Mat(new Color(0.40f, 0.28f, 0.16f), 0f, 0.4f), wood);
+        BuildCrate(parent, new Vector3(westX - 0.5f, 0.5f, -6.0f), 1.1f, wood, TDVisuals.Mat(new Color(0.40f, 0.28f, 0.16f), 0f, 0.4f), wood);
+
+        // signpost (north-west)
+        TDVisuals.Cyl(parent, "SignPost", new Vector3(westX + 0.4f, 1.4f, 12.5f), 0.1f, 2.8f, wood);
+        TDVisuals.Box(parent, "SignBoard", new Vector3(westX + 0.4f, 2.4f, 12.5f), new Vector3(1.6f, 0.6f, 0.12f),
+            TDVisuals.Mat(new Color(0.74f, 0.60f, 0.36f), 0f, 0.4f));
+
+        // tumbleweeds and scattered rocks
+        TDVisuals.Sphere(parent, "Tumbleweed0", new Vector3(eastX, 0.4f, -10f), 0.8f, brush);
+        TDVisuals.Sphere(parent, "Tumbleweed1", new Vector3(4f, 0.35f, -13f), 0.7f, brush);
+        TDVisuals.Sphere(parent, "Rock0", new Vector3(eastX + 1.2f, 0.3f, 2f), 0.9f, boulder);
+        TDVisuals.Sphere(parent, "Rock1", new Vector3(-8f, 0.35f, -13f), 1.1f, boulder);
+        TDVisuals.Sphere(parent, "Rock2", new Vector3(9f, 0.25f, 13f), 0.7f, boulder);
+    }
+
+    static void BuildCactus(Transform parent, Vector3 basePos, Material green, Material dark, Material sand)
+    {
+        TDVisuals.Cyl(parent, "CactusTrunk", basePos + new Vector3(0f, 1.2f, 0f), 0.30f, 2.4f, green);
+        TDVisuals.Cyl(parent, "CactusBand", basePos + new Vector3(0f, 1.2f, 0f), 0.315f, 0.9f, dark);
+
+        GameObject armL = TDVisuals.Cyl(parent, "CactusArmL", basePos + new Vector3(-0.58f, 1.45f, 0f), 0.19f, 0.75f, green);
+        armL.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+        TDVisuals.Cyl(parent, "CactusArmLup", basePos + new Vector3(-0.90f, 1.95f, 0f), 0.19f, 1.0f, green);
+
+        GameObject armR = TDVisuals.Cyl(parent, "CactusArmR", basePos + new Vector3(0.58f, 1.15f, 0f), 0.19f, 0.75f, green);
+        armR.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+        TDVisuals.Cyl(parent, "CactusArmRup", basePos + new Vector3(0.90f, 1.65f, 0f), 0.19f, 1.0f, green);
+
+        TDVisuals.Cyl(parent, "CactusSand", basePos + new Vector3(0f, 0.06f, 0f), 0.55f, 0.12f, sand);
+    }
+
+    static void BuildGasPump(Transform parent, Vector3 pos, Material body, Material red, Material metal)
+    {
+        TDVisuals.Box(parent, "PumpBase", pos + new Vector3(0f, 0.2f, 0f), new Vector3(1.2f, 0.4f, 0.9f), metal);
+        TDVisuals.Box(parent, "PumpBody", pos + new Vector3(0f, 1.0f, 0f), new Vector3(1.1f, 1.2f, 0.8f), body);
+        TDVisuals.Box(parent, "PumpTop", pos + new Vector3(0f, 1.75f, 0f), new Vector3(1.2f, 0.3f, 0.9f), red);
+        TDVisuals.Cyl(parent, "PumpHose", pos + new Vector3(0.78f, 0.95f, 0f), 0.09f, 1.0f, metal);
     }
 }

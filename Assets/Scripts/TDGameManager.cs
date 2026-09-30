@@ -182,6 +182,11 @@ public partial class TDGameManager : MonoBehaviour
                 fillCol = new Color(0.25f, 0.45f, 0.85f); fillI = 0.32f;
                 ambCol = new Color(0.13f, 0.16f, 0.22f); shadow = 0.50f;
                 break;
+            case BoardTheme.DesertHighway:                       // bright, hard midday sun
+                keyCol = new Color(1.00f, 0.95f, 0.80f); keyI = 1.05f;
+                fillCol = new Color(0.88f, 0.74f, 0.55f); fillI = 0.22f;   // warm sand bounce
+                ambCol = new Color(0.26f, 0.24f, 0.20f); shadow = 0.55f;
+                break;
             default:                                             // Kid's Bedroom: warm afternoon
                 keyCol = new Color(1.00f, 0.86f, 0.66f); keyI = 0.95f;
                 fillCol = new Color(0.55f, 0.62f, 0.78f); fillI = 0.16f;

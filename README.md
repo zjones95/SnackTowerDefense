@@ -78,6 +78,7 @@ identical across boards. Pick one with `TDGameManager.ActiveTheme`:
 | `ArcticOutpost` | Packed snowmobile track | Frosted ice tiles | Ice cliff rim, crate, sled, antenna, pines |
 | `VolcanicCaldera` | Glowing lava channel | Dark basalt slabs | Ash plain, crater rim, obsidian spires, lava pools |
 | `SpaceStation` | Lit mag-rail lane | Gunmetal deck plates | Hull walls with glowing portholes, hazard trim, crates, dish, robot arm |
+| `DesertHighway` | Asphalt lane with white markings | Light adobe / terracotta / turquoise paving | Sand ground, red mesa rim, cacti, gas pumps, crates, signpost |
 
 `TDBoardBuilder.BuildTiles(...)` and `TDRoom.Build(...)` take the theme; both are also
 used by remote boards and the editor previews, so every board in a match looks the same.

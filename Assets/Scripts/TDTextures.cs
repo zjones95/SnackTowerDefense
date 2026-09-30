@@ -430,6 +430,96 @@ public static class TDTextures
         return t;
     }
 
+    // ------------------------------------------------------ desert theme
+    static Texture2D adobe, asphalt, asphaltCross;
+
+    /// <summary>Sun-baked paving slab for tower plots: light sandstone with a
+    /// 2x2 seam split and fine speckle. Kept light so per-material tints read
+    /// as tan / terracotta / turquoise paving.</summary>
+    public static Texture2D Adobe()
+    {
+        if (adobe != null) return adobe;
+        int S = 128;
+        Texture2D t = New(S);
+        Color baseC = new Color(0.94f, 0.90f, 0.83f);
+        Color seam = new Color(0.68f, 0.62f, 0.53f);
+        Color fleck = new Color(0.82f, 0.75f, 0.64f);
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float n = (N(x, y) - 0.5f) * 0.05f;
+                float mot = (N(x / 11 + 3, y / 11 + 5) - 0.5f) * 0.06f;
+                Color c = baseC + new Color(n, n * 0.96f, n * 0.86f) + new Color(mot, mot * 0.95f, mot * 0.82f);
+                // paving seams: a 2x2 split, plus the slab border
+                if (Mathf.Abs(x - S / 2) < 2 || Mathf.Abs(y - S / 2) < 2) c = seam;
+                if (x < 3 || y < 3 || x >= S - 3 || y >= S - 3) c = Color.Lerp(c, seam, 0.75f);
+                if (N(x * 7 + 1, y * 7 + 9) > 0.988f) c = fleck;
+                t.SetPixel(x, y, c);
+            }
+        }
+        t.Apply();
+        adobe = t;
+        return t;
+    }
+
+    /// <summary>Highway lane (the mob path): dark asphalt with a dashed white
+    /// centre line and solid white edge lines. The lines run along the tile's
+    /// local X, matching how the track textures are oriented.</summary>
+    public static Texture2D Asphalt()
+    {
+        if (asphalt != null) return asphalt;
+        int S = 128;
+        Texture2D t = New(S);
+        Color road = new Color(0.19f, 0.19f, 0.20f);
+        Color grit = new Color(0.29f, 0.29f, 0.30f);
+        Color paint = new Color(0.96f, 0.95f, 0.90f);
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float n = (N(x, y) - 0.5f) * 0.07f;
+                Color c = road + new Color(n, n, n);
+                if (N(x * 5 + 2, y * 5 + 6) > 0.965f) c = grit + new Color(n, n, n);
+                if (Mathf.Abs(y - 20) < 2 || Mathf.Abs(y - 108) < 2) c = paint;              // edge lines
+                if (Mathf.Abs(y - 64) < 3 && (x % 32) < 18) c = paint;                        // centre dashes
+                t.SetPixel(x, y, c);
+            }
+        }
+        t.Apply();
+        asphalt = t;
+        return t;
+    }
+
+    public static Texture2D AsphaltCross()
+    {
+        if (asphaltCross != null) return asphaltCross;
+        int S = 128;
+        Texture2D t = New(S);
+        Color road = new Color(0.19f, 0.19f, 0.20f);
+        Color grit = new Color(0.29f, 0.29f, 0.30f);
+        Color paint = new Color(0.96f, 0.95f, 0.90f);
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float n = (N(x, y) - 0.5f) * 0.07f;
+                Color c = road + new Color(n, n, n);
+                if (N(x * 5 + 2, y * 5 + 6) > 0.965f) c = grit + new Color(n, n, n);
+
+                bool edge = Mathf.Abs(y - 20) < 2 || Mathf.Abs(y - 108) < 2
+                         || Mathf.Abs(x - 20) < 2 || Mathf.Abs(x - 108) < 2;
+                bool dashX = Mathf.Abs(y - 64) < 3 && (x % 32) < 18;
+                bool dashY = Mathf.Abs(x - 64) < 3 && (y % 32) < 18;
+                if (edge || dashX || dashY) c = paint;
+                t.SetPixel(x, y, c);
+            }
+        }
+        t.Apply();
+        asphaltCross = t;
+        return t;
+    }
+
     // ------------------------------------------------------------ paper (UI)
     static Texture2D paper, paperHover, paperPressed, menuFade;
 
