@@ -80,6 +80,9 @@ identical across boards. Pick one with `TDGameManager.ActiveTheme`:
 | `SpaceStation` | Lit mag-rail lane | Gunmetal deck plates | Hull walls with glowing portholes, hazard trim, crates, dish, robot arm |
 | `DesertHighway` | Asphalt lane with white markings | Light adobe / terracotta / turquoise paving | Sand ground, red mesa rim, cacti, gas pumps, crates, signpost |
 | `CandyShop` | Chocolate lane with icing drizzle | Pastel pink / blue / lemon / mint candy slabs | Wood shop floor, jar shelves, lollipops, candy cane, gumdrops, cookie crate |
+| `SewerSubway` | Steel rails on dark ballast | Concrete slabs with hazard-yellow borders | Tiled tunnel walls, pipes and valves, floor grate, drainage channel, ladder |
+| `MedievalCastle` | Cobblestone road with timber edging | Heraldic red / blue / gold / green banners | Crenellated stone walls, torches, barrels, catapult, banner poles, straw bales |
+| `FactoryFloor` | Conveyor belt with safety stripe | Safety-painted machine plates | Checker-plate floor, corrugated walls, control consoles, crates, chain hoist |
 
 `TDBoardBuilder.BuildTiles(...)` and `TDRoom.Build(...)` take the theme; both are also
 used by remote boards and the editor previews, so every board in a match looks the same.

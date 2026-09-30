@@ -11,6 +11,9 @@ public static class TDRoom
         if (theme == BoardTheme.SpaceStation) { BuildStation(parent, map); return; }
         if (theme == BoardTheme.DesertHighway) { BuildDesert(parent, map); return; }
         if (theme == BoardTheme.CandyShop) { BuildCandy(parent, map); return; }
+        if (theme == BoardTheme.SewerSubway) { BuildSewer(parent, map); return; }
+        if (theme == BoardTheme.MedievalCastle) { BuildCastle(parent, map); return; }
+        if (theme == BoardTheme.FactoryFloor) { BuildFactory(parent, map); return; }
         BuildBedroom(parent, map);
     }
 
@@ -514,5 +517,237 @@ public static class TDRoom
         disc.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
         GameObject swirlSpot = TDVisuals.Cyl(parent, "LolliSwirl", basePos + new Vector3(0f, discR * 1.6f, -0.11f), discR * 0.45f, 0.20f, sugar);
         swirlSpot.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+    }
+
+    // ---------------------------------------------------------- sewer theme
+    static void BuildSewer(Transform parent, TDMap map)
+    {
+        Material wet = TDVisuals.Mat(new Color(0.28f, 0.28f, 0.28f), 0.05f, 0.55f);
+        Material tileWall = TDVisuals.Mat(new Color(0.40f, 0.42f, 0.40f), 0f, 0.4f);
+        Material tileBand = TDVisuals.Mat(new Color(0.52f, 0.53f, 0.50f), 0f, 0.45f);
+        Material pipe = TDVisuals.Mat(new Color(0.42f, 0.31f, 0.22f), 0.35f, 0.4f);
+        Material valve = TDVisuals.Mat(new Color(0.55f, 0.30f, 0.18f), 0.4f, 0.45f);
+        Material grate = TDVisuals.Mat(new Color(0.26f, 0.26f, 0.27f), 0.5f, 0.4f);
+        Material water = TDVisuals.Mat(new Color(0.16f, 0.26f, 0.30f), 0.2f, 0.7f);
+        Material wood = TDVisuals.Mat(new Color(0.48f, 0.36f, 0.24f), 0f, 0.4f);
+        Material lamp = TDVisuals.Mat(new Color(0.98f, 0.80f, 0.42f), 0f, 0.6f);
+
+        float halfX = map.Width * map.Cell * 0.5f + 6f;
+        float halfZ = map.Height * map.Cell * 0.5f + 6f;
+
+        // flooded concrete floor
+        TDVisuals.Box(parent, "RoomFloor", new Vector3(0f, -0.15f, 0f), new Vector3(halfX * 2f, 0.2f, halfZ * 2f), wet);
+
+        // tiled tunnel walls with a lighter band
+        float wh = 3.2f, wt = 1.0f;
+        TDVisuals.Box(parent, "WallN", new Vector3(0f, wh * 0.5f, halfZ), new Vector3(halfX * 2f + wt, wh, wt), tileWall);
+        TDVisuals.Box(parent, "WallS", new Vector3(0f, wh * 0.5f, -halfZ), new Vector3(halfX * 2f + wt, wh, wt), tileWall);
+        TDVisuals.Box(parent, "WallE", new Vector3(halfX, wh * 0.5f, 0f), new Vector3(wt, wh, halfZ * 2f + wt), tileWall);
+        TDVisuals.Box(parent, "WallW", new Vector3(-halfX, wh * 0.5f, 0f), new Vector3(wt, wh, halfZ * 2f + wt), tileWall);
+        TDVisuals.Box(parent, "BandN", new Vector3(0f, 2.0f, halfZ - wt * 0.5f), new Vector3(halfX * 2f, 0.5f, 0.12f), tileBand);
+        TDVisuals.Box(parent, "BandS", new Vector3(0f, 2.0f, -halfZ + wt * 0.5f), new Vector3(halfX * 2f, 0.5f, 0.12f), tileBand);
+        TDVisuals.Box(parent, "BandE", new Vector3(halfX - wt * 0.5f, 2.0f, 0f), new Vector3(0.12f, 0.5f, halfZ * 2f), tileBand);
+        TDVisuals.Box(parent, "BandW", new Vector3(-halfX + wt * 0.5f, 2.0f, 0f), new Vector3(0.12f, 0.5f, halfZ * 2f), tileBand);
+
+        float westX = -halfX + 3.0f;
+        float eastX = halfX - 3.0f;
+
+        // fat pipes along the east wall, with valve wheels
+        for (int i = 0; i < 2; i++)
+        {
+            GameObject p = TDVisuals.Cyl(parent, "Pipe" + i, new Vector3(eastX + 1.4f, 0.8f + i * 0.8f, 0f), 0.26f, 14f, pipe);
+            p.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+        }
+        for (int i = 0; i < 3; i++)
+        {
+            GameObject v = TDVisuals.Cyl(parent, "Valve" + i, new Vector3(eastX + 1.4f, 1.6f, -5f + i * 5f), 0.42f, 0.12f, valve);
+            v.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+        }
+
+        // floor grate (south-west)
+        TDVisuals.Box(parent, "GrateFrame", new Vector3(westX, 0.02f, -9f), new Vector3(3.2f, 0.14f, 2.4f), grate);
+        for (int i = 0; i < 7; i++)
+            TDVisuals.Box(parent, "GrateSlat" + i, new Vector3(westX - 1.4f + i * 0.47f, 0.12f, -9f),
+                new Vector3(0.16f, 0.14f, 2.3f), water);
+
+        // drainage channel running beside the play area
+        TDVisuals.Box(parent, "Channel", new Vector3(0f, -0.07f, -halfZ + 2.2f), new Vector3(halfX * 1.4f, 0.06f, 1.2f), water);
+
+        // ladder up the north wall
+        TDVisuals.Box(parent, "LadderRailL", new Vector3(11f, 1.6f, halfZ - wt * 0.5f - 0.2f), new Vector3(0.12f, 3.2f, 0.12f), grate);
+        TDVisuals.Box(parent, "LadderRailR", new Vector3(11.6f, 1.6f, halfZ - wt * 0.5f - 0.2f), new Vector3(0.12f, 3.2f, 0.12f), grate);
+        for (int i = 0; i < 6; i++)
+            TDVisuals.Box(parent, "LadderRung" + i, new Vector3(11.3f, 0.4f + i * 0.55f, halfZ - wt * 0.5f - 0.2f),
+                new Vector3(0.75f, 0.09f, 0.09f), grate);
+
+        // crates and a warm lamp
+        TDVisuals.Box(parent, "Crate0", new Vector3(westX - 0.5f, 0.6f, 8f), new Vector3(1.6f, 1.2f, 1.6f), wood);
+        TDVisuals.Box(parent, "Crate1", new Vector3(westX + 0.4f, 0.45f, 10.2f), new Vector3(1.2f, 0.9f, 1.2f), wood);
+        TDVisuals.Cyl(parent, "LampPole", new Vector3(westX - 0.6f, 1.5f, -13f), 0.09f, 3.0f, grate);
+        TDVisuals.Sphere(parent, "LampGlobe", new Vector3(westX - 0.6f, 3.05f, -13f), 0.7f, lamp);
+    }
+
+    // --------------------------------------------------------- castle theme
+    static void BuildCastle(Transform parent, TDMap map)
+    {
+        Material earth = TDVisuals.Mat(new Color(0.56f, 0.46f, 0.32f), 0f, 0.3f);
+        Material stone = TDVisuals.Mat(new Color(0.62f, 0.61f, 0.58f), 0f, 0.35f);
+        Material stoneDark = TDVisuals.Mat(new Color(0.50f, 0.49f, 0.47f), 0f, 0.35f);
+        Material wood = TDVisuals.Mat(new Color(0.52f, 0.37f, 0.22f), 0f, 0.4f);
+        Material iron = TDVisuals.Mat(new Color(0.40f, 0.40f, 0.42f), 0.6f, 0.4f);
+        Material flame = TDVisuals.Mat(new Color(1.00f, 0.62f, 0.18f), 0f, 0.7f);
+        Material straw = TDVisuals.Mat(new Color(0.88f, 0.76f, 0.38f), 0f, 0.4f);
+        Material red = TDVisuals.Mat(new Color(0.72f, 0.20f, 0.20f), 0f, 0.45f);
+        Material blue = TDVisuals.Mat(new Color(0.22f, 0.36f, 0.68f), 0f, 0.45f);
+
+        float halfX = map.Width * map.Cell * 0.5f + 6f;
+        float halfZ = map.Height * map.Cell * 0.5f + 6f;
+
+        // packed-earth courtyard
+        TDVisuals.Box(parent, "RoomFloor", new Vector3(0f, -0.15f, 0f), new Vector3(halfX * 2f, 0.2f, halfZ * 2f), earth);
+
+        // stone curtain walls with crenellations
+        float wh = 3.0f, wt = 1.0f;
+        TDVisuals.Box(parent, "WallN", new Vector3(0f, wh * 0.5f, halfZ), new Vector3(halfX * 2f + wt, wh, wt), stone);
+        TDVisuals.Box(parent, "WallS", new Vector3(0f, wh * 0.5f, -halfZ), new Vector3(halfX * 2f + wt, wh, wt), stone);
+        TDVisuals.Box(parent, "WallE", new Vector3(halfX, wh * 0.5f, 0f), new Vector3(wt, wh, halfZ * 2f + wt), stone);
+        TDVisuals.Box(parent, "WallW", new Vector3(-halfX, wh * 0.5f, 0f), new Vector3(wt, wh, halfZ * 2f + wt), stone);
+        TDVisuals.Box(parent, "CourseN", new Vector3(0f, 1.5f, halfZ - wt * 0.5f), new Vector3(halfX * 2f, 0.16f, 0.1f), stoneDark);
+        TDVisuals.Box(parent, "CourseS", new Vector3(0f, 1.5f, -halfZ + wt * 0.5f), new Vector3(halfX * 2f, 0.16f, 0.1f), stoneDark);
+        TDVisuals.Box(parent, "CourseE", new Vector3(halfX - wt * 0.5f, 1.5f, 0f), new Vector3(0.1f, 0.16f, halfZ * 2f), stoneDark);
+        TDVisuals.Box(parent, "CourseW", new Vector3(-halfX + wt * 0.5f, 1.5f, 0f), new Vector3(0.1f, 0.16f, halfZ * 2f), stoneDark);
+
+        for (int i = 0; i < 11; i++)
+        {
+            float cx = -13f + i * 2.6f;
+            TDVisuals.Box(parent, "CrenN" + i, new Vector3(cx, wh + 0.4f, halfZ), new Vector3(1.4f, 0.8f, 1.1f), stone);
+            TDVisuals.Box(parent, "CrenS" + i, new Vector3(cx, wh + 0.4f, -halfZ), new Vector3(1.4f, 0.8f, 1.1f), stone);
+        }
+        for (int i = 0; i < 8; i++)
+        {
+            float cz = -13f + i * 3.4f;
+            TDVisuals.Box(parent, "CrenE" + i, new Vector3(halfX, wh + 0.4f, cz), new Vector3(1.1f, 0.8f, 1.4f), stone);
+            TDVisuals.Box(parent, "CrenW" + i, new Vector3(-halfX, wh + 0.4f, cz), new Vector3(1.1f, 0.8f, 1.4f), stone);
+        }
+
+        float westX = -halfX + 3.0f;
+        float eastX = halfX - 3.0f;
+
+        // torches along the walls
+        for (int i = 0; i < 4; i++)
+        {
+            float tx = -9f + i * 6f;
+            BuildTorch(parent, new Vector3(tx, 0f, halfZ - wt * 0.5f - 0.24f), wood, iron, flame);
+        }
+        BuildTorch(parent, new Vector3(westX + 1.2f, 0f, 2f), wood, iron, flame);
+        BuildTorch(parent, new Vector3(eastX - 1.2f, 0f, -4f), wood, iron, flame);
+
+        // barrels
+        for (int i = 0; i < 3; i++)
+            BuildBarrel(parent, new Vector3(westX - 0.6f + i * 0.2f, 0f, 9.5f - i * 2.2f), wood, iron);
+
+        // banner poles
+        BuildWallBanner(parent, new Vector3(westX, 0f, -11f), red, wood);
+        BuildWallBanner(parent, new Vector3(eastX, 0f, 11f), blue, wood);
+
+        // siege catapult (east floor)
+        TDVisuals.Box(parent, "CatFrame", new Vector3(eastX, 0.5f, -10f), new Vector3(2.4f, 0.5f, 1.6f), wood);
+        GameObject arm = TDVisuals.Box(parent, "CatArm", new Vector3(eastX, 1.4f, -10f), new Vector3(0.3f, 2.6f, 0.3f), wood);
+        arm.transform.localRotation = Quaternion.Euler(0f, 0f, 35f);
+        GameObject wheelL = TDVisuals.Cyl(parent, "CatWheelL", new Vector3(eastX - 0.9f, 0.55f, -9.2f), 0.55f, 0.24f, wood);
+        wheelL.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+        GameObject wheelR = TDVisuals.Cyl(parent, "CatWheelR", new Vector3(eastX + 0.9f, 0.55f, -9.2f), 0.55f, 0.24f, wood);
+        wheelR.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+
+        // straw bales
+        GameObject bale0 = TDVisuals.Cyl(parent, "Straw0", new Vector3(westX + 1.2f, 0.5f, 13f), 0.9f, 0.9f, straw);
+        bale0.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+        GameObject bale1 = TDVisuals.Cyl(parent, "Straw1", new Vector3(eastX - 1.0f, 0.45f, 4f), 0.8f, 0.8f, straw);
+        bale1.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+    }
+
+    static void BuildTorch(Transform parent, Vector3 basePos, Material wood, Material iron, Material flame)
+    {
+        TDVisuals.Cyl(parent, "TorchPole", basePos + new Vector3(0f, 1.1f, 0f), 0.09f, 2.2f, wood);
+        TDVisuals.Cyl(parent, "TorchCup", basePos + new Vector3(0f, 2.25f, 0f), 0.24f, 0.3f, iron);
+        TDVisuals.Sphere(parent, "TorchFlame", basePos + new Vector3(0f, 2.6f, 0f), 0.6f, flame);
+    }
+
+    static void BuildBarrel(Transform parent, Vector3 basePos, Material wood, Material iron)
+    {
+        TDVisuals.Cyl(parent, "Barrel", basePos + new Vector3(0f, 0.65f, 0f), 0.5f, 1.3f, wood);
+        TDVisuals.Cyl(parent, "BarrelHoop0", basePos + new Vector3(0f, 0.95f, 0f), 0.53f, 0.1f, iron);
+        TDVisuals.Cyl(parent, "BarrelHoop1", basePos + new Vector3(0f, 0.35f, 0f), 0.53f, 0.1f, iron);
+    }
+
+    static void BuildWallBanner(Transform parent, Vector3 basePos, Material cloth, Material pole)
+    {
+        TDVisuals.Cyl(parent, "BannerPole", basePos + new Vector3(0f, 1.6f, 0f), 0.1f, 3.2f, pole);
+        TDVisuals.Box(parent, "BannerCloth", basePos + new Vector3(0.6f, 2.3f, 0f), new Vector3(1.1f, 1.6f, 0.1f), cloth);
+    }
+
+    // -------------------------------------------------------- factory theme
+    static void BuildFactory(Transform parent, TDMap map)
+    {
+        Material deck = TDVisuals.Mat(new Color(0.42f, 0.44f, 0.47f), 0.35f, 0.5f);
+        Material wall = TDVisuals.Mat(new Color(0.56f, 0.60f, 0.64f), 0.2f, 0.45f);
+        Material wallDark = TDVisuals.Mat(new Color(0.42f, 0.46f, 0.50f), 0.2f, 0.45f);
+        Material hazard = TDVisuals.Mat(new Color(0.92f, 0.78f, 0.20f), 0f, 0.45f);
+        Material steel = TDVisuals.Mat(new Color(0.68f, 0.70f, 0.72f), 0.6f, 0.5f);
+        Material wood = TDVisuals.Mat(new Color(0.58f, 0.42f, 0.26f), 0f, 0.4f);
+        Material green = TDVisuals.Mat(new Color(0.32f, 0.78f, 0.40f), 0f, 0.5f);
+        Material panel = TDVisuals.Mat(new Color(0.28f, 0.30f, 0.34f), 0.3f, 0.5f);
+
+        float halfX = map.Width * map.Cell * 0.5f + 6f;
+        float halfZ = map.Height * map.Cell * 0.5f + 6f;
+
+        // checker-plate floor
+        TDVisuals.Box(parent, "RoomFloor", new Vector3(0f, -0.15f, 0f), new Vector3(halfX * 2f, 0.2f, halfZ * 2f), deck);
+
+        // corrugated walls with hazard trim
+        float wh = 3.2f, wt = 0.9f;
+        TDVisuals.Box(parent, "WallN", new Vector3(0f, wh * 0.5f, halfZ), new Vector3(halfX * 2f + wt, wh, wt), wall);
+        TDVisuals.Box(parent, "WallS", new Vector3(0f, wh * 0.5f, -halfZ), new Vector3(halfX * 2f + wt, wh, wt), wall);
+        TDVisuals.Box(parent, "WallE", new Vector3(halfX, wh * 0.5f, 0f), new Vector3(wt, wh, halfZ * 2f + wt), wall);
+        TDVisuals.Box(parent, "WallW", new Vector3(-halfX, wh * 0.5f, 0f), new Vector3(wt, wh, halfZ * 2f + wt), wall);
+        TDVisuals.Box(parent, "TrimN", new Vector3(0f, 2.4f, halfZ - wt * 0.5f), new Vector3(halfX * 2f, 0.34f, 0.12f), hazard);
+        TDVisuals.Box(parent, "TrimS", new Vector3(0f, 2.4f, -halfZ + wt * 0.5f), new Vector3(halfX * 2f, 0.34f, 0.12f), hazard);
+        TDVisuals.Box(parent, "TrimE", new Vector3(halfX - wt * 0.5f, 2.4f, 0f), new Vector3(0.12f, 0.34f, halfZ * 2f), hazard);
+        TDVisuals.Box(parent, "TrimW", new Vector3(-halfX + wt * 0.5f, 2.4f, 0f), new Vector3(0.12f, 0.34f, halfZ * 2f), hazard);
+        // vertical ribs so the walls read as corrugated
+        for (int i = 0; i < 14; i++)
+        {
+            float rx = -16f + i * 2.5f;
+            TDVisuals.Box(parent, "RibN" + i, new Vector3(rx, wh * 0.5f, halfZ - wt * 0.5f), new Vector3(0.3f, wh, 0.1f), wallDark);
+        }
+
+        float westX = -halfX + 3.0f;
+        float eastX = halfX - 3.0f;
+
+        // control consoles
+        BuildConsole(parent, new Vector3(eastX, 0f, -4f), panel, steel, green);
+        BuildConsole(parent, new Vector3(eastX, 0f, 6.5f), panel, steel, green);
+
+        // crate stacks
+        TDVisuals.Box(parent, "Crate0", new Vector3(westX, 0.7f, 10f), new Vector3(1.8f, 1.4f, 1.8f), wood);
+        TDVisuals.Box(parent, "Crate1", new Vector3(westX - 0.3f, 0.55f, 7.8f), new Vector3(1.4f, 1.1f, 1.4f), wood);
+        TDVisuals.Box(parent, "Crate2", new Vector3(westX + 0.2f, 1.9f, 10f), new Vector3(1.4f, 1.1f, 1.4f), wood);
+
+        // overhead chain hoist
+        TDVisuals.Box(parent, "Chain", new Vector3(eastX + 1.5f, 2.0f, 10.5f), new Vector3(0.12f, 2.0f, 0.12f), steel);
+        TDVisuals.Box(parent, "Hook", new Vector3(eastX + 1.5f, 0.85f, 10.5f), new Vector3(0.5f, 0.5f, 0.3f), steel);
+
+        // conduit runs along the east wall
+        GameObject conduit = TDVisuals.Cyl(parent, "Conduit", new Vector3(eastX + 1.6f, 2.0f, 0f), 0.18f, 16f, steel);
+        conduit.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+    }
+
+    static void BuildConsole(Transform parent, Vector3 basePos, Material panel, Material steel, Material green)
+    {
+        TDVisuals.Box(parent, "ConsoleBody", basePos + new Vector3(0f, 0.7f, 0f), new Vector3(2.0f, 1.4f, 1.2f), panel);
+        GameObject face = TDVisuals.Box(parent, "ConsoleFace", basePos + new Vector3(0f, 1.25f, -0.35f), new Vector3(1.8f, 0.7f, 0.3f), steel);
+        face.transform.localRotation = Quaternion.Euler(-30f, 0f, 0f);
+        TDVisuals.Sphere(parent, "ConsoleLight", basePos + new Vector3(-0.5f, 1.5f, -0.5f), 0.22f, green);
+        TDVisuals.Box(parent, "ConsoleBase", basePos + new Vector3(0f, 0.1f, 0f), new Vector3(2.2f, 0.2f, 1.4f), steel);
     }
 }

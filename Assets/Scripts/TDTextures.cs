@@ -625,6 +625,274 @@ public static class TDTextures
         return t;
     }
 
+    // -------------------------------------------------------- sewer theme
+    static Texture2D concrete, railTrack, railCross;
+
+    /// <summary>Damp concrete slab for tower plots: mid-grey with a painted
+    /// hazard border and scuff marks. Kept light so tints read as grey /
+    /// hazard yellow / caution orange / olive.</summary>
+    public static Texture2D Concrete()
+    {
+        if (concrete != null) return concrete;
+        int S = 128;
+        Texture2D t = New(S);
+        Color baseC = new Color(0.84f, 0.84f, 0.82f);
+        Color paint = new Color(0.58f, 0.56f, 0.52f);
+        Color scuff = new Color(0.70f, 0.69f, 0.66f);
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float n = (N(x, y) - 0.5f) * 0.05f;
+                float grime = (N(x / 13 + 6, y / 13 + 2) - 0.5f) * 0.09f;
+                Color c = baseC + new Color(n, n, n) + new Color(grime, grime * 0.98f, grime * 0.92f);
+
+                const int b = 7;                       // painted hazard border
+                if (x < b || y < b || x >= S - b || y >= S - b) c = paint;
+                if (N(x * 13 + 4, y * 13 + 7) > 0.982f) c = scuff;
+                t.SetPixel(x, y, c);
+            }
+        }
+        t.Apply();
+        concrete = t;
+        return t;
+    }
+
+    /// <summary>Rail line (the mob path): dark wet ballast with sleepers and two
+    /// bright polished steel rails, so the route is the brightest element.</summary>
+    public static Texture2D RailTrack()
+    {
+        if (railTrack != null) return railTrack;
+        int S = 128;
+        Texture2D t = New(S);
+        Color ballast = new Color(0.30f, 0.28f, 0.27f);
+        Color sleeper = new Color(0.24f, 0.20f, 0.17f);
+        Color steel = new Color(0.92f, 0.94f, 0.97f);
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float n = (N(x, y) - 0.5f) * 0.08f;
+                Color c = ballast + new Color(n, n * 0.96f, n * 0.90f);
+                if ((x % 16) < 6 && y > 22 && y < 106) c = sleeper + new Color(n, n, n);
+                if ((y >= 40 && y <= 45) || (y >= 83 && y <= 88)) c = steel;
+                t.SetPixel(x, y, c);
+            }
+        }
+        t.Apply();
+        railTrack = t;
+        return t;
+    }
+
+    public static Texture2D RailCross()
+    {
+        if (railCross != null) return railCross;
+        int S = 128;
+        Texture2D t = New(S);
+        Color ballast = new Color(0.30f, 0.28f, 0.27f);
+        Color sleeper = new Color(0.24f, 0.20f, 0.17f);
+        Color steel = new Color(0.92f, 0.94f, 0.97f);
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float n = (N(x, y) - 0.5f) * 0.08f;
+                Color c = ballast + new Color(n, n * 0.96f, n * 0.90f);
+                if ((x % 16) < 6 || (y % 16) < 6) c = sleeper + new Color(n, n, n);
+                bool rail = ((y >= 40 && y <= 45) || (y >= 83 && y <= 88)
+                          || (x >= 40 && x <= 45) || (x >= 83 && x <= 88));
+                if (rail) c = steel;
+                t.SetPixel(x, y, c);
+            }
+        }
+        t.Apply();
+        railCross = t;
+        return t;
+    }
+
+    // ------------------------------------------------------- castle theme
+    static Texture2D banner, cobble, cobbleCross;
+
+    /// <summary>Heraldic banner for tower plots: flat matte cloth with a woven
+    /// texture and a broad chevron. Kept light so tints read as red / blue /
+    /// gold / green heraldry.</summary>
+    public static Texture2D Banner()
+    {
+        if (banner != null) return banner;
+        int S = 128;
+        Texture2D t = New(S);
+        Color cloth = new Color(0.96f, 0.95f, 0.92f);
+        Color weaveC = new Color(0.88f, 0.86f, 0.83f);
+        Color chevron = new Color(0.74f, 0.72f, 0.68f);
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float n = (N(x, y) - 0.5f) * 0.03f;
+                float w = (((x / 2) + (y / 2)) % 2 == 0) ? 0.022f : -0.022f;   // cloth weave
+                Color c = cloth + new Color(n + w, n + w, n + w);
+
+                float dx = Mathf.Abs(x - S * 0.5f);
+                float cy = 46f - dx * 0.45f;                                    // upward chevron
+                float d = Mathf.Abs(y - cy);
+                if (d < 8f) c = Color.Lerp(c, chevron, 1f - d / 8f);
+
+                if (x < 3 || y < 3 || x >= S - 3 || y >= S - 3) c = weaveC * 0.92f;
+                t.SetPixel(x, y, c);
+            }
+        }
+        t.Apply();
+        banner = t;
+        return t;
+    }
+
+    /// <summary>Cobblestone road (the mob path): irregular grey stones with
+    /// weathered timber edging along the direction of travel.</summary>
+    public static Texture2D Cobble()
+    {
+        if (cobble != null) return cobble;
+        int S = 128;
+        Texture2D t = New(S);
+        Color stone = new Color(0.76f, 0.75f, 0.73f);
+        Color mortar = new Color(0.56f, 0.55f, 0.53f);
+        Color plank = new Color(0.52f, 0.38f, 0.24f);
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float jitter = (N(x / 16, y / 16) - 0.5f) * 0.13f;             // per-stone tone
+                float n = (N(x, y) - 0.5f) * 0.05f;
+                Color c = stone + new Color(jitter + n, jitter + n, jitter + n);
+                if ((x % 16) < 3 || (y % 16) < 3) c = mortar + new Color(n, n, n);
+                if (y < 6 || y >= S - 6) c = plank;                            // timber edging
+                t.SetPixel(x, y, c);
+            }
+        }
+        t.Apply();
+        cobble = t;
+        return t;
+    }
+
+    public static Texture2D CobbleCross()
+    {
+        if (cobbleCross != null) return cobbleCross;
+        int S = 128;
+        Texture2D t = New(S);
+        Color stone = new Color(0.76f, 0.75f, 0.73f);
+        Color mortar = new Color(0.56f, 0.55f, 0.53f);
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float jitter = (N(x / 16, y / 16) - 0.5f) * 0.13f;
+                float n = (N(x, y) - 0.5f) * 0.05f;
+                Color c = stone + new Color(jitter + n, jitter + n, jitter + n);
+                if ((x % 16) < 3 || (y % 16) < 3) c = mortar + new Color(n, n, n);
+                t.SetPixel(x, y, c);
+            }
+        }
+        t.Apply();
+        cobbleCross = t;
+        return t;
+    }
+
+    // ------------------------------------------------------ factory theme
+    static Texture2D safetyPlate, conveyor, conveyorCross;
+
+    /// <summary>Painted steel plate for tower plots: light base with scuffed
+    /// paint patches and corner bolts. Tints read as machine blue / safety
+    /// yellow / industrial grey / dark green.</summary>
+    public static Texture2D SafetyPlate()
+    {
+        if (safetyPlate != null) return safetyPlate;
+        int S = 128;
+        Texture2D t = New(S);
+        Color plate = new Color(0.92f, 0.92f, 0.90f);
+        Color scuff = new Color(0.76f, 0.75f, 0.73f);
+        Color rivet = new Color(0.64f, 0.64f, 0.64f);
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float n = (N(x, y) - 0.5f) * 0.04f;
+                float wear = (N(x / 7 + 1, y / 7 + 8) - 0.5f) * 0.10f;
+                Color c = plate + new Color(n, n, n) + new Color(wear, wear * 0.98f, wear * 0.96f);
+                if (N(x * 17 + 3, y * 17 + 5) > 0.976f) c = scuff;             // chipped paint
+
+                const int d = 8;                                               // corner bolts
+                bool rx = Mathf.Abs(x - d) < 2 || Mathf.Abs(x - (S - 1 - d)) < 2;
+                bool ry = Mathf.Abs(y - d) < 2 || Mathf.Abs(y - (S - 1 - d)) < 2;
+                if (rx && ry) c = rivet;
+                if (x < 3 || y < 3 || x >= S - 3 || y >= S - 3) c = Color.Lerp(c, scuff, 0.7f);
+                t.SetPixel(x, y, c);
+            }
+        }
+        t.Apply();
+        safetyPlate = t;
+        return t;
+    }
+
+    /// <summary>Conveyor belt (the mob path): black rubber with steel roller
+    /// segments and a bright painted safety stripe along one edge.</summary>
+    public static Texture2D Conveyor()
+    {
+        if (conveyor != null) return conveyor;
+        int S = 128;
+        Texture2D t = New(S);
+        Color belt = new Color(0.13f, 0.13f, 0.14f);
+        Color beltLit = new Color(0.21f, 0.21f, 0.23f);
+        Color roller = new Color(0.56f, 0.58f, 0.61f);
+        Color stripe = new Color(0.96f, 0.80f, 0.16f);
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float n = (N(x, y) - 0.5f) * 0.04f;
+                Color c = belt + new Color(n, n, n);
+                if ((x % 14) < 5 && y > 18 && y < 110) c = roller + new Color(n, n, n);
+
+                float gl = Mathf.Clamp01(1f - Mathf.Abs(y - 64f) / 30f);
+                c = Color.Lerp(c, beltLit, gl * 0.5f);
+
+                if (Mathf.Abs(y - 22f) < 7f) c = stripe;                        // safety stripe
+                t.SetPixel(x, y, c);
+            }
+        }
+        t.Apply();
+        conveyor = t;
+        return t;
+    }
+
+    public static Texture2D ConveyorCross()
+    {
+        if (conveyorCross != null) return conveyorCross;
+        int S = 128;
+        Texture2D t = New(S);
+        Color belt = new Color(0.13f, 0.13f, 0.14f);
+        Color beltLit = new Color(0.21f, 0.21f, 0.23f);
+        Color roller = new Color(0.56f, 0.58f, 0.61f);
+        Color stripe = new Color(0.96f, 0.80f, 0.16f);
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float n = (N(x, y) - 0.5f) * 0.04f;
+                Color c = belt + new Color(n, n, n);
+                if ((x % 14) < 5 || (y % 14) < 5) c = roller + new Color(n, n, n);
+
+                float gl = Mathf.Clamp01(1f - Mathf.Abs((x + y) * 0.5f - 64f) / 34f);
+                c = Color.Lerp(c, beltLit, gl * 0.35f);
+
+                bool stripeOn = Mathf.Abs(y - 22f) < 7f || Mathf.Abs(x - 22f) < 7f;
+                if (stripeOn) c = stripe;
+                t.SetPixel(x, y, c);
+            }
+        }
+        t.Apply();
+        conveyorCross = t;
+        return t;
+    }
+
     // ------------------------------------------------------------ paper (UI)
     static Texture2D paper, paperHover, paperPressed, menuFade;
 

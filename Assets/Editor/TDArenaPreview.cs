@@ -54,6 +54,21 @@ public static class TDArenaPreview
                 fillCol = new Color(0.95f, 0.72f, 0.80f); fillI = 0.26f;
                 ambCol = new Color(0.24f, 0.20f, 0.20f);
                 break;
+            case BoardTheme.SewerSubway:
+                keyCol = new Color(0.95f, 0.82f, 0.64f); keyI = 0.75f;
+                fillCol = new Color(0.45f, 0.60f, 0.88f); fillI = 0.30f;
+                ambCol = new Color(0.17f, 0.18f, 0.21f);
+                break;
+            case BoardTheme.MedievalCastle:
+                keyCol = new Color(1.00f, 0.88f, 0.70f); keyI = 0.95f;
+                fillCol = new Color(0.62f, 0.66f, 0.80f); fillI = 0.18f;
+                ambCol = new Color(0.20f, 0.19f, 0.18f);
+                break;
+            case BoardTheme.FactoryFloor:
+                keyCol = new Color(0.88f, 0.94f, 1.00f); keyI = 0.88f;
+                fillCol = new Color(0.60f, 0.70f, 0.85f); fillI = 0.26f;
+                ambCol = new Color(0.16f, 0.18f, 0.21f);
+                break;
             default:
                 keyCol = new Color(1.00f, 0.86f, 0.66f); keyI = 0.72f;
                 fillCol = new Color(0.55f, 0.62f, 0.78f); fillI = 0.10f;

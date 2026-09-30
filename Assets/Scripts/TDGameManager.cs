@@ -192,6 +192,21 @@ public partial class TDGameManager : MonoBehaviour
                 fillCol = new Color(0.95f, 0.72f, 0.80f); fillI = 0.26f;   // pink bounce off the shelves
                 ambCol = new Color(0.24f, 0.20f, 0.20f); shadow = 0.40f;
                 break;
+            case BoardTheme.SewerSubway:                         // dim underground, lamp pools
+                keyCol = new Color(0.95f, 0.82f, 0.64f); keyI = 0.75f;
+                fillCol = new Color(0.45f, 0.60f, 0.88f); fillI = 0.30f;   // cold bounce off wet concrete
+                ambCol = new Color(0.17f, 0.18f, 0.21f); shadow = 0.60f;
+                break;
+            case BoardTheme.MedievalCastle:                      // warm afternoon
+                keyCol = new Color(1.00f, 0.88f, 0.70f); keyI = 0.95f;
+                fillCol = new Color(0.62f, 0.66f, 0.80f); fillI = 0.18f;
+                ambCol = new Color(0.20f, 0.19f, 0.18f); shadow = 0.45f;
+                break;
+            case BoardTheme.FactoryFloor:                        // bright cool fluorescents
+                keyCol = new Color(0.88f, 0.94f, 1.00f); keyI = 0.88f;
+                fillCol = new Color(0.60f, 0.70f, 0.85f); fillI = 0.26f;
+                ambCol = new Color(0.16f, 0.18f, 0.21f); shadow = 0.40f;
+                break;
             default:                                             // Kid's Bedroom: warm afternoon
                 keyCol = new Color(1.00f, 0.86f, 0.66f); keyI = 0.95f;
                 fillCol = new Color(0.55f, 0.62f, 0.78f); fillI = 0.16f;

@@ -5,7 +5,18 @@ using UnityEngine;
 /// so the same code can produce the local board and inert remote boards.
 /// Layout/Route are never changed here — themes only reskin tiles + room.
 /// </summary>
-public enum BoardTheme { Bedroom, ArcticOutpost, VolcanicCaldera, SpaceStation, DesertHighway, CandyShop }
+public enum BoardTheme
+{
+    Bedroom,
+    ArcticOutpost,
+    VolcanicCaldera,
+    SpaceStation,
+    DesertHighway,
+    CandyShop,
+    SewerSubway,
+    MedievalCastle,
+    FactoryFloor
+}
 
 public static class TDBoardBuilder
 {
@@ -17,7 +28,10 @@ public static class TDBoardBuilder
         BoardTheme.VolcanicCaldera,
         BoardTheme.SpaceStation,
         BoardTheme.DesertHighway,
-        BoardTheme.CandyShop
+        BoardTheme.CandyShop,
+        BoardTheme.SewerSubway,
+        BoardTheme.MedievalCastle,
+        BoardTheme.FactoryFloor
     };
 
     public static string ThemeName(BoardTheme t)
@@ -29,6 +43,9 @@ public static class TDBoardBuilder
             case BoardTheme.SpaceStation: return "Space Station";
             case BoardTheme.DesertHighway: return "Desert Highway";
             case BoardTheme.CandyShop: return "Candy Shop";
+            case BoardTheme.SewerSubway: return "Sewer / Subway";
+            case BoardTheme.MedievalCastle: return "Medieval Castle";
+            case BoardTheme.FactoryFloor: return "Factory Floor";
             default: return "Kid's Bedroom";
         }
     }
@@ -47,6 +64,12 @@ public static class TDBoardBuilder
                 return "An asphalt highway threads sun-baked paving across red mesa country.";
             case BoardTheme.CandyShop:
                 return "An icing-topped chocolate lane winds between pastel candy slabs.";
+            case BoardTheme.SewerSubway:
+                return "A steel rail line runs through a flooded concrete undercroft.";
+            case BoardTheme.MedievalCastle:
+                return "A cobbled road crosses heraldic banners in a torchlit courtyard.";
+            case BoardTheme.FactoryFloor:
+                return "A conveyor belt snakes between safety-painted machine plates.";
             default:
                 return "The original play-mat: a toy train track weaving through a kid's bedroom.";
         }
@@ -90,6 +113,9 @@ public static class TDBoardBuilder
         if (theme == BoardTheme.SpaceStation) { BuildTilesStation(parent, map, layout, gw, gh); return; }
         if (theme == BoardTheme.DesertHighway) { BuildTilesDesert(parent, map, layout, gw, gh); return; }
         if (theme == BoardTheme.CandyShop) { BuildTilesCandy(parent, map, layout, gw, gh); return; }
+        if (theme == BoardTheme.SewerSubway) { BuildTilesSewer(parent, map, layout, gw, gh); return; }
+        if (theme == BoardTheme.MedievalCastle) { BuildTilesCastle(parent, map, layout, gw, gh); return; }
+        if (theme == BoardTheme.FactoryFloor) { BuildTilesFactory(parent, map, layout, gw, gh); return; }
 
         Color[] tileCols =
         {
@@ -351,6 +377,141 @@ public static class TDBoardBuilder
         Material voidMat = TDVisuals.Mat(new Color(0.88f, 0.83f, 0.74f), 0f, 0.3f);
         Material startMat = TDVisuals.Mat(new Color(0.35f, 0.85f, 0.40f), 0f, 0.5f);   // gumdrop
         Material endMat = TDVisuals.Mat(new Color(0.88f, 0.18f, 0.20f), 0f, 0.5f);     // licorice
+
+        float cell = map.Cell;
+        for (int ly = 0; ly < gh; ly++)
+        {
+            for (int x = 0; x < gw; x++)
+            {
+                char c = layout[ly][x];
+                Vector3 pos = map.CellCenter(x, ly) - Vector3.up * 0.05f;
+                Vector3 scale = new Vector3(cell * 0.97f, 0.10f, cell * 0.97f);
+                if (c == 'm')
+                {
+                    int o = PathOrientation(map, x, ly);
+                    GameObject tile = TDVisuals.Box(parent, "Tile", pos, scale, o == 2 ? crossMat : pathMat);
+                    if (o == 1) tile.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+                }
+                else
+                {
+                    Material m = voidMat;
+                    if (c == 't') m = tileMats[(x + ly) % tileMats.Length];
+                    else if (c == 's') m = startMat;
+                    else if (c == 'e') m = endMat;
+                    TDVisuals.Box(parent, "Tile", pos, scale, m);
+                }
+            }
+        }
+    }
+
+    static void BuildTilesSewer(Transform parent, TDMap map, string[] layout, int gw, int gh)
+    {
+        Color[] tileCols =
+        {
+            new Color(0.80f, 0.80f, 0.78f),   // damp concrete
+            new Color(0.95f, 0.82f, 0.30f),   // hazard yellow
+            new Color(0.92f, 0.58f, 0.26f),   // caution orange
+            new Color(0.58f, 0.62f, 0.44f)    // algae olive
+        };
+        Material[] tileMats = new Material[tileCols.Length];
+        for (int i = 0; i < tileCols.Length; i++)
+            tileMats[i] = TDVisuals.TexturedMat(TDTextures.Concrete(), tileCols[i], Vector2.one);
+
+        Material pathMat = TDVisuals.TexturedMat(TDTextures.RailTrack(), Color.white, Vector2.one);
+        Material crossMat = TDVisuals.TexturedMat(TDTextures.RailCross(), Color.white, Vector2.one);
+        Material voidMat = TDVisuals.Mat(new Color(0.34f, 0.34f, 0.33f), 0.05f, 0.4f);   // wet concrete
+        Material startMat = TDVisuals.Mat(new Color(0.35f, 0.82f, 0.45f), 0f, 0.45f);
+        Material endMat = TDVisuals.Mat(new Color(0.85f, 0.25f, 0.22f), 0f, 0.45f);
+
+        float cell = map.Cell;
+        for (int ly = 0; ly < gh; ly++)
+        {
+            for (int x = 0; x < gw; x++)
+            {
+                char c = layout[ly][x];
+                Vector3 pos = map.CellCenter(x, ly) - Vector3.up * 0.05f;
+                Vector3 scale = new Vector3(cell * 0.97f, 0.10f, cell * 0.97f);
+                if (c == 'm')
+                {
+                    int o = PathOrientation(map, x, ly);
+                    GameObject tile = TDVisuals.Box(parent, "Tile", pos, scale, o == 2 ? crossMat : pathMat);
+                    if (o == 1) tile.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+                }
+                else
+                {
+                    Material m = voidMat;
+                    if (c == 't') m = tileMats[(x + ly) % tileMats.Length];
+                    else if (c == 's') m = startMat;
+                    else if (c == 'e') m = endMat;
+                    TDVisuals.Box(parent, "Tile", pos, scale, m);
+                }
+            }
+        }
+    }
+
+    static void BuildTilesCastle(Transform parent, TDMap map, string[] layout, int gw, int gh)
+    {
+        Color[] tileCols =
+        {
+            new Color(0.78f, 0.24f, 0.24f),   // deep red banner
+            new Color(0.24f, 0.40f, 0.74f),   // royal blue
+            new Color(0.88f, 0.72f, 0.26f),   // gold
+            new Color(0.28f, 0.55f, 0.32f)    // forest green
+        };
+        Material[] tileMats = new Material[tileCols.Length];
+        for (int i = 0; i < tileCols.Length; i++)
+            tileMats[i] = TDVisuals.TexturedMat(TDTextures.Banner(), tileCols[i], Vector2.one);
+
+        Material pathMat = TDVisuals.TexturedMat(TDTextures.Cobble(), Color.white, Vector2.one);
+        Material crossMat = TDVisuals.TexturedMat(TDTextures.CobbleCross(), Color.white, Vector2.one);
+        Material voidMat = TDVisuals.Mat(new Color(0.60f, 0.50f, 0.36f), 0f, 0.3f);     // packed earth
+        Material startMat = TDVisuals.Mat(new Color(0.35f, 0.72f, 0.38f), 0f, 0.4f);
+        Material endMat = TDVisuals.Mat(new Color(0.78f, 0.22f, 0.20f), 0f, 0.4f);
+
+        float cell = map.Cell;
+        for (int ly = 0; ly < gh; ly++)
+        {
+            for (int x = 0; x < gw; x++)
+            {
+                char c = layout[ly][x];
+                Vector3 pos = map.CellCenter(x, ly) - Vector3.up * 0.05f;
+                Vector3 scale = new Vector3(cell * 0.97f, 0.10f, cell * 0.97f);
+                if (c == 'm')
+                {
+                    int o = PathOrientation(map, x, ly);
+                    GameObject tile = TDVisuals.Box(parent, "Tile", pos, scale, o == 2 ? crossMat : pathMat);
+                    if (o == 1) tile.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+                }
+                else
+                {
+                    Material m = voidMat;
+                    if (c == 't') m = tileMats[(x + ly) % tileMats.Length];
+                    else if (c == 's') m = startMat;
+                    else if (c == 'e') m = endMat;
+                    TDVisuals.Box(parent, "Tile", pos, scale, m);
+                }
+            }
+        }
+    }
+
+    static void BuildTilesFactory(Transform parent, TDMap map, string[] layout, int gw, int gh)
+    {
+        Color[] tileCols =
+        {
+            new Color(0.34f, 0.52f, 0.80f),   // machine blue
+            new Color(0.92f, 0.80f, 0.26f),   // safety yellow
+            new Color(0.62f, 0.64f, 0.66f),   // industrial grey
+            new Color(0.32f, 0.56f, 0.40f)    // dark green
+        };
+        Material[] tileMats = new Material[tileCols.Length];
+        for (int i = 0; i < tileCols.Length; i++)
+            tileMats[i] = TDVisuals.TexturedMat(TDTextures.SafetyPlate(), tileCols[i], Vector2.one);
+
+        Material pathMat = TDVisuals.TexturedMat(TDTextures.Conveyor(), Color.white, Vector2.one);
+        Material crossMat = TDVisuals.TexturedMat(TDTextures.ConveyorCross(), Color.white, Vector2.one);
+        Material voidMat = TDVisuals.Mat(new Color(0.48f, 0.50f, 0.53f), 0.3f, 0.5f);   // checker plate
+        Material startMat = TDVisuals.Mat(new Color(0.35f, 0.80f, 0.40f), 0f, 0.45f);
+        Material endMat = TDVisuals.Mat(new Color(0.85f, 0.25f, 0.22f), 0f, 0.45f);
 
         float cell = map.Cell;
         for (int ly = 0; ly < gh; ly++)
