@@ -208,7 +208,7 @@ Editor render helpers (write PNGs to `%TEMP%\opencode\`):
 | Method | Renders |
 |---|---|
 | `SnackPreview.Render` | tower grid (6 tiers each) + a few mobs |
-| `TDArenaPreview.Render` | map + room |
+| `TDArenaPreview.Render` | map + room (set `TD_PREVIEW_THEME=<BoardTheme>` to render one theme headlessly; batch mode never runs `Awake`, so otherwise it uses the declared default) |
 | `TDMultiBoardPreview.Render` | four player boards side by side |
 | `TDSpectatePreview.Render` | a remote board fed a synthetic snapshot |
 | `TDPlacementPreview.Render` | ground contact of towers/mobs |

@@ -1,13 +1,14 @@
 using UnityEngine;
 
 // Builds environments around the grid map. Bedroom is the original kid's room;
-// ArcticOutpost is the winter reskin (same Layout/Route, only visuals change).
+// the other themes are visual reskins (same Layout/Route, only visuals change).
 public static class TDRoom
 {
     public static void Build(Transform parent, TDMap map, BoardTheme theme = BoardTheme.Bedroom)
     {
         if (theme == BoardTheme.ArcticOutpost) { BuildArctic(parent, map); return; }
         if (theme == BoardTheme.VolcanicCaldera) { BuildVolcanic(parent, map); return; }
+        if (theme == BoardTheme.SpaceStation) { BuildStation(parent, map); return; }
         BuildBedroom(parent, map);
     }
 
@@ -207,5 +208,114 @@ public static class TDRoom
     {
         TDVisuals.Cyl(parent, "Pool", pos, diameter * 0.5f, 0.08f, lava);
         TDVisuals.Cyl(parent, "PoolCore", pos + new Vector3(0f, 0.05f, 0f), diameter * 0.26f, 0.08f, hot);
+    }
+
+    // -------------------------------------------------------- space station
+    static void BuildStation(Transform parent, TDMap map)
+    {
+        Material floor = TDVisuals.Mat(new Color(0.20f, 0.23f, 0.28f), 0.1f, 0.4f);
+        Material hull = TDVisuals.Mat(new Color(0.29f, 0.33f, 0.40f), 0.15f, 0.45f);
+        Material hullDark = TDVisuals.Mat(new Color(0.21f, 0.24f, 0.30f), 0.15f, 0.45f);
+        Material trim = TDVisuals.Mat(new Color(0.36f, 0.41f, 0.48f), 0.3f, 0.55f);
+        Material glow = TDVisuals.Mat(new Color(0.40f, 0.95f, 1.00f), 0f, 0.6f);
+        Material hazard = TDVisuals.Mat(new Color(0.74f, 0.58f, 0.13f), 0f, 0.45f);
+        Material crate = TDVisuals.Mat(new Color(0.34f, 0.37f, 0.42f), 0f, 0.4f);
+
+        float halfX = map.Width * map.Cell * 0.5f + 6f;
+        float halfZ = map.Height * map.Cell * 0.5f + 6f;
+        float gridX = map.Width * map.Cell * 0.5f;
+        float gridZ = map.Height * map.Cell * 0.5f;
+
+        // deck floor
+        TDVisuals.Box(parent, "RoomFloor", new Vector3(0f, -0.15f, 0f), new Vector3(halfX * 2f, 0.2f, halfZ * 2f), floor);
+
+        // hazard trim skirting the play area
+        TDVisuals.Box(parent, "HazardN", new Vector3(0f, -0.06f, gridZ + 0.35f), new Vector3(gridX * 2f + 0.7f, 0.05f, 0.35f), hazard);
+        TDVisuals.Box(parent, "HazardS", new Vector3(0f, -0.06f, -gridZ - 0.35f), new Vector3(gridX * 2f + 0.7f, 0.05f, 0.35f), hazard);
+        TDVisuals.Box(parent, "HazardE", new Vector3(gridX + 0.35f, -0.06f, 0f), new Vector3(0.35f, 0.05f, gridZ * 2f + 0.7f), hazard);
+        TDVisuals.Box(parent, "HazardW", new Vector3(-gridX - 0.35f, -0.06f, 0f), new Vector3(0.35f, 0.05f, gridZ * 2f + 0.7f), hazard);
+
+        // hull walls
+        float wh = 3.0f, wt = 0.9f;
+        TDVisuals.Box(parent, "WallN", new Vector3(0f, wh * 0.5f, halfZ), new Vector3(halfX * 2f + wt, wh, wt), hull);
+        TDVisuals.Box(parent, "WallS", new Vector3(0f, wh * 0.5f, -halfZ), new Vector3(halfX * 2f + wt, wh, wt), hull);
+        TDVisuals.Box(parent, "WallE", new Vector3(halfX, wh * 0.5f, 0f), new Vector3(wt, wh, halfZ * 2f + wt), hull);
+        TDVisuals.Box(parent, "WallW", new Vector3(-halfX, wh * 0.5f, 0f), new Vector3(wt, wh, halfZ * 2f + wt), hull);
+        // darker wainscot band along the base of each wall
+        TDVisuals.Box(parent, "SkirtN", new Vector3(0f, 0.35f, halfZ - wt * 0.5f), new Vector3(halfX * 2f, 0.7f, 0.15f), hullDark);
+        TDVisuals.Box(parent, "SkirtS", new Vector3(0f, 0.35f, -halfZ + wt * 0.5f), new Vector3(halfX * 2f, 0.7f, 0.15f), hullDark);
+        TDVisuals.Box(parent, "SkirtE", new Vector3(halfX - wt * 0.5f, 0.35f, 0f), new Vector3(0.15f, 0.7f, halfZ * 2f), hullDark);
+        TDVisuals.Box(parent, "SkirtW", new Vector3(-halfX + wt * 0.5f, 0.35f, 0f), new Vector3(0.15f, 0.7f, halfZ * 2f), hullDark);
+
+        // glowing portholes onto the starfield (a bright disc + a bezel)
+        float[] px = { -9f, -4.5f, 0f, 4.5f, 9f };
+        for (int i = 0; i < px.Length; i++)
+            BuildPorthole(parent, new Vector3(px[i], 1.85f, halfZ - wt * 0.5f - 0.04f), true, glow, trim);
+        float[] pz = { -6f, 0f, 6f };
+        for (int i = 0; i < pz.Length; i++)
+        {
+            BuildPorthole(parent, new Vector3(halfX - wt * 0.5f - 0.04f, 1.85f, pz[i]), false, glow, trim);
+            BuildPorthole(parent, new Vector3(-halfX + wt * 0.5f + 0.04f, 1.85f, pz[i]), false, glow, trim);
+        }
+
+        float westX = -halfX + 3.0f;
+        float eastX = halfX - 3.0f;
+
+        // cargo crates (west) with hazard accents
+        BuildCrate(parent, new Vector3(westX, 0.6f, 9f), 2.0f, crate, hazard, trim);
+        BuildCrate(parent, new Vector3(westX - 0.4f, 0.45f, 6.6f), 1.3f, crate, hazard, trim);
+
+        // satellite dish (north-west floor)
+        TDVisuals.Cyl(parent, "DishPole", new Vector3(westX + 0.4f, 0.9f, 12f), 0.12f, 1.8f, trim);
+        GameObject dish = TDVisuals.Cyl(parent, "Dish", new Vector3(westX + 0.4f, 1.9f, 12f), 0.9f, 0.16f, trim);
+        dish.transform.localRotation = Quaternion.Euler(60f, 0f, 0f);
+
+        // coolant pipes running along the east wall
+        for (int i = 0; i < 2; i++)
+        {
+            GameObject pipe = TDVisuals.Cyl(parent, "Pipe" + i,
+                new Vector3(eastX + 1.4f, 0.7f + i * 0.5f, 0f), 0.16f, 12f, trim);
+            pipe.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+        }
+
+        // maintenance robot arm (south-east floor)
+        TDVisuals.Cyl(parent, "ArmBase", new Vector3(eastX, 0.35f, -8f), 0.45f, 0.7f, hullDark);
+        GameObject armLo = TDVisuals.Box(parent, "ArmLower", new Vector3(eastX, 1.0f, -8f), new Vector3(0.35f, 1.4f, 0.35f), trim);
+        armLo.transform.localRotation = Quaternion.Euler(0f, 0f, 18f);
+        GameObject armHi = TDVisuals.Box(parent, "ArmUpper", new Vector3(eastX + 0.6f, 1.9f, -8f), new Vector3(0.28f, 1.3f, 0.28f), trim);
+        armHi.transform.localRotation = Quaternion.Euler(0f, 0f, -35f);
+        TDVisuals.Box(parent, "ArmHead", new Vector3(eastX + 1.15f, 2.4f, -8f), new Vector3(0.4f, 0.35f, 0.4f), glow);
+
+        // antenna mast (south-west floor)
+        TDVisuals.Cyl(parent, "MastPole", new Vector3(westX - 0.4f, 1.3f, -11.5f), 0.1f, 2.6f, trim);
+        TDVisuals.Sphere(parent, "MastTip", new Vector3(westX - 0.4f, 2.7f, -11.5f), 0.45f, glow);
+    }
+
+    /// <summary>A glowing porthole disc (plus a rim) let into a hull wall.</summary>
+    static void BuildPorthole(Transform parent, Vector3 pos, bool facingZ, Material glow, Material trim)
+    {
+        GameObject glass = TDVisuals.Cyl(parent, "Porthole", pos, 0.55f, 0.10f, glow);
+        GameObject rim = TDVisuals.Cyl(parent, "PortholeRim", pos, 0.70f, 0.06f, trim);
+        // a cylinder's axis is its local Y, so rotate it to face out of the wall
+        if (facingZ)
+        {
+            glass.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            rim.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+        }
+        else
+        {
+            glass.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+            rim.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+        }
+        // push the rim slightly behind the glass so it reads as a bezel
+        rim.transform.localPosition = pos + (facingZ ? new Vector3(0f, 0f, 0.06f) : new Vector3(0.06f, 0f, 0f));
+    }
+
+    static void BuildCrate(Transform parent, Vector3 pos, float size, Material crate, Material hazard, Material trim)
+    {
+        TDVisuals.Box(parent, "Crate", pos, new Vector3(size, size, size), crate);
+        TDVisuals.Box(parent, "CrateBand", pos, new Vector3(size * 1.02f, size * 0.16f, size * 1.02f), hazard);
+        TDVisuals.Box(parent, "CrateLid", pos + new Vector3(0f, size * 0.5f, 0f),
+            new Vector3(size * 1.04f, size * 0.1f, size * 1.04f), trim);
     }
 }

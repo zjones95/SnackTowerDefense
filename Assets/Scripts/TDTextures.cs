@@ -324,6 +324,112 @@ public static class TDTextures
         return t;
     }
 
+    // -------------------------------------------------- space-station theme
+    static Texture2D deckPanel, magRail, magRailCross;
+
+    /// <summary>Space-station deck plate for tower plots: gunmetal panel with a
+    /// recessed seam, an inner bevel highlight and corner rivets. Tint per material.</summary>
+    public static Texture2D DeckPanel()
+    {
+        if (deckPanel != null) return deckPanel;
+        int S = 128;
+        Texture2D t = New(S);
+        Color plate = new Color(0.44f, 0.48f, 0.56f);
+        Color seam = new Color(0.20f, 0.23f, 0.29f);
+        Color rivet = new Color(0.60f, 0.65f, 0.73f);
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float n = (N(x, y) - 0.5f) * 0.05f;
+                float brush = (N(x / 3 + 9, y / 3 + 2) - 0.5f) * 0.05f;   // brushed metal streaks
+                Color c = plate + new Color(n, n, n * 1.06f) + new Color(brush, brush, brush);
+
+                const int b = 5;                       // recessed border seam
+                if (x < b || y < b || x >= S - b || y >= S - b)
+                {
+                    c = seam;
+                }
+                else if (x < b + 3 || y < b + 3 || x >= S - b - 3 || y >= S - b - 3)
+                {
+                    c = Color.Lerp(c, rivet, 0.22f);   // bevel catches the light
+                }
+                else
+                {
+                    // corner rivets
+                    int d = b + 5;
+                    bool rx = Mathf.Abs(x - d) < 2 || Mathf.Abs(x - (S - 1 - d)) < 2;
+                    bool ry = Mathf.Abs(y - d) < 2 || Mathf.Abs(y - (S - 1 - d)) < 2;
+                    if (rx && ry) c = rivet;
+                }
+                t.SetPixel(x, y, c);
+            }
+        }
+        t.Apply();
+        deckPanel = t;
+        return t;
+    }
+
+    /// <summary>Mag-rail lane (the mob path): a dark rail bed with twin glowing
+    /// cyan guide strips, so the route is by far the brightest thing on the board.</summary>
+    public static Texture2D MagRail()
+    {
+        if (magRail != null) return magRail;
+        int S = 128;
+        Texture2D t = New(S);
+        Color bed = new Color(0.13f, 0.15f, 0.19f);
+        Color tread = new Color(0.20f, 0.23f, 0.29f);
+        Color glow = new Color(0.35f, 0.92f, 1.00f);
+        Color core = new Color(0.88f, 1.00f, 1.00f);
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float n = (N(x, y) - 0.5f) * 0.04f;
+                Color c = bed + new Color(n, n, n);
+                if ((x % 16) < 8 && y > 20 && y < 108) c = tread + new Color(n, n, n);   // tread plates
+
+                float s = Mathf.Min(Mathf.Abs(y - 26f), Mathf.Abs(y - 102f));
+                if (s < 7f) c = Color.Lerp(c, glow, Mathf.Clamp01(1f - s / 7f));
+                if (s < 2.2f) c = Color.Lerp(c, core, 1f - s / 2.2f);
+                t.SetPixel(x, y, c);
+            }
+        }
+        t.Apply();
+        magRail = t;
+        return t;
+    }
+
+    public static Texture2D MagRailCross()
+    {
+        if (magRailCross != null) return magRailCross;
+        int S = 128;
+        Texture2D t = New(S);
+        Color bed = new Color(0.13f, 0.15f, 0.19f);
+        Color tread = new Color(0.20f, 0.23f, 0.29f);
+        Color glow = new Color(0.35f, 0.92f, 1.00f);
+        Color core = new Color(0.88f, 1.00f, 1.00f);
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float n = (N(x, y) - 0.5f) * 0.04f;
+                Color c = bed + new Color(n, n, n);
+                if ((x % 16) < 8 && (y % 16) < 8) c = tread + new Color(n, n, n);
+
+                float s = Mathf.Min(
+                    Mathf.Min(Mathf.Abs(y - 26f), Mathf.Abs(y - 102f)),
+                    Mathf.Min(Mathf.Abs(x - 26f), Mathf.Abs(x - 102f)));
+                if (s < 7f) c = Color.Lerp(c, glow, Mathf.Clamp01(1f - s / 7f));
+                if (s < 2.2f) c = Color.Lerp(c, core, 1f - s / 2.2f);
+                t.SetPixel(x, y, c);
+            }
+        }
+        t.Apply();
+        magRailCross = t;
+        return t;
+    }
+
     // ------------------------------------------------------------ paper (UI)
     static Texture2D paper, paperHover, paperPressed, menuFade;
 

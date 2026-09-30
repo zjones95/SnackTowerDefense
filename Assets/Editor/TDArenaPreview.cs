@@ -14,32 +14,62 @@ public static class TDArenaPreview
         int gw = layout[0].Length, gh = layout.Length;
         TDMap map = new TDMap(layout, route, cell, new Vector3(-gw * cell * 0.5f, 0f, -gh * cell * 0.5f));
 
-        bool arctic = TDGameManager.ActiveTheme == BoardTheme.ArcticOutpost;
-        bool volcanic = TDGameManager.ActiveTheme == BoardTheme.VolcanicCaldera;
+        // Batch mode never runs Awake, so ActiveTheme sits at its declared default.
+        // TD_PREVIEW_THEME lets a headless render target any board without a rebuild:
+        //   TD_PREVIEW_THEME=SpaceStation  ->  map_preview.png for that theme.
+        string themeEnv = System.Environment.GetEnvironmentVariable("TD_PREVIEW_THEME");
+        if (!string.IsNullOrEmpty(themeEnv))
+        {
+            try { TDGameManager.ActiveTheme = (BoardTheme)System.Enum.Parse(typeof(BoardTheme), themeEnv, true); }
+            catch { Debug.LogWarning("TDArenaPreview: unknown TD_PREVIEW_THEME '" + themeEnv + "', using " + TDGameManager.ActiveTheme); }
+        }
+
+        // Same per-theme light table the game uses, so the preview matches a run.
+        Color keyCol, fillCol, ambCol;
+        float keyI, fillI;
+        switch (TDGameManager.ActiveTheme)
+        {
+            case BoardTheme.ArcticOutpost:
+                keyCol = new Color(0.86f, 0.92f, 1.00f); keyI = 0.85f;
+                fillCol = new Color(0.60f, 0.70f, 0.90f); fillI = 0.30f;
+                ambCol = new Color(0.17f, 0.19f, 0.22f);
+                break;
+            case BoardTheme.VolcanicCaldera:
+                keyCol = new Color(1.00f, 0.72f, 0.48f); keyI = 0.78f;
+                fillCol = new Color(0.95f, 0.32f, 0.10f); fillI = 0.22f;
+                ambCol = new Color(0.14f, 0.10f, 0.09f);
+                break;
+            case BoardTheme.SpaceStation:
+                keyCol = new Color(0.72f, 0.88f, 1.00f); keyI = 0.75f;
+                fillCol = new Color(0.25f, 0.45f, 0.85f); fillI = 0.32f;
+                ambCol = new Color(0.13f, 0.16f, 0.22f);
+                break;
+            default:
+                keyCol = new Color(1.00f, 0.86f, 0.66f); keyI = 0.72f;
+                fillCol = new Color(0.55f, 0.62f, 0.78f); fillI = 0.10f;
+                ambCol = new Color(0.12f, 0.11f, 0.10f);
+                break;
+        }
+
         GameObject lightGO = new GameObject("PreviewLight");
         Light l = lightGO.AddComponent<Light>();
         l.type = LightType.Directional;
-        l.color = arctic ? new Color(0.86f, 0.92f, 1.0f)
-                : volcanic ? new Color(1.00f, 0.72f, 0.48f)
-                : new Color(1f, 0.86f, 0.66f);
-        l.intensity = arctic ? 0.85f : volcanic ? 0.78f : 0.72f;
+        l.color = keyCol;
+        l.intensity = keyI;
         l.shadows = LightShadows.Soft;
         l.transform.rotation = Quaternion.Euler(50f, 35f, 0f);
 
         GameObject fillGO = new GameObject("PreviewFill");
         Light fill = fillGO.AddComponent<Light>();
         fill.type = LightType.Directional;
-        fill.color = arctic ? new Color(0.60f, 0.70f, 0.90f)
-                   : volcanic ? new Color(0.95f, 0.32f, 0.10f)
-                   : new Color(0.55f, 0.62f, 0.78f);
-        fill.intensity = arctic ? 0.30f : volcanic ? 0.22f : 0.10f;
+        fill.color = fillCol;
+        fill.intensity = fillI;
         fill.shadows = LightShadows.None;
         fillGO.transform.rotation = Quaternion.Euler(28f, -140f, 0f);
 
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-        RenderSettings.ambientLight = arctic ? new Color(0.17f, 0.19f, 0.22f)
-                                   : volcanic ? new Color(0.14f, 0.10f, 0.09f)
-                                   : new Color(0.12f, 0.11f, 0.10f);
+        RenderSettings.ambientLight = ambCol;
+        RenderSettings.ambientIntensity = 1f;
 
         GameObject boardRoot = new GameObject("BoardRoot");
         TDBoardBuilder.BuildTiles(boardRoot.transform, map, TDGameManager.ActiveTheme);

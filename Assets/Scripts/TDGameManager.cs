@@ -163,8 +163,31 @@ public partial class TDGameManager : MonoBehaviour
     /// </summary>
     void ApplyThemeLighting()
     {
-        bool arctic = ActiveTheme == BoardTheme.ArcticOutpost;
-        bool volcanic = ActiveTheme == BoardTheme.VolcanicCaldera;
+        Color keyCol, fillCol, ambCol;
+        float keyI, fillI, shadow;
+        switch (ActiveTheme)
+        {
+            case BoardTheme.ArcticOutpost:                       // cool, high-key daylight
+                keyCol = new Color(0.86f, 0.92f, 1.00f); keyI = 0.85f;
+                fillCol = new Color(0.60f, 0.70f, 0.90f); fillI = 0.30f;
+                ambCol = new Color(0.17f, 0.19f, 0.22f); shadow = 0.40f;
+                break;
+            case BoardTheme.VolcanicCaldera:                     // hot and low-key, deep shadows
+                keyCol = new Color(1.00f, 0.72f, 0.48f); keyI = 0.78f;
+                fillCol = new Color(0.95f, 0.32f, 0.10f); fillI = 0.22f;   // ember bounce
+                ambCol = new Color(0.14f, 0.10f, 0.09f); shadow = 0.65f;
+                break;
+            case BoardTheme.SpaceStation:                        // cold neon, blue ambient
+                keyCol = new Color(0.72f, 0.88f, 1.00f); keyI = 0.75f;
+                fillCol = new Color(0.25f, 0.45f, 0.85f); fillI = 0.32f;
+                ambCol = new Color(0.13f, 0.16f, 0.22f); shadow = 0.50f;
+                break;
+            default:                                             // Kid's Bedroom: warm afternoon
+                keyCol = new Color(1.00f, 0.86f, 0.66f); keyI = 0.95f;
+                fillCol = new Color(0.55f, 0.62f, 0.78f); fillI = 0.16f;
+                ambCol = new Color(0.19f, 0.18f, 0.17f); shadow = 0.40f;
+                break;
+        }
 
         // warm, dimmer sunlight (reuse any directional light the scene already has)
         if (sunLight == null)
@@ -181,17 +204,15 @@ public partial class TDGameManager : MonoBehaviour
             sunLight = lg.AddComponent<Light>();
             sunLight.type = LightType.Directional;
         }
-        sunLight.color = arctic ? new Color(0.86f, 0.92f, 1.0f)
-                       : volcanic ? new Color(1.00f, 0.72f, 0.48f)
-                       : new Color(1f, 0.86f, 0.66f);
-        sunLight.intensity = arctic ? 0.85f : volcanic ? 0.78f : 0.95f;
+        sunLight.color = keyCol;
+        sunLight.intensity = keyI;
         sunLight.shadows = LightShadows.Soft;
-        sunLight.shadowStrength = volcanic ? 0.65f : 0.40f;        // deeper shadows on the caldera
+        sunLight.shadowStrength = shadow;
         sunLight.shadowBias = 0.05f;
         sunLight.shadowNormalBias = 0.4f;
         sunLight.transform.rotation = Quaternion.Euler(33f, 35f, 0f);   // lower sun: longer, gentler shadows
 
-        // tiny fill so shadows aren't pitch black (an ember bounce on the caldera)
+        // tiny fill so shadows aren't pitch black
         if (fillLight == null)
         {
             GameObject fillGO = new GameObject("Fill");
@@ -200,15 +221,11 @@ public partial class TDGameManager : MonoBehaviour
             fillLight.shadows = LightShadows.None;
             fillLight.transform.rotation = Quaternion.Euler(28f, -140f, 0f);
         }
-        fillLight.color = arctic ? new Color(0.60f, 0.70f, 0.90f)
-                        : volcanic ? new Color(0.95f, 0.32f, 0.10f)
-                        : new Color(0.55f, 0.62f, 0.78f);
-        fillLight.intensity = arctic ? 0.30f : volcanic ? 0.22f : 0.16f;
+        fillLight.color = fillCol;
+        fillLight.intensity = fillI;
 
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-        RenderSettings.ambientLight = arctic ? new Color(0.17f, 0.19f, 0.22f)
-                                   : volcanic ? new Color(0.14f, 0.10f, 0.09f)
-                                   : new Color(0.19f, 0.18f, 0.17f);
+        RenderSettings.ambientLight = ambCol;
         RenderSettings.ambientIntensity = 1f;
     }
 
