@@ -314,7 +314,7 @@ public static class TowerCatalog
         d.tiers.Add(new TowerTierStats { damage = 0, range = 4.5f, fireInterval = 5.0f, projectileSpeed = 20f, goldPerHit = 1 });
         d.tiers.Add(new TowerTierStats { damage = 0, range = 5.2f, fireInterval = 4.0f, projectileSpeed = 22f, goldPerHit = 2 });
         d.tiers.Add(new TowerTierStats { damage = 0, range = 6.0f, fireInterval = 3.2f, projectileSpeed = 24f, goldPerHit = 3 });
-        d.tiers.Add(new TowerTierStats { damage = 0, range = 6.8f, fireInterval = 2.0f, projectileSpeed = 26f, goldPerHit = 5 });
+        d.tiers.Add(new TowerTierStats { damage = 0, range = 6.8f, fireInterval = 3.0f, projectileSpeed = 26f, goldPerHit = 5 });
         defs[d.type] = d;
 
         // --- Tier 7 fusion towers ---
