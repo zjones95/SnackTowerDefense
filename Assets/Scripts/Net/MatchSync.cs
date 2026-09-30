@@ -19,11 +19,12 @@ using UnityEngine;
 ///
 /// PER-PLAYER RESULTS: clearing all <see cref="TDBalance.TotalWaves"/> waves
 /// finishes only THAT player's own board (their end screen shows Victory;
-/// they stop playing while the match continues for everyone else).
-/// Elimination still only ends that player's own board -- they keep
-/// spectating. The host ends the match as a defeat (Over, Victory=false)
-/// only once every board is eliminated or gone; each client applies only its
-/// OWN row for its end screen and ignores other boards' clears.
+/// dismissable to keep spectating while the match continues for everyone
+/// else). Elimination finishes only that player's own board the same way
+/// (their end screen shows Game Over; dismissable to keep spectating).
+/// There is no global match end: the host never declares Over, and each
+/// client applies only its OWN row for its end screen. Over/Victory stay on
+/// the wire (always false) for protocol compatibility.
 /// </summary>
 public class MatchSync : MonoBehaviour
 {
@@ -199,15 +200,6 @@ public class MatchSync : MonoBehaviour
         }
     }
 
-    void EndMatch(bool victory)
-    {
-        if (Over) return;
-        Over = true;
-        Victory = victory;
-        PublishLocal();   // relay our final row, then the result
-        if (TDGameManager.Instance != null) TDGameManager.Instance.OnMatchOver(victory);
-    }
-
     /// <summary>Per-player finish: shows this peer's own end screen without
     /// ending the match for anyone else. The final row is still relayed so
     /// the scoreboard marks this board cleared/out.</summary>
@@ -255,7 +247,6 @@ public class MatchSync : MonoBehaviour
 
         if (host)
         {
-            CheckMatchEnd();
             Broadcast();
         }
         else
@@ -373,7 +364,6 @@ public class MatchSync : MonoBehaviour
         b.Cleared = cleared; b.Eliminated = eliminated; b.HasStatus = true;
         b.Absent = false;
 
-        CheckMatchEnd();
         Broadcast();
     }
 
@@ -411,10 +401,9 @@ public class MatchSync : MonoBehaviour
         MarkLocalBoard();
 
         // Per-player results: only our OWN row drives our end screen. Another
-        // board's clear must never finish us; the global Over now means defeat
-        // only (every board eliminated) and applies to survivors still playing.
-        // (Own-row victory is normally applied immediately in AdvanceLocal;
-        // this echo covers a missed/stale local report.)
+        // board's result must never finish us. (Own-row victory is normally
+        // applied immediately in AdvanceLocal; this echo covers a missed/stale
+        // local report. The host never sets Over now -- no global end.)
         if (!Over)
         {
             BoardState own = LocalBoard();
@@ -433,25 +422,9 @@ public class MatchSync : MonoBehaviour
     }
 
     // -------------------------------------------------------------- match end
-    void CheckMatchEnd()
-    {
-        if (Over) return;
-
-        // Per-player results: a clear finishes only that board (handled
-        // locally in AdvanceLocal / OnBoardsMessage, never here). The host
-        // ends the match as a defeat only once every board is out.
-        // Nobody can win once every board is out (absent boards count as out:
-        // their sim died with their link from the host's point of view).
-        if (AllEliminated()) EndMatch(false);
-    }
-
-    bool AllEliminated()
-    {
-        if (Boards.Count == 0) return false;
-        for (int i = 0; i < Boards.Count; i++)
-            if (!Boards[i].Eliminated && !Boards[i].Absent) return false;
-        return true;
-    }
+    // No global match end: every board resolves on its own (own Victory on
+    // clearing all waves, own Game Over on elimination). The roster below
+    // only feeds the scoreboard and spectating.
 
     /// <summary>A drop holds its seat instead of freeing it: the row is marked
     /// absent (survivors see "reconnecting") and expires after the reconnect
@@ -479,7 +452,7 @@ public class MatchSync : MonoBehaviour
                 changed = true;
             }
         }
-        if (changed) { CheckMatchEnd(); Broadcast(); }
+        if (changed) { Broadcast(); }
     }
 
     // ------------------------------------------------------------------ wire

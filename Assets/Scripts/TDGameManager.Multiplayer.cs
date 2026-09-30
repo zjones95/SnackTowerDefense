@@ -21,6 +21,7 @@ public partial class TDGameManager
     // match state (multiplayer only)
     private bool cleared;           // local board has cleared the current wave
     private bool eliminated;        // local board is out of lives
+    private bool mpEndDismissed;    // MP end screen dismissed to keep spectating
     private readonly List<RemoteBoard> remoteBoards = new List<RemoteBoard>();
     // Set when the link returns mid-match: remote boards are rebuilt once the
     // fresh roster (with our new ClientId) arrives via the lobby message.
@@ -161,6 +162,7 @@ public partial class TDGameManager
         mpActive = true;
         cleared = false;
         eliminated = false;
+        mpEndDismissed = false;
         SetSelected(null);
 
         NetworkSession ns = NetworkSession.Instance;
@@ -290,8 +292,7 @@ public partial class TDGameManager
     public void OnMatchOver(bool victory)
     {
         if (!mpActive) return;
-        // Per-player results: the first result sticks. A later global defeat
-        // (all remaining boards eliminated) must not override an earned Victory.
+        // Per-player results: the first result sticks (each board finishes once).
         if (State == GameState.Victory || State == GameState.GameOver) return;
         if (ChatSync.Instance != null) ChatSync.Instance.Close();
         RestoreTimeScale();
@@ -314,6 +315,8 @@ public partial class TDGameManager
         messageTimer = 3f;
         if (MatchSync.Instance != null)
             MatchSync.Instance.ReportLocal(Lives, Money, Wave, true, true);
+        // Per-player defeat: own GameOver screen now (dismissable to spectate).
+        OnMatchOver(false);
     }
 
     void UpdateRemoteBoards()
@@ -342,6 +345,7 @@ public partial class TDGameManager
         mpActive = false;
         cleared = false;
         eliminated = false;
+        mpEndDismissed = false;
         viewSlot = mySlot;
         viewOffset = Vector3.zero;
         mpScoreboardCollapsed = true;
