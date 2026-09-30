@@ -81,6 +81,12 @@ identical across boards. Pick one with `TDGameManager.ActiveTheme`:
 `TDBoardBuilder.BuildTiles(...)` and `TDRoom.Build(...)` take the theme; both are also
 used by remote boards and the editor previews, so every board in a match looks the same.
 
+**Picking a board** — the **single-player difficulty screen** has a **map picker** beside
+the difficulty buttons: the map name sits above a box holding a slowly rotating preview of
+the board, with **`<` / `>`** arrows (or the **left/right arrow keys**) to cycle. The
+choice is saved (`PlayerPrefs` key `td.theme`) and re-applied at boot. Multiplayer does not
+offer the picker yet.
+
 ## Towers
 
 8 types (7 random-build + the economy-only Gold Coin). The 7 random types have

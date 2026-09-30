@@ -9,6 +9,49 @@ public enum BoardTheme { Bedroom, ArcticOutpost, VolcanicCaldera }
 
 public static class TDBoardBuilder
 {
+    /// <summary>Themes offered by the single-player map picker, in cycle order.</summary>
+    public static readonly BoardTheme[] PickerThemes =
+    {
+        BoardTheme.Bedroom,
+        BoardTheme.ArcticOutpost,
+        BoardTheme.VolcanicCaldera
+    };
+
+    public static string ThemeName(BoardTheme t)
+    {
+        switch (t)
+        {
+            case BoardTheme.ArcticOutpost: return "Arctic Outpost";
+            case BoardTheme.VolcanicCaldera: return "Volcanic Caldera";
+            default: return "Kid's Bedroom";
+        }
+    }
+
+    public static string ThemeBlurb(BoardTheme t)
+    {
+        switch (t)
+        {
+            case BoardTheme.ArcticOutpost:
+                return "Snowfield research outpost - a packed ski-track route over frosted ice pads.";
+            case BoardTheme.VolcanicCaldera:
+                return "A glowing lava channel threads cooled basalt slabs inside a crater.";
+            default:
+                return "The original play-mat: a toy train track weaving through a kid's bedroom.";
+        }
+    }
+
+    /// <summary>Next/previous theme in the picker ring (wraps).</summary>
+    public static BoardTheme NextTheme(BoardTheme t) { return ShiftTheme(t, 1); }
+    public static BoardTheme PrevTheme(BoardTheme t) { return ShiftTheme(t, -1); }
+
+    static BoardTheme ShiftTheme(BoardTheme t, int dir)
+    {
+        int n = PickerThemes.Length;
+        int i = System.Array.IndexOf(PickerThemes, t);
+        if (i < 0) i = 0;
+        return PickerThemes[((i + dir) % n + n) % n];
+    }
+
     /// <summary>Map whose world origin sits at <paramref name="boardOffset"/>.</summary>
     public static TDMap CreateMap(string[] layout, Vector2Int[] route, float cell, Vector3 boardOffset)
     {

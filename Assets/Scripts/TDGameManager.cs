@@ -55,7 +55,10 @@ public partial class TDGameManager : MonoBehaviour
         new Vector2Int(3, 0)
     };
 
-    public static BoardTheme ActiveTheme = BoardTheme.VolcanicCaldera;
+    public static BoardTheme ActiveTheme = BoardTheme.Bedroom;
+
+    /// <summary>PlayerPrefs key holding the picked board theme.</summary>
+    private const string ThemePrefKey = "td.theme";
 
     public Transform ProjectilesRoot { get; private set; }
     public Tower Selected { get; private set; }
@@ -78,6 +81,7 @@ public partial class TDGameManager : MonoBehaviour
     private const float MenuPitch = 38f, MenuDist = 31f, MenuOrbitDegPerSec = 3f;
     private Transform worldRoot, towersRoot, mobsRoot;
     private readonly Dictionary<int, Tower> towers = new Dictionary<int, Tower>();
+    private Light sunLight, fillLight;   // created once, re-tinted per board theme
 
     private float prepTimer;
     private float waveIntroTimer;   // shows the wave title + modifiers at wave start
@@ -117,6 +121,7 @@ public partial class TDGameManager : MonoBehaviour
         // WebGL host in a hidden tab doesn't slow the wave clock to a crawl.
         Time.maximumDeltaTime = 1f;
         QualitySettings.antiAliasing = 8; // MSAA (also smooths the HUD's 3D elements)
+        ActiveTheme = (BoardTheme)PlayerPrefs.GetInt(ThemePrefKey, (int)BoardTheme.Bedroom);
         TDAudio.Ensure();
         SetupCameraAndLight();
         Cursor.lockState = CursorLockMode.None;
@@ -148,48 +153,84 @@ public partial class TDGameManager : MonoBehaviour
         cam.clearFlags = CameraClearFlags.SolidColor;
         cam.backgroundColor = new Color(0.12f, 0.14f, 0.17f);
 
-        // warm, dimmer sunlight (override any default scene light)
-        // Arctic reads cool/white; Volcanic reads hot and low-key.
+        ApplyThemeLighting();
+    }
+
+    /// <summary>
+    /// (Re)applies the active board theme's key light, fill and ambient. Called at
+    /// boot and whenever the player picks a different board in the map picker, so
+    /// the backdrop, the preview and the run all agree on the mood.
+    /// </summary>
+    void ApplyThemeLighting()
+    {
         bool arctic = ActiveTheme == BoardTheme.ArcticOutpost;
         bool volcanic = ActiveTheme == BoardTheme.VolcanicCaldera;
-        Light sun = null;
-        var lights = Object.FindObjectsByType<Light>(FindObjectsSortMode.None);
-        for (int i = 0; i < lights.Length; i++)
+
+        // warm, dimmer sunlight (reuse any directional light the scene already has)
+        if (sunLight == null)
         {
-            if (lights[i].type == LightType.Directional) { sun = lights[i]; break; }
+            var lights = Object.FindObjectsByType<Light>(FindObjectsSortMode.None);
+            for (int i = 0; i < lights.Length; i++)
+            {
+                if (lights[i].type == LightType.Directional) { sunLight = lights[i]; break; }
+            }
         }
-        if (sun == null)
+        if (sunLight == null)
         {
             GameObject lg = new GameObject("Sun");
-            sun = lg.AddComponent<Light>();
-            sun.type = LightType.Directional;
+            sunLight = lg.AddComponent<Light>();
+            sunLight.type = LightType.Directional;
         }
-        sun.color = arctic ? new Color(0.86f, 0.92f, 1.0f)
-                  : volcanic ? new Color(1.00f, 0.72f, 0.48f)
-                  : new Color(1f, 0.86f, 0.66f);
-        sun.intensity = arctic ? 0.85f : volcanic ? 0.78f : 0.95f;
-        sun.shadows = LightShadows.Soft;
-        sun.shadowStrength = volcanic ? 0.65f : 0.40f;             // deeper shadows on the caldera
-        sun.shadowBias = 0.05f;
-        sun.shadowNormalBias = 0.4f;
-        sun.transform.rotation = Quaternion.Euler(33f, 35f, 0f);   // lower sun: longer, gentler shadows
+        sunLight.color = arctic ? new Color(0.86f, 0.92f, 1.0f)
+                       : volcanic ? new Color(1.00f, 0.72f, 0.48f)
+                       : new Color(1f, 0.86f, 0.66f);
+        sunLight.intensity = arctic ? 0.85f : volcanic ? 0.78f : 0.95f;
+        sunLight.shadows = LightShadows.Soft;
+        sunLight.shadowStrength = volcanic ? 0.65f : 0.40f;        // deeper shadows on the caldera
+        sunLight.shadowBias = 0.05f;
+        sunLight.shadowNormalBias = 0.4f;
+        sunLight.transform.rotation = Quaternion.Euler(33f, 35f, 0f);   // lower sun: longer, gentler shadows
 
-        // tiny cool fill so shadows aren't pitch black
-        GameObject fillGO = new GameObject("Fill");
-        Light fill = fillGO.AddComponent<Light>();
-        fill.type = LightType.Directional;
-        fill.color = arctic ? new Color(0.60f, 0.70f, 0.90f)
-                   : volcanic ? new Color(0.95f, 0.32f, 0.10f)     // ember bounce
-                   : new Color(0.55f, 0.62f, 0.78f);
-        fill.intensity = arctic ? 0.30f : volcanic ? 0.22f : 0.16f;
-        fill.shadows = LightShadows.None;
-        fillGO.transform.rotation = Quaternion.Euler(28f, -140f, 0f);
+        // tiny fill so shadows aren't pitch black (an ember bounce on the caldera)
+        if (fillLight == null)
+        {
+            GameObject fillGO = new GameObject("Fill");
+            fillLight = fillGO.AddComponent<Light>();
+            fillLight.type = LightType.Directional;
+            fillLight.shadows = LightShadows.None;
+            fillLight.transform.rotation = Quaternion.Euler(28f, -140f, 0f);
+        }
+        fillLight.color = arctic ? new Color(0.60f, 0.70f, 0.90f)
+                        : volcanic ? new Color(0.95f, 0.32f, 0.10f)
+                        : new Color(0.55f, 0.62f, 0.78f);
+        fillLight.intensity = arctic ? 0.30f : volcanic ? 0.22f : 0.16f;
 
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
         RenderSettings.ambientLight = arctic ? new Color(0.17f, 0.19f, 0.22f)
                                    : volcanic ? new Color(0.14f, 0.10f, 0.09f)
                                    : new Color(0.19f, 0.18f, 0.17f);
         RenderSettings.ambientIntensity = 1f;
+    }
+
+    /// <summary>
+    /// Switches the board theme. Visuals only: <see cref="Layout"/> and
+    /// <see cref="Route"/> are never touched, so balance and pathing are identical
+    /// on every board. Re-applies the theme lighting and rebuilds the menu backdrop
+    /// (and the picker preview) so everything matches immediately.
+    /// </summary>
+    public void SetTheme(BoardTheme theme)
+    {
+        if (ActiveTheme == theme) return;
+        ActiveTheme = theme;
+        PlayerPrefs.SetInt(ThemePrefKey, (int)theme);
+        ApplyThemeLighting();
+
+        // The menu backdrop is a real board; drop it so it rebuilds with the new
+        // theme on the next frame (only safe while we're on a menu screen).
+        if (State == GameState.MainMenu || State == GameState.DifficultySelect)
+            ClearWorld();
+
+        if (BoardPreview.Instance != null) BoardPreview.Instance.Show(theme);
     }
 
     // ----------------------------------------------------------- camera move
@@ -278,6 +319,7 @@ public partial class TDGameManager : MonoBehaviour
         paused = false;
         settingsOpen = false;
         RestoreTimeScale();
+        if (BoardPreview.Instance != null) BoardPreview.Instance.Close();
         boardOffset = offset;
         viewOffset = offset;
         Mobs.Clear();
@@ -1211,45 +1253,121 @@ public partial class TDGameManager : MonoBehaviour
     {
         DrawMenuOverlay();
 
-        GUI.Label(new Rect(0f, Screen.height * 0.11f, Screen.width, 60f), "SELECT DIFFICULTY",
-            Style(40, TextAnchor.MiddleCenter, new Color(1f, 0.85f, 0.4f)));
+        GUI.Label(new Rect(0f, Screen.height * 0.06f, Screen.width, 60f), "SELECT DIFFICULTY",
+            Style(38, TextAnchor.MiddleCenter, new Color(1f, 0.85f, 0.4f)));
 
-        float bw = 300f, bh = 52f, gap = 12f;
-        float bx = (Screen.width - bw) * 0.5f - 120f;
-        float by = Screen.height * 0.30f;
-        GUIStyle btn = PaperButton(22);
+        // The map preview only lives while this screen is up.
+        BoardPreview preview = BoardPreview.Ensure();
+        if (!preview.IsOpen) preview.Open();
 
+        GUIStyle btn = PaperButton(20);
+        GUIStyle head = Style(17, TextAnchor.MiddleCenter, new Color(0.85f, 0.88f, 0.94f));
+
+        // ---- geometry: difficulty column | map column, centred as a pair ----
+        float diffW = 250f, bh = 46f, gap = 10f;
+        float blurbW = 220f;
+        float diffColW = diffW + 16f + blurbW;
+
+        float arrowW = 46f;
+        float mapBox = Mathf.Clamp(Screen.height * 0.30f, 150f, 300f);
+        float mapColW = arrowW * 2f + mapBox + 24f;
+
+        float spacing = 48f;
+        float totalW = diffColW + spacing + mapColW;
+        float left = (Screen.width - totalW) * 0.5f;
+        float top = Screen.height * 0.21f;
+
+        float diffX = left;
+        float mapX = left + diffColW + spacing;
+
+        // ============================ difficulty column ============================
+        GUI.Label(new Rect(diffX, top, diffColW, 26f), "DIFFICULTY", head);
+
+        float by = top + 34f;
         // Dark strip behind the blurbs keeps the coloured text readable over the board.
         Color old = GUI.color;
         GUI.color = new Color(0f, 0f, 0f, 0.45f);
-        GUI.DrawTexture(new Rect(bx + bw + 10f, by - 4f, 320f, 4f * (bh + gap) + 4f), Texture2D.whiteTexture);
+        GUI.DrawTexture(new Rect(diffX + diffW + 10f, by - 4f, blurbW + 16f, 4f * (bh + gap) + 4f), Texture2D.whiteTexture);
         GUI.color = old;
 
         for (int i = 0; i < 4; i++)
         {
             Difficulty d = (Difficulty)i;
             float y = by + i * (bh + gap);
-            if (GUI.Button(new Rect(bx, y, bw, bh), TDBalance.DifficultyName(d), btn))
+            if (GUI.Button(new Rect(diffX, y, diffW, bh), TDBalance.DifficultyName(d), btn))
             {
                 Click();
                 CurrentDifficulty = d;
                 StartRun();
             }
-            GUI.Label(new Rect(bx + bw + 18f, y, 300f, bh), TDBalance.DifficultyBlurb(d),
-                Style(16, TextAnchor.MiddleLeft, TDBalance.DifficultyColour(d)));
+            GUI.Label(new Rect(diffX + diffW + 18f, y, blurbW, bh), TDBalance.DifficultyBlurb(d),
+                Style(14, TextAnchor.MiddleLeft, TDBalance.DifficultyColour(d)));
         }
 
-        if (GUI.Button(new Rect(bx, by + 4f * (bh + gap) + 12f, bw, 46f), "Back", btn))
+        if (GUI.Button(new Rect(diffX, by + 4f * (bh + gap) + 14f, diffW, 44f), "Back", btn))
         {
             Click();
+            preview.Close();
             State = GameState.MainMenu;
         }
 
-        GUI.Label(new Rect(0f, Screen.height - 30f, Screen.width, 24f),
-            "Esc to go back", Style(13, TextAnchor.MiddleCenter, new Color(0.85f, 0.88f, 0.92f)));
+        // ============================== map column ==============================
+        // Map name on top, then the rotating board in a box with arrows either side.
+        GUI.Label(new Rect(mapX, top, mapColW, 26f), "MAP", head);
+        GUI.Label(new Rect(mapX, top + 30f, mapColW, 30f), TDBoardBuilder.ThemeName(ActiveTheme),
+            Style(22, TextAnchor.MiddleCenter, Color.white));
 
-        if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Escape)
-            State = GameState.MainMenu;
+        float boxX = mapX + arrowW + 12f;
+        float boxY = top + 68f;
+
+        old = GUI.color;
+        GUI.color = new Color(0f, 0f, 0f, 0.5f);
+        GUI.DrawTexture(new Rect(boxX, boxY, mapBox, mapBox), Texture2D.whiteTexture);
+        GUI.color = old;
+
+        preview.Show(ActiveTheme);
+        GUI.DrawTexture(new Rect(boxX, boxY, mapBox, mapBox), preview.Texture, ScaleMode.ScaleToFit, false);
+
+        GUIStyle arrow = PaperButton(24);
+        float ay = boxY + mapBox * 0.5f - 30f;
+        if (GUI.Button(new Rect(mapX, ay, arrowW, 60f), "<", arrow))
+        {
+            Click();
+            SetTheme(TDBoardBuilder.PrevTheme(ActiveTheme));
+        }
+        if (GUI.Button(new Rect(boxX + mapBox + 12f, ay, arrowW, 60f), ">", arrow))
+        {
+            Click();
+            SetTheme(TDBoardBuilder.NextTheme(ActiveTheme));
+        }
+
+        GUIStyle blurb = Style(13, TextAnchor.UpperCenter, new Color(0.80f, 0.84f, 0.90f));
+        blurb.wordWrap = true;
+        GUI.Label(new Rect(boxX - 50f, boxY + mapBox + 10f, mapBox + 100f, 50f),
+            TDBoardBuilder.ThemeBlurb(ActiveTheme), blurb);
+
+        GUI.Label(new Rect(0f, Screen.height - 30f, Screen.width, 24f),
+            "Left / Right to change map   -   Esc to go back",
+            Style(13, TextAnchor.MiddleCenter, new Color(0.85f, 0.88f, 0.92f)));
+
+        if (Event.current.type == EventType.KeyDown)
+        {
+            if (Event.current.keyCode == KeyCode.Escape)
+            {
+                preview.Close();
+                State = GameState.MainMenu;
+            }
+            else if (Event.current.keyCode == KeyCode.LeftArrow)
+            {
+                Click();
+                SetTheme(TDBoardBuilder.PrevTheme(ActiveTheme));
+            }
+            else if (Event.current.keyCode == KeyCode.RightArrow)
+            {
+                Click();
+                SetTheme(TDBoardBuilder.NextTheme(ActiveTheme));
+            }
+        }
     }
 
     void DrawHud()
