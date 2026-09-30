@@ -95,8 +95,9 @@ new (fast, low HP, spawned in large numbers).
 ## Implementation status
 
 - ✅ **`MobCatalog`** holds all 45 defs with archetype stats and boss traits.
-- ✅ **`TDBalance.Waves`** — 45 waves, one mob each, boss every 5th; health curve
-  is now `1.13^(wave-1)` and each wave is a single spawn group.
+- ✅ **`TDBalance.Waves`** — 45 waves, one mob each, boss every 5th; health
+  grows 13% per wave through wave 10, then tapers from 7.5% to 5% per wave.
+  Each wave is a single spawn group.
 - ✅ **`Swarm` archetype** plus boss behaviours (regen / armour / slow-immunity /
   enrage / dash) are wired into `Mob`.
 - ✅ **Models** — all 45 built and walk-animated in Blender. **Granola Mom uses a

@@ -5,10 +5,9 @@ public enum Difficulty { Easy, Normal, Hard, Insane }
 
 // Central balance. Towers are a FLAT $25.
 //
-// Because build cost never rises, the limiter has to be income: rewards are
-// kept modest so a full run only affords ~15-20 towers. The rest of your
-// power must come from MERGING two towers into a stronger tier, which is why
-// mob health scales steeply (1.55^wave). Quantity alone won't cut it late.
+// Build cost stays flat while cash arrives mostly through wave bonuses and
+// Gold towers. Late mob HP growth must leave room for a player who invests in
+// Gold early rather than requiring a perfect offensive tower roll.
 public static class TDBalance
 {
     public const int StartMoney = 100;
@@ -102,16 +101,19 @@ public static class TDBalance
         }
     }
 
-    // Mob health: growth starts at 13%/wave and eases toward 10% by the final
-    // wave, so the late game ramps less steeply than a straight exponential
-    // (1.00, 1.13, 1.28, ... ~122x by wave 45 instead of ~64x).
+    // Mob health: keep the early 13% growth (waves 1-10), then taper from
+    // 7.5% to 5%/wave. The old 13%->10% curve reached 122x on wave 45:
+    // Granola Mom had ~198k HP on Normal despite only ~$3k baseline cash.
+    // This reaches ~25x instead (~41k HP) so a mixed T5/T6 defense, with or
+    // without a Gold investment, has a plausible final-boss damage budget.
     public static float HealthMult(int wave)
     {
         int n = Mathf.Max(0, wave - 1);
         float log = 0f;
         for (int i = 0; i < n; i++)
         {
-            float g = Mathf.Lerp(1.13f, 1.10f, i / (float)(TotalWaves - 1));
+            float g = i < 9 ? 1.13f
+                : Mathf.Lerp(1.075f, 1.05f, (i - 9) / (float)(TotalWaves - 11));
             log += Mathf.Log(g);
         }
         return Mathf.Exp(log);
