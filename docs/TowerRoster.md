@@ -33,7 +33,7 @@ mechanic or a new `TowerType`, with tier scaling and model notes.
 |---|---|---|---|
 | SingleShot | Popcorn Bucket | Baseline DPS | Homing popcorn, one target, balanced rate |
 | Splash | Soda Cup | AoE burst | Homing blob, `splashRadius` damage on impact |
-| Slow | Gumball Machine | Control | 0 damage, fires `multiShot` gumballs that apply `slowFactor` |
+| Slow | Gumball Machine | Control | Light impact damage (~30% of Soda per target), fires `multiShot` gumballs at distinct mobs that apply `slowFactor` |
 | Sniper | Sour Straw | Burst / long range | Instant hit, highest damage, slowest rate, longest range |
 | Chain | Sour Belt | Multi-hit | Damage arcs to `chainCount` nearby enemies, 25% falloff per jump |
 | Pierce | Skewer | Line clear | Straight rod that skewers up to `pierceCount` enemies |

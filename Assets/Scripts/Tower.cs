@@ -513,7 +513,7 @@ public class Tower : MonoBehaviour
         p.Type = Type;
         p.Target = target;
         p.Speed = 14f;
-        p.Damage = s.damage;               // Candy Shell (T5/T6): gumballs hit for real
+        p.Damage = s.damage;               // Light impact at every tier; Candy Shell boosts T5+
         p.SlowFactor = s.slowFactor;
         p.SlowDuration = s.slowDuration;
         p.TarDamageBonus = s.tarDamageBonus;   // Sticky Tar (T6)

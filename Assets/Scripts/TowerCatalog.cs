@@ -8,7 +8,7 @@ public enum TowerType { SingleShot, Splash, Slow, Sniper, Chain, Pierce, Poison,
 [System.Serializable]
 public class TowerTierStats
 {
-    public int damage = 10;
+    public float damage = 10f;  // fractional hits let low-tier utility towers deal modest damage
     public float range = 4f;
     public float fireInterval = 1f;
     public float projectileSpeed = 22f;
@@ -196,7 +196,7 @@ public static class TowerCatalog
             {
                 case TowerType.SingleShot: return "Ricochet Pop - shots bounce to 2 more enemies";
                 case TowerType.Splash: return "Fizz Ricochet - bursts bounce once and detonate again";
-                case TowerType.Slow: return "Candy Shell - gumballs deal impact damage";
+                case TowerType.Slow: return "Candy Shell - stronger gumball impact damage";
                 case TowerType.Sniper: return "Powdered Sour - 30% crit for x2.5 that ignores armour";
                 case TowerType.Chain: return "Twin Lash - arcs branch to 2 more enemies, 10% chance to stun 1.5s";
                 case TowerType.Pierce: return "Wide Skewer - a wider line that skewers more enemies";
@@ -233,7 +233,7 @@ public static class TowerCatalog
         // T4 pure stats; T5 Ricochet Pop (bounce 2 / 2.5); T6 Kettle Burst (3 pellets + mini-splash).
         d.tiers.Add(new TowerTierStats { damage = 20, range = 7.5f, fireInterval = 0.22f, projectileSpeed = 27f });
         d.tiers.Add(new TowerTierStats { damage = 30, range = 8.5f, fireInterval = 0.20f, projectileSpeed = 28f, bounceCount = 2, bounceRange = 2.5f });
-        d.tiers.Add(new TowerTierStats { damage = 26, range = 9.5f, fireInterval = 0.20f, projectileSpeed = 29f, multiShot = 3, impactSplash = 1.3f, bounceCount = 2, bounceRange = 2.5f });
+        d.tiers.Add(new TowerTierStats { damage = 32, range = 9.5f, fireInterval = 0.20f, projectileSpeed = 29f, multiShot = 3, impactSplash = 1.3f, bounceCount = 2, bounceRange = 2.5f });
         defs[d.type] = d;
 
         d = new TowerDef();
@@ -249,13 +249,15 @@ public static class TowerCatalog
 
         d = new TowerDef();
         d.type = TowerType.Slow; d.displayName = "Gumball Machine"; d.color = new Color(0.55f, 1f, 0.60f);
-        d.tiers.Add(new TowerTierStats { damage = 0, range = 3.5f, fireInterval = 0.50f, slowFactor = 0.45f, slowDuration = 2.0f, multiShot = 2 });
-        d.tiers.Add(new TowerTierStats { damage = 0, range = 4.2f, fireInterval = 0.50f, slowFactor = 0.55f, slowDuration = 2.2f, multiShot = 4 });
-        d.tiers.Add(new TowerTierStats { damage = 0, range = 5.0f, fireInterval = 0.50f, slowFactor = 0.65f, slowDuration = 2.4f, multiShot = 6 });
-        // T4 pure stats; T5 Candy Shell (impact damage 3); T6 Sticky Tar (impact 6 + tar +30% / 1.5s).
-        d.tiers.Add(new TowerTierStats { damage = 0, range = 5.8f, fireInterval = 0.48f, slowFactor = 0.72f, slowDuration = 2.6f, multiShot = 7 });
-        d.tiers.Add(new TowerTierStats { damage = 3, range = 6.6f, fireInterval = 0.46f, slowFactor = 0.78f, slowDuration = 2.8f, multiShot = 8 });
-        d.tiers.Add(new TowerTierStats { damage = 6, range = 7.4f, fireInterval = 0.44f, slowFactor = 0.84f, slowDuration = 3.0f, multiShot = 10, tarDamageBonus = 0.30f, tarLinger = 1.5f });
+        // Each pellet hits a distinct target: ~30% of Soda's per-target DPS,
+        // not 30% per volley. T6 Tar boosts subsequent hits (including its own).
+        d.tiers.Add(new TowerTierStats { damage = 0.5f, range = 3.5f, fireInterval = 0.50f, slowFactor = 0.45f, slowDuration = 2.0f, multiShot = 2 });
+        d.tiers.Add(new TowerTierStats { damage = 1.5f, range = 4.2f, fireInterval = 0.50f, slowFactor = 0.55f, slowDuration = 2.2f, multiShot = 4 });
+        d.tiers.Add(new TowerTierStats { damage = 3, range = 5.0f, fireInterval = 0.50f, slowFactor = 0.65f, slowDuration = 2.4f, multiShot = 6 });
+        // T5 Candy Shell boosts impact; T6 Sticky Tar adds +30% damage taken.
+        d.tiers.Add(new TowerTierStats { damage = 4, range = 5.8f, fireInterval = 0.48f, slowFactor = 0.72f, slowDuration = 2.6f, multiShot = 7 });
+        d.tiers.Add(new TowerTierStats { damage = 7, range = 6.6f, fireInterval = 0.46f, slowFactor = 0.78f, slowDuration = 2.8f, multiShot = 8 });
+        d.tiers.Add(new TowerTierStats { damage = 8, range = 7.4f, fireInterval = 0.44f, slowFactor = 0.84f, slowDuration = 3.0f, multiShot = 10, tarDamageBonus = 0.30f, tarLinger = 1.5f });
         defs[d.type] = d;
 
         d = new TowerDef();
@@ -330,7 +332,7 @@ public static class TowerCatalog
         d = new TowerDef();
         d.type = TowerType.IceCreamTruck; d.displayName = "Ice Cream Truck"; d.color = new Color(0.98f, 0.72f, 0.80f);
         for (int i = 0; i < TowerCatalog.MaxTier - 1; i++) d.tiers.Add(new TowerTierStats());
-        d.tiers.Add(new TowerTierStats { damage = 120, range = 9f, fireInterval = 0.55f, projectileSpeed = 22f, splashRadius = 4.8f, stunChance = 0.20f, stunDuration = 1.2f });
+        d.tiers.Add(new TowerTierStats { damage = 160, range = 9f, fireInterval = 0.55f, projectileSpeed = 22f, splashRadius = 4.8f, stunChance = 0.20f, stunDuration = 1.2f });
         defs[d.type] = d;
 
         d = new TowerDef();
@@ -342,7 +344,7 @@ public static class TowerCatalog
         d = new TowerDef();
         d.type = TowerType.PizzaOven; d.displayName = "Pizza Oven"; d.color = new Color(0.90f, 0.45f, 0.22f);
         for (int i = 0; i < TowerCatalog.MaxTier - 1; i++) d.tiers.Add(new TowerTierStats());
-        d.tiers.Add(new TowerTierStats { damage = 100, range = 10f, fireInterval = 2.0f, projectileSpeed = 18f, splashRadius = 2.5f, zoneDps = 240f, zoneDuration = 5f });
+        d.tiers.Add(new TowerTierStats { damage = 140, range = 10f, fireInterval = 2.0f, projectileSpeed = 18f, splashRadius = 2.5f, zoneDps = 240f, zoneDuration = 5f });
         defs[d.type] = d;
     }
 }
