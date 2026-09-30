@@ -10,6 +10,7 @@ public static class TDRoom
         if (theme == BoardTheme.VolcanicCaldera) { BuildVolcanic(parent, map); return; }
         if (theme == BoardTheme.SpaceStation) { BuildStation(parent, map); return; }
         if (theme == BoardTheme.DesertHighway) { BuildDesert(parent, map); return; }
+        if (theme == BoardTheme.CandyShop) { BuildCandy(parent, map); return; }
         BuildBedroom(parent, map);
     }
 
@@ -407,5 +408,111 @@ public static class TDRoom
         TDVisuals.Box(parent, "PumpBody", pos + new Vector3(0f, 1.0f, 0f), new Vector3(1.1f, 1.2f, 0.8f), body);
         TDVisuals.Box(parent, "PumpTop", pos + new Vector3(0f, 1.75f, 0f), new Vector3(1.2f, 0.3f, 0.9f), red);
         TDVisuals.Cyl(parent, "PumpHose", pos + new Vector3(0.78f, 0.95f, 0f), 0.09f, 1.0f, metal);
+    }
+
+    // ----------------------------------------------------------- candy theme
+    static void BuildCandy(Transform parent, TDMap map)
+    {
+        Material floor = TDVisuals.Mat(new Color(0.44f, 0.27f, 0.16f), 0f, 0.4f);      // wood shop floor
+        Material wood = TDVisuals.Mat(new Color(0.60f, 0.40f, 0.24f), 0f, 0.4f);
+        Material woodDark = TDVisuals.Mat(new Color(0.47f, 0.30f, 0.17f), 0f, 0.4f);
+        Material cream = TDVisuals.Mat(new Color(0.93f, 0.88f, 0.80f), 0f, 0.45f);
+        Material glass = TDVisuals.Mat(new Color(0.86f, 0.92f, 0.94f), 0.2f, 0.7f);
+        Material caneRed = TDVisuals.Mat(new Color(0.90f, 0.20f, 0.22f), 0f, 0.5f);
+        Material sugar = TDVisuals.Mat(new Color(0.97f, 0.95f, 0.92f), 0f, 0.5f);
+
+        Color[] candyCols =
+        {
+            new Color(0.98f, 0.62f, 0.70f),
+            new Color(0.62f, 0.78f, 0.98f),
+            new Color(0.98f, 0.90f, 0.55f),
+            new Color(0.62f, 0.92f, 0.70f)
+        };
+        Material[] candyMats = new Material[candyCols.Length];
+        for (int i = 0; i < candyCols.Length; i++)
+            candyMats[i] = TDVisuals.Mat(candyCols[i], 0f, 0.6f);
+
+        // lollipop discs use saturated candy, not the pastel plot tints
+        Material[] lolliMats =
+        {
+            TDVisuals.Mat(new Color(1.00f, 0.45f, 0.60f), 0f, 0.65f),
+            TDVisuals.Mat(new Color(0.40f, 0.70f, 1.00f), 0f, 0.65f),
+            TDVisuals.Mat(new Color(1.00f, 0.85f, 0.35f), 0f, 0.65f)
+        };
+
+        float halfX = map.Width * map.Cell * 0.5f + 6f;
+        float halfZ = map.Height * map.Cell * 0.5f + 6f;
+
+        // shop floor
+        TDVisuals.Box(parent, "RoomFloor", new Vector3(0f, -0.15f, 0f), new Vector3(halfX * 2f, 0.2f, halfZ * 2f), floor);
+
+        // shop walls (light wood panelling) + skirting
+        float wh = 2.8f, wt = 0.8f;
+        TDVisuals.Box(parent, "WallN", new Vector3(0f, wh * 0.5f, halfZ), new Vector3(halfX * 2f + wt, wh, wt), wood);
+        TDVisuals.Box(parent, "WallS", new Vector3(0f, wh * 0.5f, -halfZ), new Vector3(halfX * 2f + wt, wh, wt), wood);
+        TDVisuals.Box(parent, "WallE", new Vector3(halfX, wh * 0.5f, 0f), new Vector3(wt, wh, halfZ * 2f + wt), wood);
+        TDVisuals.Box(parent, "WallW", new Vector3(-halfX, wh * 0.5f, 0f), new Vector3(wt, wh, halfZ * 2f + wt), wood);
+        TDVisuals.Box(parent, "SkirtN", new Vector3(0f, 0.35f, halfZ - wt * 0.5f), new Vector3(halfX * 2f, 0.7f, 0.14f), woodDark);
+        TDVisuals.Box(parent, "SkirtS", new Vector3(0f, 0.35f, -halfZ + wt * 0.5f), new Vector3(halfX * 2f, 0.7f, 0.14f), woodDark);
+        TDVisuals.Box(parent, "SkirtE", new Vector3(halfX - wt * 0.5f, 0.35f, 0f), new Vector3(0.14f, 0.7f, halfZ * 2f), woodDark);
+        TDVisuals.Box(parent, "SkirtW", new Vector3(-halfX + wt * 0.5f, 0.35f, 0f), new Vector3(0.14f, 0.7f, halfZ * 2f), woodDark);
+
+        float westX = -halfX + 3.0f;
+        float eastX = halfX - 3.0f;
+
+        // sweet shelves along the north wall, lined with candy jars
+        TDVisuals.Box(parent, "ShelfN0", new Vector3(0f, 1.5f, halfZ - 1.4f), new Vector3(16f, 0.18f, 1.6f), woodDark);
+        TDVisuals.Box(parent, "ShelfN1", new Vector3(0f, 2.3f, halfZ - 1.4f), new Vector3(16f, 0.18f, 1.6f), woodDark);
+        for (int i = 0; i < 7; i++)
+        {
+            float jx = -7.2f + i * 2.4f;
+            BuildJar(parent, new Vector3(jx, 1.72f, halfZ - 1.4f), 0.34f, candyMats[i % candyMats.Length], glass, cream);
+            BuildJar(parent, new Vector3(jx, 2.52f, halfZ - 1.4f), 0.32f, candyMats[(i + 2) % candyMats.Length], glass, cream);
+        }
+
+        // lollipops on poles (west and east floor)
+        BuildLollipop(parent, new Vector3(westX - 0.4f, 0f, 10.5f), 1.5f, lolliMats[0], cream, sugar);
+        BuildLollipop(parent, new Vector3(westX + 0.6f, 0f, 7.0f), 1.2f, lolliMats[1], cream, sugar);
+        BuildLollipop(parent, new Vector3(eastX, 0f, 11f), 1.4f, lolliMats[2], cream, sugar);
+
+        // candy cane
+        TDVisuals.Cyl(parent, "CanePole", new Vector3(westX - 1.0f, 1.2f, -6f), 0.22f, 2.4f, sugar);
+        for (int i = 0; i < 5; i++)
+            TDVisuals.Cyl(parent, "CaneStripe" + i, new Vector3(westX - 1.0f, 0.3f + i * 0.5f, -6f), 0.235f, 0.18f, caneRed);
+
+        // gumdrop boulders (east)
+        for (int i = 0; i < 3; i++)
+            TDVisuals.Sphere(parent, "Gumdrop" + i, new Vector3(eastX + 0.6f, 0.45f + i * 0.05f, -8f - i * 1.5f),
+                1.1f - i * 0.15f, TDVisuals.Mat(candyCols[i % candyCols.Length], 0f, 0.6f));
+
+        // cookie crate (south-east) and wrapped bonbons
+        TDVisuals.Box(parent, "CookieCrate", new Vector3(eastX, 0.6f, -1.5f), new Vector3(2.0f, 1.2f, 1.6f), wood);
+        TDVisuals.Box(parent, "CookieCrateBand", new Vector3(eastX, 0.6f, -1.5f), new Vector3(2.06f, 0.24f, 1.66f), woodDark);
+        for (int i = 0; i < 4; i++)
+            TDVisuals.Sphere(parent, "Cookie" + i, new Vector3(eastX - 0.5f + i * 0.33f, 1.35f, -1.5f), 0.3f,
+                TDVisuals.Mat(new Color(0.68f, 0.46f, 0.26f), 0f, 0.5f));
+
+        TDVisuals.Sphere(parent, "Bonbon0", new Vector3(-4f, 0.35f, -13f), 0.7f, TDVisuals.Mat(candyCols[1], 0f, 0.6f));
+        TDVisuals.Sphere(parent, "Bonbon1", new Vector3(5f, 0.3f, 13.5f), 0.6f, TDVisuals.Mat(candyCols[3], 0f, 0.6f));
+    }
+
+    static void BuildJar(Transform parent, Vector3 pos, float radius, Material candyFill, Material glass, Material lid)
+    {
+        // The candy is the dominant volume; the glass is only a bright rim, so a
+        // jar still reads as "full of candy" at board distance.
+        TDVisuals.Cyl(parent, "JarCandy", pos, radius * 0.88f, radius * 1.45f, candyFill);
+        TDVisuals.Cyl(parent, "JarRim", pos + new Vector3(0f, radius * 0.72f, 0f), radius, radius * 0.12f, glass);
+        TDVisuals.Cyl(parent, "JarLid", pos + new Vector3(0f, radius * 0.92f, 0f), radius * 0.95f, radius * 0.26f, lid);
+    }
+
+    static void BuildLollipop(Transform parent, Vector3 basePos, float discR, Material swirl, Material stick, Material sugar)
+    {
+        TDVisuals.Cyl(parent, "LolliStick", basePos + new Vector3(0f, discR * 0.8f, 0f), 0.08f, discR * 1.6f, stick);
+
+        // disc faces −Z, the side the board camera looks from
+        GameObject disc = TDVisuals.Cyl(parent, "LolliDisc", basePos + new Vector3(0f, discR * 1.6f, 0f), discR, 0.18f, swirl);
+        disc.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+        GameObject swirlSpot = TDVisuals.Cyl(parent, "LolliSwirl", basePos + new Vector3(0f, discR * 1.6f, -0.11f), discR * 0.45f, 0.20f, sugar);
+        swirlSpot.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
     }
 }

@@ -187,6 +187,11 @@ public partial class TDGameManager : MonoBehaviour
                 fillCol = new Color(0.88f, 0.74f, 0.55f); fillI = 0.22f;   // warm sand bounce
                 ambCol = new Color(0.26f, 0.24f, 0.20f); shadow = 0.55f;
                 break;
+            case BoardTheme.CandyShop:                           // soft warm confectionery light
+                keyCol = new Color(1.00f, 0.90f, 0.80f); keyI = 0.95f;
+                fillCol = new Color(0.95f, 0.72f, 0.80f); fillI = 0.26f;   // pink bounce off the shelves
+                ambCol = new Color(0.24f, 0.20f, 0.20f); shadow = 0.40f;
+                break;
             default:                                             // Kid's Bedroom: warm afternoon
                 keyCol = new Color(1.00f, 0.86f, 0.66f); keyI = 0.95f;
                 fillCol = new Color(0.55f, 0.62f, 0.78f); fillI = 0.16f;

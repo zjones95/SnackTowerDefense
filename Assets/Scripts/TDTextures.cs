@@ -520,6 +520,111 @@ public static class TDTextures
         return t;
     }
 
+    // ------------------------------------------------------- candy theme
+    static Texture2D candy, chocolate, chocolateCross;
+
+    /// <summary>Pastel candy slab for tower plots: matte taffy with a pressed
+    /// edge and a scatter of sugar crystals. Kept light so per-material tints
+    /// read as pink / blue / lemon / mint candy.</summary>
+    public static Texture2D Candy()
+    {
+        if (candy != null) return candy;
+        int S = 128;
+        Texture2D t = New(S);
+        Color baseC = new Color(0.96f, 0.95f, 0.94f);
+        Color edge = new Color(0.78f, 0.76f, 0.77f);
+        Color sugar = new Color(1.00f, 1.00f, 1.00f);
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float n = (N(x, y) - 0.5f) * 0.03f;
+                float soft = (N(x / 9 + 2, y / 9 + 6) - 0.5f) * 0.05f;   // soft taffy blotch
+                Color c = baseC + new Color(n, n, n) + new Color(soft, soft, soft);
+
+                const int b = 6;                       // pressed candy edge
+                if (x < b || y < b || x >= S - b || y >= S - b)
+                {
+                    c = edge;
+                }
+                else if (x < b + 2 || y < b + 2 || x >= S - b - 2 || y >= S - b - 2)
+                {
+                    c = Color.Lerp(c, sugar, 0.35f);
+                }
+                if (N(x * 11 + 5, y * 11 + 3) > 0.975f) c = sugar;   // sugar crystals
+                t.SetPixel(x, y, c);
+            }
+        }
+        t.Apply();
+        candy = t;
+        return t;
+    }
+
+    /// <summary>Chocolate lane (the mob path): dark glossy chocolate bar segments
+    /// with a wavy piped icing drizzle running along both edges.</summary>
+    public static Texture2D Chocolate()
+    {
+        if (chocolate != null) return chocolate;
+        int S = 128;
+        Texture2D t = New(S);
+        Color choc = new Color(0.26f, 0.14f, 0.08f);
+        Color chocLight = new Color(0.38f, 0.21f, 0.12f);
+        Color icing = new Color(0.97f, 0.95f, 0.92f);
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float n = (N(x, y) - 0.5f) * 0.06f;
+                Color c = choc + new Color(n, n * 0.8f, n * 0.6f);
+                if ((x % 32) < 2) c = chocLight * 0.7f;                             // bar grooves
+
+                float gl = Mathf.Clamp01(1f - Mathf.Abs(y - 44f) / 26f);            // glossy sheen
+                c = Color.Lerp(c, chocLight, gl * 0.30f);
+
+                float wy = Mathf.Sin(x * 0.26f) * 4f;                              // wavy icing drizzle
+                float d = Mathf.Min(Mathf.Abs(y - (26f + wy)), Mathf.Abs(y - (102f - wy)));
+                if (d < 4.5f) c = Color.Lerp(c, icing, Mathf.Clamp01(1f - d / 4.5f));
+                t.SetPixel(x, y, c);
+            }
+        }
+        t.Apply();
+        chocolate = t;
+        return t;
+    }
+
+    public static Texture2D ChocolateCross()
+    {
+        if (chocolateCross != null) return chocolateCross;
+        int S = 128;
+        Texture2D t = New(S);
+        Color choc = new Color(0.26f, 0.14f, 0.08f);
+        Color chocLight = new Color(0.38f, 0.21f, 0.12f);
+        Color icing = new Color(0.97f, 0.95f, 0.92f);
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float n = (N(x, y) - 0.5f) * 0.06f;
+                Color c = choc + new Color(n, n * 0.8f, n * 0.6f);
+                if ((x % 32) < 2 || (y % 32) < 2) c = chocLight * 0.7f;
+
+                float gl = Mathf.Clamp01(1f - Mathf.Abs((x + y) * 0.5f - 64f) / 30f);
+                c = Color.Lerp(c, chocLight, gl * 0.22f);
+
+                float wy = Mathf.Sin(x * 0.26f) * 4f;
+                float wx = Mathf.Sin(y * 0.26f) * 4f;
+                float d = Mathf.Min(
+                    Mathf.Min(Mathf.Abs(y - (26f + wy)), Mathf.Abs(y - (102f - wy))),
+                    Mathf.Min(Mathf.Abs(x - (26f + wx)), Mathf.Abs(x - (102f - wx))));
+                if (d < 4.5f) c = Color.Lerp(c, icing, Mathf.Clamp01(1f - d / 4.5f));
+                t.SetPixel(x, y, c);
+            }
+        }
+        t.Apply();
+        chocolateCross = t;
+        return t;
+    }
+
     // ------------------------------------------------------------ paper (UI)
     static Texture2D paper, paperHover, paperPressed, menuFade;
 

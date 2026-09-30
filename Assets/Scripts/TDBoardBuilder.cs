@@ -5,7 +5,7 @@ using UnityEngine;
 /// so the same code can produce the local board and inert remote boards.
 /// Layout/Route are never changed here — themes only reskin tiles + room.
 /// </summary>
-public enum BoardTheme { Bedroom, ArcticOutpost, VolcanicCaldera, SpaceStation, DesertHighway }
+public enum BoardTheme { Bedroom, ArcticOutpost, VolcanicCaldera, SpaceStation, DesertHighway, CandyShop }
 
 public static class TDBoardBuilder
 {
@@ -16,7 +16,8 @@ public static class TDBoardBuilder
         BoardTheme.ArcticOutpost,
         BoardTheme.VolcanicCaldera,
         BoardTheme.SpaceStation,
-        BoardTheme.DesertHighway
+        BoardTheme.DesertHighway,
+        BoardTheme.CandyShop
     };
 
     public static string ThemeName(BoardTheme t)
@@ -27,6 +28,7 @@ public static class TDBoardBuilder
             case BoardTheme.VolcanicCaldera: return "Volcanic Caldera";
             case BoardTheme.SpaceStation: return "Space Station";
             case BoardTheme.DesertHighway: return "Desert Highway";
+            case BoardTheme.CandyShop: return "Candy Shop";
             default: return "Kid's Bedroom";
         }
     }
@@ -43,6 +45,8 @@ public static class TDBoardBuilder
                 return "A lit mag-rail lane crosses the deck plates of an orbital station.";
             case BoardTheme.DesertHighway:
                 return "An asphalt highway threads sun-baked paving across red mesa country.";
+            case BoardTheme.CandyShop:
+                return "An icing-topped chocolate lane winds between pastel candy slabs.";
             default:
                 return "The original play-mat: a toy train track weaving through a kid's bedroom.";
         }
@@ -85,6 +89,7 @@ public static class TDBoardBuilder
         if (theme == BoardTheme.VolcanicCaldera) { BuildTilesVolcanic(parent, map, layout, gw, gh); return; }
         if (theme == BoardTheme.SpaceStation) { BuildTilesStation(parent, map, layout, gw, gh); return; }
         if (theme == BoardTheme.DesertHighway) { BuildTilesDesert(parent, map, layout, gw, gh); return; }
+        if (theme == BoardTheme.CandyShop) { BuildTilesCandy(parent, map, layout, gw, gh); return; }
 
         Color[] tileCols =
         {
@@ -298,6 +303,54 @@ public static class TDBoardBuilder
         Material voidMat = TDVisuals.Mat(new Color(0.82f, 0.70f, 0.50f), 0f, 0.3f);
         Material startMat = TDVisuals.Mat(new Color(0.32f, 0.82f, 0.36f), 0f, 0.4f);
         Material endMat = TDVisuals.Mat(new Color(0.88f, 0.22f, 0.18f), 0f, 0.4f);
+
+        float cell = map.Cell;
+        for (int ly = 0; ly < gh; ly++)
+        {
+            for (int x = 0; x < gw; x++)
+            {
+                char c = layout[ly][x];
+                Vector3 pos = map.CellCenter(x, ly) - Vector3.up * 0.05f;
+                Vector3 scale = new Vector3(cell * 0.97f, 0.10f, cell * 0.97f);
+                if (c == 'm')
+                {
+                    int o = PathOrientation(map, x, ly);
+                    GameObject tile = TDVisuals.Box(parent, "Tile", pos, scale, o == 2 ? crossMat : pathMat);
+                    if (o == 1) tile.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+                }
+                else
+                {
+                    Material m = voidMat;
+                    if (c == 't') m = tileMats[(x + ly) % tileMats.Length];
+                    else if (c == 's') m = startMat;
+                    else if (c == 'e') m = endMat;
+                    TDVisuals.Box(parent, "Tile", pos, scale, m);
+                }
+            }
+        }
+    }
+
+    static void BuildTilesCandy(Transform parent, TDMap map, string[] layout, int gw, int gh)
+    {
+        // Pastel candy plots against a dark chocolate lane: same dark-path read
+        // that worked on the desert board.
+        Color[] tileCols =
+        {
+            new Color(0.98f, 0.62f, 0.70f),   // strawberry
+            new Color(0.62f, 0.78f, 0.98f),   // blueberry
+            new Color(0.98f, 0.90f, 0.55f),   // lemon
+            new Color(0.62f, 0.92f, 0.70f)    // mint
+        };
+        Material[] tileMats = new Material[tileCols.Length];
+        for (int i = 0; i < tileCols.Length; i++)
+            tileMats[i] = TDVisuals.TexturedMat(TDTextures.Candy(), tileCols[i], Vector2.one);
+
+        Material pathMat = TDVisuals.TexturedMat(TDTextures.Chocolate(), Color.white, Vector2.one);
+        Material crossMat = TDVisuals.TexturedMat(TDTextures.ChocolateCross(), Color.white, Vector2.one);
+        // void is plain wrapped toffee paper: flat, no candy sheen
+        Material voidMat = TDVisuals.Mat(new Color(0.88f, 0.83f, 0.74f), 0f, 0.3f);
+        Material startMat = TDVisuals.Mat(new Color(0.35f, 0.85f, 0.40f), 0f, 0.5f);   // gumdrop
+        Material endMat = TDVisuals.Mat(new Color(0.88f, 0.18f, 0.20f), 0f, 0.5f);     // licorice
 
         float cell = map.Cell;
         for (int ly = 0; ly < gh; ly++)
