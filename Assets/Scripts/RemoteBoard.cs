@@ -91,8 +91,8 @@ public class RemoteBoard : MonoBehaviour
         rb.BoardOffset = offset;
 
         rb.map = TDBoardBuilder.CreateMap(TDGameManager.Layout, TDGameManager.Route, 2f, offset);
-        TDBoardBuilder.BuildTiles(go.transform, rb.map);
-        TDBoardBuilder.BuildRoom(go.transform, rb.map, offset);
+        TDBoardBuilder.BuildTiles(go.transform, rb.map, TDGameManager.ActiveTheme);
+        TDBoardBuilder.BuildRoom(go.transform, rb.map, offset, TDGameManager.ActiveTheme);
 
         GameObject live = new GameObject("Live");
         live.transform.SetParent(go.transform, false);

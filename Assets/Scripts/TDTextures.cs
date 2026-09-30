@@ -116,6 +116,98 @@ public static class TDTextures
         return t;
     }
 
+    // ------------------------------------------------------ arctic theme
+    static Texture2D frost, snowTrack, snowCross;
+
+    /// <summary>Frosted ice tile: pale blue centre, white snow-dusted border,
+    /// faint snowflake etched in the middle. Tint per material.</summary>
+    public static Texture2D Frost()
+    {
+        if (frost != null) return frost;
+        int S = 128;
+        Texture2D t = New(S);
+        Color ice = new Color(0.84f, 0.91f, 0.94f);
+        Color snow = new Color(0.96f, 0.97f, 0.99f);
+        Color etch = new Color(0.98f, 0.99f, 1.0f);
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float n = (N(x, y) - 0.5f) * 0.05f;
+                Color c = ice + new Color(n, n, n);
+                int edge = 10;
+                if (x < edge || y < edge || x >= S - edge || y >= S - edge) c = snow + new Color(n, n, n);
+                float cx = x - S * 0.5f, cy = y - S * 0.5f;
+                float d = Mathf.Sqrt(cx * cx + cy * cy);
+                // 6-arm snowflake etch around the centre
+                float arm = 999f;
+                for (int i = 0; i < 3; i++)
+                {
+                    float a = i * Mathf.PI / 3f;
+                    float dx = Mathf.Abs(cx * Mathf.Sin(a) - cy * Mathf.Cos(a));
+                    float along = Mathf.Abs(cx * Mathf.Cos(a) + cy * Mathf.Sin(a));
+                    if (along < 28f) arm = Mathf.Min(arm, dx);
+                }
+                if (arm < 1.6f && d < 30f && d > 4f) c = Color.Lerp(c, etch, 0.8f);
+                if (d < 4f) c = etch;
+                t.SetPixel(x, y, c);
+            }
+        }
+        t.Apply();
+        frost = t;
+        return t;
+    }
+
+    /// <summary>Packed snowmobile track: snow white with twin ski grooves.</summary>
+    public static Texture2D SnowTrack()
+    {
+        if (snowTrack != null) return snowTrack;
+        int S = 128;
+        Texture2D t = New(S);
+        Color snow = new Color(0.93f, 0.95f, 0.98f);
+        Color groove = new Color(0.76f, 0.83f, 0.90f);
+        Color drift = new Color(0.98f, 0.99f, 1.0f);
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float n = (N(x, y) - 0.5f) * 0.06f;
+                Color c = snow + new Color(n, n, n);
+                if (x < 8 || x >= S - 8) c = drift + new Color(n, n, n);
+                if ((y >= 42 && y <= 47) || (y >= 81 && y <= 86)) c = groove + new Color(n, n, n);
+                if (y == 42 || y == 47 || y == 81 || y == 86) c = drift;
+                t.SetPixel(x, y, c);
+            }
+        }
+        t.Apply();
+        snowTrack = t;
+        return t;
+    }
+
+    public static Texture2D SnowCross()
+    {
+        if (snowCross != null) return snowCross;
+        int S = 128;
+        Texture2D t = New(S);
+        Color snow = new Color(0.93f, 0.95f, 0.98f);
+        Color groove = new Color(0.76f, 0.83f, 0.90f);
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float n = (N(x, y) - 0.5f) * 0.06f;
+                Color c = snow + new Color(n, n, n);
+                bool gx = (y >= 42 && y <= 47) || (y >= 81 && y <= 86);
+                bool gz = (x >= 42 && x <= 47) || (x >= 81 && x <= 86);
+                if (gx || gz) c = groove + new Color(n, n, n);
+                t.SetPixel(x, y, c);
+            }
+        }
+        t.Apply();
+        snowCross = t;
+        return t;
+    }
+
     // ------------------------------------------------------------ paper (UI)
     static Texture2D paper, paperHover, paperPressed, menuFade;
 

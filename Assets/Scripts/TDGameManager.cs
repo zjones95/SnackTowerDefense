@@ -25,6 +25,7 @@ public partial class TDGameManager : MonoBehaviour
     private ushort nextMobId = 1;
 
     // map layout + ordered waypoints (shared with tools/previews)
+    // Layout/Route are gameplay — themes only reskin visuals, never change these.
     public static readonly string[] Layout =
     {
         "sxxexxxxx",
@@ -53,6 +54,8 @@ public partial class TDGameManager : MonoBehaviour
         new Vector2Int(3, 9),
         new Vector2Int(3, 0)
     };
+
+    public static BoardTheme ActiveTheme = BoardTheme.ArcticOutpost;
 
     public Transform ProjectilesRoot { get; private set; }
     public Tower Selected { get; private set; }
@@ -146,6 +149,8 @@ public partial class TDGameManager : MonoBehaviour
         cam.backgroundColor = new Color(0.12f, 0.14f, 0.17f);
 
         // warm, dimmer sunlight (override any default scene light)
+        // ArcticOutpost uses a cooler sun so the snow reads white, not beige.
+        bool arctic = ActiveTheme == BoardTheme.ArcticOutpost;
         Light sun = null;
         var lights = Object.FindObjectsByType<Light>(FindObjectsSortMode.None);
         for (int i = 0; i < lights.Length; i++)
@@ -158,8 +163,8 @@ public partial class TDGameManager : MonoBehaviour
             sun = lg.AddComponent<Light>();
             sun.type = LightType.Directional;
         }
-        sun.color = new Color(1f, 0.86f, 0.66f);
-        sun.intensity = 0.95f;
+        sun.color = arctic ? new Color(0.86f, 0.92f, 1.0f) : new Color(1f, 0.86f, 0.66f);
+        sun.intensity = arctic ? 0.85f : 0.95f;
         sun.shadows = LightShadows.Soft;
         sun.shadowStrength = 0.40f;                                // much lighter, softer shadows
         sun.shadowBias = 0.05f;
@@ -170,13 +175,13 @@ public partial class TDGameManager : MonoBehaviour
         GameObject fillGO = new GameObject("Fill");
         Light fill = fillGO.AddComponent<Light>();
         fill.type = LightType.Directional;
-        fill.color = new Color(0.55f, 0.62f, 0.78f);
-        fill.intensity = 0.16f;
+        fill.color = arctic ? new Color(0.60f, 0.70f, 0.90f) : new Color(0.55f, 0.62f, 0.78f);
+        fill.intensity = arctic ? 0.30f : 0.16f;
         fill.shadows = LightShadows.None;
         fillGO.transform.rotation = Quaternion.Euler(28f, -140f, 0f);
 
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-        RenderSettings.ambientLight = new Color(0.19f, 0.18f, 0.17f);
+        RenderSettings.ambientLight = arctic ? new Color(0.17f, 0.19f, 0.22f) : new Color(0.19f, 0.18f, 0.17f);
         RenderSettings.ambientIntensity = 1f;
     }
 
@@ -320,10 +325,10 @@ public partial class TDGameManager : MonoBehaviour
 
         // (room floor is built by TDRoom)
 
-        TDBoardBuilder.BuildTiles(worldRoot, map);
+        TDBoardBuilder.BuildTiles(worldRoot, map, ActiveTheme);
         BuildHover();
         BuildGhost();
-        TDBoardBuilder.BuildRoom(worldRoot, map, boardOffset);
+        TDBoardBuilder.BuildRoom(worldRoot, map, boardOffset, ActiveTheme);
     }
 
     void BuildHover()
@@ -498,7 +503,16 @@ public partial class TDGameManager : MonoBehaviour
             // Settings can be opened over the main menu; Esc closes it there.
             if (settingsOpen && Input.GetKeyDown(KeyCode.Escape)) CloseSettings();
 
-            if (State == GameState.MainMenu || State == GameState.DifficultySelect)
+            // Per-player MP results: a finished board keeps rendering the live
+            // match behind its (possibly dismissed) end screen. Own sim is done;
+            // only camera + remote boards + spectate input keep ticking.
+            if (mpActive && (State == GameState.GameOver || State == GameState.Victory))
+            {
+                UpdateCamera(Time.deltaTime);
+                UpdateRemoteBoards();
+                UpdateSpectate();
+            }
+            else if (State == GameState.MainMenu || State == GameState.DifficultySelect)
                 UpdateMenuBackdrop();
             return;
         }
@@ -1082,7 +1096,11 @@ public partial class TDGameManager : MonoBehaviour
         {
             if (State == GameState.DamageTest) DrawDamageTestHud();
             else DrawHud();
-            if (State == GameState.GameOver) DrawEnd(false);
+            // MP end screens are dismissable so a finished player can keep
+            // spectating the remaining boards (per-player results).
+            bool mpDone = mpActive && (State == GameState.GameOver || State == GameState.Victory);
+            if (mpDone && mpEndDismissed) DrawMpResultsTab();
+            else if (State == GameState.GameOver) DrawEnd(false);
             else if (State == GameState.Victory) DrawEnd(true);
             DrawDamageTestResult();   // fading final total, drawn over the end screen
             DrawPauseMenu();
@@ -1567,6 +1585,16 @@ public partial class TDGameManager : MonoBehaviour
             GUI.DrawTexture(new Rect(x, top, size, size), TDTextures.IconTar(), ScaleMode.ScaleToFit, true);
     }
 
+    /// <summary>Reopens a dismissed MP end screen while spectating.</summary>
+    void DrawMpResultsTab()
+    {
+        if (GUI.Button(new Rect(Screen.width - 150f, 46f, 140f, 34f), "Results", PaperButton(16)))
+        {
+            Click();
+            mpEndDismissed = false;
+        }
+    }
+
     void DrawEnd(bool won)
     {
         Color old = GUI.color;
@@ -1588,6 +1616,11 @@ public partial class TDGameManager : MonoBehaviour
         if (mpActive)
         {
             DrawScoreboard();
+            if (GUI.Button(new Rect(bx, Screen.height * 0.66f, bw, bh), "Spectate", PaperButton(22)))
+            {
+                Click();
+                mpEndDismissed = true;
+            }
             if (GUI.Button(new Rect(bx, Screen.height * 0.74f, bw, bh), "Back to Lobby", PaperButton(22)))
             {
                 Click();

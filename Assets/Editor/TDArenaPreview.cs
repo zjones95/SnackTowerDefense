@@ -17,68 +17,26 @@ public static class TDArenaPreview
         GameObject lightGO = new GameObject("PreviewLight");
         Light l = lightGO.AddComponent<Light>();
         l.type = LightType.Directional;
-        l.color = new Color(1f, 0.86f, 0.66f);
-        l.intensity = 0.72f;
+        bool arctic = TDGameManager.ActiveTheme == BoardTheme.ArcticOutpost;
+        l.color = arctic ? new Color(0.86f, 0.92f, 1.0f) : new Color(1f, 0.86f, 0.66f);
+        l.intensity = arctic ? 0.85f : 0.72f;
         l.shadows = LightShadows.Soft;
         l.transform.rotation = Quaternion.Euler(50f, 35f, 0f);
 
         GameObject fillGO = new GameObject("PreviewFill");
         Light fill = fillGO.AddComponent<Light>();
         fill.type = LightType.Directional;
-        fill.color = new Color(0.55f, 0.62f, 0.78f);
-        fill.intensity = 0.10f;
+        fill.color = arctic ? new Color(0.60f, 0.70f, 0.90f) : new Color(0.55f, 0.62f, 0.78f);
+        fill.intensity = arctic ? 0.30f : 0.10f;
         fill.shadows = LightShadows.None;
         fillGO.transform.rotation = Quaternion.Euler(28f, -140f, 0f);
 
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-        RenderSettings.ambientLight = new Color(0.12f, 0.11f, 0.10f);
+        RenderSettings.ambientLight = arctic ? new Color(0.17f, 0.19f, 0.22f) : new Color(0.12f, 0.11f, 0.10f);
 
-        // colourful play-mat tiles
-        Color[] tileCols =
-        {
-            new Color(0.82f, 0.34f, 0.34f),
-            new Color(0.34f, 0.56f, 0.86f),
-            new Color(0.88f, 0.76f, 0.30f),
-            new Color(0.42f, 0.76f, 0.44f)
-        };
-        Material[] tileMats = new Material[tileCols.Length];
-        for (int i = 0; i < tileCols.Length; i++)
-            tileMats[i] = TDVisuals.TexturedMat(TDTextures.Weave(), tileCols[i], new Vector2(3f, 3f));
-
-        Material pathMat = TDVisuals.TexturedMat(TDTextures.Road(), Color.white, Vector2.one);        // toy train track
-        Material crossMat = TDVisuals.TexturedMat(TDTextures.RoadCross(), Color.white, Vector2.one);
-        Material voidMat = TDVisuals.Mat(new Color(0.60f, 0.54f, 0.44f), 0f, 0.25f);
-        Material startMat = TDVisuals.Mat(new Color(0.25f, 0.80f, 0.35f), 0f, 0.3f);
-        Material endMat = TDVisuals.Mat(new Color(0.85f, 0.22f, 0.22f), 0f, 0.3f);
-
-        for (int ly = 0; ly < gh; ly++)
-        {
-            for (int x = 0; x < gw; x++)
-            {
-                char c = layout[ly][x];
-                Vector3 pos = map.CellCenter(x, ly) - Vector3.up * 0.05f;   // matches the game
-                Vector3 scale = new Vector3(cell * 0.97f, 0.10f, cell * 0.97f);
-                if (c == 'm')
-                {
-                    bool left = map.IsPath(x - 1, ly), right = map.IsPath(x + 1, ly);
-                    bool up = map.IsPath(x, ly - 1), down = map.IsPath(x, ly + 1);
-                    bool horiz = left || right, vert = up || down;
-                    Material pm = (horiz && vert) ? crossMat : pathMat;
-                    GameObject tile = TDVisuals.Box(null, "Tile", pos, scale, pm);
-                    if (vert && !horiz) tile.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
-                }
-                else
-                {
-                    Material m = voidMat;
-                    if (c == 't') m = tileMats[(x + ly) % tileMats.Length];
-                    else if (c == 's') m = startMat;
-                    else if (c == 'e') m = endMat;
-                    TDVisuals.Box(null, "Tile", pos, scale, m);
-                }
-            }
-        }
-
-        TDRoom.Build(null, map);
+        GameObject boardRoot = new GameObject("BoardRoot");
+        TDBoardBuilder.BuildTiles(boardRoot.transform, map, TDGameManager.ActiveTheme);
+        TDRoom.Build(boardRoot.transform, map, TDGameManager.ActiveTheme);
 
         GameObject camGO = new GameObject("PreviewCam");
         camGO.tag = "MainCamera";

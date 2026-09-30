@@ -3,7 +3,10 @@ using UnityEngine;
 /// <summary>
 /// Builds the static environment of a board (play-mat tiles + the child's room)
 /// so the same code can produce the local board and inert remote boards.
+/// Layout/Route are never changed here — themes only reskin tiles + room.
 /// </summary>
+public enum BoardTheme { Bedroom, ArcticOutpost }
+
 public static class TDBoardBuilder
 {
     /// <summary>Map whose world origin sits at <paramref name="boardOffset"/>.</summary>
@@ -14,7 +17,7 @@ public static class TDBoardBuilder
         return new TDMap(layout, route, cell, origin);
     }
 
-    public static void BuildTiles(Transform parent, TDMap map)
+    public static void BuildTiles(Transform parent, TDMap map, BoardTheme theme = BoardTheme.Bedroom)
     {
         string[] layout = null;
         // rebuild the char grid from the map (layout is cheap and keeps callers simple)
@@ -26,6 +29,8 @@ public static class TDBoardBuilder
             for (int x = 0; x < gw; x++) row[x] = map.At(x, ly);
             layout[ly] = new string(row);
         }
+
+        if (theme == BoardTheme.ArcticOutpost) { BuildTilesArctic(parent, map, layout, gw, gh); return; }
 
         Color[] tileCols =
         {
@@ -71,13 +76,58 @@ public static class TDBoardBuilder
     }
 
     /// <summary>Room is authored around the grid centre, so parent it to a root at the offset.</summary>
-    public static GameObject BuildRoom(Transform parent, TDMap map, Vector3 boardOffset)
+    public static GameObject BuildRoom(Transform parent, TDMap map, Vector3 boardOffset, BoardTheme theme = BoardTheme.Bedroom)
     {
         GameObject root = new GameObject("Room");
         root.transform.SetParent(parent, false);
         root.transform.position = boardOffset;
-        TDRoom.Build(root.transform, map);
+        TDRoom.Build(root.transform, map, theme);
         return root;
+    }
+
+    static void BuildTilesArctic(Transform parent, TDMap map, string[] layout, int gw, int gh)
+    {
+        Color[] tileCols =
+        {
+            new Color(0.38f, 0.52f, 0.64f),
+            new Color(0.43f, 0.57f, 0.69f),
+            new Color(0.34f, 0.47f, 0.60f),
+            new Color(0.48f, 0.61f, 0.72f)
+        };
+        Material[] tileMats = new Material[tileCols.Length];
+        for (int i = 0; i < tileCols.Length; i++)
+            tileMats[i] = TDVisuals.TexturedMat(TDTextures.Frost(), tileCols[i], Vector2.one);
+
+        Material pathMat = TDVisuals.TexturedMat(TDTextures.SnowTrack(), Color.white, Vector2.one);
+        Material crossMat = TDVisuals.TexturedMat(TDTextures.SnowCross(), Color.white, Vector2.one);
+        Material voidMat = TDVisuals.Mat(new Color(0.80f, 0.85f, 0.90f), 0f, 0.25f);
+        Material startMat = TDVisuals.Mat(new Color(0.55f, 0.85f, 0.65f), 0f, 0.3f);
+        Material endMat = TDVisuals.Mat(new Color(0.85f, 0.38f, 0.36f), 0f, 0.3f);
+
+        float cell = map.Cell;
+        for (int ly = 0; ly < gh; ly++)
+        {
+            for (int x = 0; x < gw; x++)
+            {
+                char c = layout[ly][x];
+                Vector3 pos = map.CellCenter(x, ly) - Vector3.up * 0.05f;
+                Vector3 scale = new Vector3(cell * 0.97f, 0.10f, cell * 0.97f);
+                if (c == 'm')
+                {
+                    int o = PathOrientation(map, x, ly);
+                    GameObject tile = TDVisuals.Box(parent, "Tile", pos, scale, o == 2 ? crossMat : pathMat);
+                    if (o == 1) tile.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+                }
+                else
+                {
+                    Material m = voidMat;
+                    if (c == 't') m = tileMats[(x + ly) % tileMats.Length];
+                    else if (c == 's') m = startMat;
+                    else if (c == 'e') m = endMat;
+                    TDVisuals.Box(parent, "Tile", pos, scale, m);
+                }
+            }
+        }
     }
 
     static int PathOrientation(TDMap map, int x, int ly)
