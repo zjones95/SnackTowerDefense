@@ -24,13 +24,6 @@ class Front:
     def pt(self, x, z, off=0): return Vector((x, self.y - off, z))
 
 
-class OffsetFront(Front):
-    def __init__(self, y, x):
-        super().__init__(y)
-        self.x = x
-    def pt(self, x, z, off=0): return Vector((x+self.x, self.y-off, z))
-
-
 def visage(b, surface, z, gap=.12, smile=True):
     ink = b.mat('ink', '#221F21', .65)
     for x in (-gap, gap):
@@ -117,27 +110,26 @@ def build_zucchini():
 
 
 def build_chili():
-    b=Builder('Chili'); red=b.mat('red','#D9332D'); bright=b.mat('highlight','#F4523D')
+    # Use the shipped Banana mesh *and* its six-bone foot/leg weights verbatim.
+    # Recolour material instances; leave Banana's arched tube, face orientation,
+    # feet geometry and hip/ankle pivots exactly as authored and verified.
+    b=build_banana()
+    b.name='Chili'
+    for key, colour in (('yellow','#D9332D'), ('brown','#9F2923'),
+                        ('mouth','#57231D')):
+        mat=b.mats[b.matmap[key]]
+        rgb=hexrgb(colour)
+        bsdf=next(n for n in mat.node_tree.nodes if n.type=='BSDF_PRINCIPLED')
+        bsdf.inputs['Base Color'].default_value=(*rgb,1)
+        mat.diffuse_color=(*rgb,1)
+    for key, idx in b.matmap.items():
+        b.mats[idx].name=f'MobLP Chili {key}'
     green=b.mat('calyx','#549344')
-    # Ring profile bends into a pepper crescent while keeping every ring
-    # horizontal. That gives a clean taper above the legs, without the
-    # twisting cross-section the old tube made as it curled at the bottom.
-    p=[(0,.20),(.07,.23),(.14,.31),(.20,.44),(.22,.60),(.18,.77),
-       (.10,.90),(0,.96)]
-    v,f,_=lathe_g(p,10)
-    def bend(z):
-        if z<.44: return .07 - .07*(z-.20)/.24
-        if z<.70: return -.12*(z-.44)/.26
-        return -.12 + .12*(z-.70)/.26
-    b.add(([(x+bend(z),y,z) for x,y,z in v],f),red)
-    b.add(frustum_g(7,.18,.035,.10),green,X((0,0,.93)))
-    b.add(tube_g([(0,0,1.0),(.06,.01,1.13)],[.045,.025]),green)
-    # Small red cheek on body, plus a flat face in front of curved spine.
-    visage(b,OffsetFront(-.223,-.07),.60,.075)
-    # Banana's long legs reach into the fruit instead of stopping just below
-    # the narrow tip. Use that same hip/ankle spacing and forward foot offset.
-    feet(b,red,b.mat('feet','#A92826'),(-.07,.07),leg_r=.05,
-         leg_h=.24,leg_z=.07,foot_sc=(.10,.18,.07),foot_y=-.05,leg_y=-.02)
+    surface=BananaSurf()
+    top=surface.center(1)
+    tangent=(top-surface.center(.97)).normalized()
+    b.add(frustum_g(6,.105,.025,.09),green,
+          X(top-.04*tangent,Vector((0,0,1)).rotation_difference(tangent).to_euler()))
     return b
 
 
