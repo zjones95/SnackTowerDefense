@@ -29,7 +29,7 @@ public class MobDef
     public bool invincible = false;  // Damage Test dummy: records damage but never dies
 }
 
-// The 45-wave roster. Waves live in TDBalance; this only describes the mobs.
+// The 50-wave roster. Waves live in TDBalance; this only describes the mobs.
 public static class MobCatalog
 {
     public static readonly MobDef[] All =
@@ -79,7 +79,12 @@ public static class MobCatalog
         Make("Garlic", MobArchetype.Tank),              // 42
         Make("Grapefruit", MobArchetype.Basic),         // 43
         Make("Kale", MobArchetype.Swarm),               // 44
-        Make("GranolaMom", MobArchetype.Boss),        // 45 — final boss
+        Make("CaesarSalad", MobArchetype.Boss),       // 45
+        Make("Starfruit", MobArchetype.Fast),         // 46
+        Make("PomegranateSeed", MobArchetype.Swarm), // 47
+        Make("Artichoke", MobArchetype.Tank),         // 48
+        Make("Asparagus", MobArchetype.Basic),       // 49
+        Make("GranolaMom", MobArchetype.Boss),        // 50 — final boss
         Make("TestDummy", MobArchetype.Boss),         // end-of-run Damage Test only (issue #9)
     };
 
@@ -127,7 +132,8 @@ public static class MobCatalog
             case "Durian": d.health = 540f; d.enrage = 0.85f; break;
             case "Coconut": d.health = 700f; d.speed = 0.68f; d.slowResist = 0.5f; break;
             case "Dragonfruit": d.health = 620f; d.dashEvery = 4.5f; break;
-            case "GranolaMom": d.health = 1300f; d.slowResist = 0.5f; d.enrage = 0.7f; d.dashEvery = 5f; d.longHair = true; d.instantLossOnLeak = true; break;
+            case "CaesarSalad": d.health = 1150f; d.speed = 0.95f; break;
+            case "GranolaMom": d.health = 1120f; d.slowResist = 0.5f; d.enrage = 0.7f; d.dashEvery = 5f; d.longHair = true; d.instantLossOnLeak = true; break;
             case "Blackberry": d.health = 750f; d.enrage = 0.7f; d.dashEvery = 5f; break;
             case "RotKing": d.health = 1100f; d.armour = 6f; d.slowResist = 0.6f; d.enrage = 0.55f; d.dashEvery = 5f; d.instantLossOnLeak = true; break;
             // Damage Test target: huge health pool, no boss traits, cannot die and
@@ -140,6 +146,8 @@ public static class MobCatalog
     static string Name(string id)
     {
         if (id == "GranolaMom") return "Granola Mom";
+        if (id == "CaesarSalad") return "Caesar Salad";
+        if (id == "PomegranateSeed") return "Pomegranate Seed";
         if (id == "Chili") return "Chili Pepper";
         if (id == "Mushroom") return "Button Mushroom";
         if (id == "Blackberry") return "Blackberry Bramble";
@@ -197,6 +205,11 @@ public static class MobCatalog
             case "Grapefruit": return new Color(0.95f, 0.55f, 0.50f);
             case "Kale": return new Color(0.18f, 0.42f, 0.22f);
             case "RotKing": return new Color(0.45f, 0.55f, 0.25f);
+            case "CaesarSalad": return new Color(0.40f, 0.70f, 0.26f);
+            case "Starfruit": return new Color(0.96f, 0.79f, 0.20f);
+            case "PomegranateSeed": return new Color(0.78f, 0.14f, 0.26f);
+            case "Artichoke": return new Color(0.42f, 0.58f, 0.29f);
+            case "Asparagus": return new Color(0.51f, 0.67f, 0.26f);
             case "TestDummy": return new Color(0.55f, 0.58f, 0.62f);   // neutral grey
             default: return new Color(0.8f, 0.8f, 0.8f);
         }

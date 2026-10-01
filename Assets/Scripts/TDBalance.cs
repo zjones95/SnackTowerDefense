@@ -13,7 +13,7 @@ public static class TDBalance
     public const int StartMoney = 100;
     public const int StartLives = 10;
     public const float PrepDuration = 10f;
-    public const int TotalWaves = 45;
+    public const int TotalWaves = 50;
     /// <summary>Length of the solo Damage Test scenario (issue #9).</summary>
     public const float DamageTestDuration = 60f;
 
@@ -104,8 +104,8 @@ public static class TDBalance
     // Mob health: keep the early 13% growth (waves 1-10), then taper from
     // 7.5% to 5%/wave. The old 13%->10% curve reached 122x on wave 45:
     // Granola Mom had ~198k HP on Normal despite only ~$3k baseline cash.
-    // This reaches ~25x instead (~41k HP) so a mixed T5/T6 defense, with or
-    // without a Gold investment, has a plausible final-boss damage budget.
+    // Keep the existing wave 1-45 curve when extending the run. From wave 46
+    // onward, growth stays at 5%/wave; Granola Mom has ~49k HP on Normal at 50.
     public static float HealthMult(int wave)
     {
         int n = Mathf.Max(0, wave - 1);
@@ -113,7 +113,7 @@ public static class TDBalance
         for (int i = 0; i < n; i++)
         {
             float g = i < 9 ? 1.13f
-                : Mathf.Lerp(1.075f, 1.05f, (i - 9) / (float)(TotalWaves - 11));
+                : Mathf.Lerp(1.075f, 1.05f, Mathf.Clamp01((i - 9) / 34f));
             log += Mathf.Log(g);
         }
         return Mathf.Exp(log);
@@ -121,7 +121,7 @@ public static class TDBalance
     public static float SpeedMult(int wave) { return 1f + 0.02f * (wave - 1); }
 
     // ------------------------------------------------------------------ waves
-    // One mob type per wave, 45 waves. Every 5th is a standalone boss.
+    // One mob type per wave, 50 waves. Every 5th is a standalone boss.
     public struct WaveDef
     {
         public string mob;
@@ -187,7 +187,12 @@ public static class TDBalance
         W("Garlic", 20, 0.90f),
         W("Grapefruit", 24, 0.55f),
         W("Kale", 36, 0.30f),
-        B("GranolaMom"),                       // 45 — final boss
+        B("CaesarSalad"),                       // 45 — penultimate boss
+        W("Starfruit", 26, 0.50f),              // 46 — fast coverage
+        W("PomegranateSeed", 40, 0.25f),        // 47 — compact swarm
+        W("Artichoke", 16, 1.00f),              // 48 — sustained damage
+        W("Asparagus", 22, 0.70f),              // 49 — spaced stream
+        B("GranolaMom"),                       // 50 — final boss
     };
 
     // Income. Rounds pay a FLAT $50 so cash is predictable; kills pay a token $1.

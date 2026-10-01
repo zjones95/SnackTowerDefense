@@ -19,7 +19,8 @@ public static class MobWalkCheck
         "Coconut", "Mango", "Raspberry", "Cauliflower", "Beetroot", "Dragonfruit",
         "Avocado", "Lychee", "Turnip", "Papaya", "Blackberry", "Lemon",
         "Lettuce", "Zucchini", "Chili", "RotKing", "Mushroom", "Garlic",
-        "Grapefruit", "Kale", "GranolaMom" };
+        "Grapefruit", "Kale", "CaesarSalad", "Starfruit", "PomegranateSeed",
+        "Artichoke", "Asparagus", "GranolaMom" };
 
     public static void Verify()
     {
@@ -35,7 +36,7 @@ public static class MobWalkCheck
         Debug.Log("MobWalkCheck OK\n" + report + "\nWrote " + file);
     }
 
-    // Art can be verified before its wave/catalog entry is introduced.
+    // Focused check for the five newly integrated mobs.
     public static void VerifyLateWaveArt()
     {
         string[] ids = { "CaesarSalad", "Starfruit", "PomegranateSeed", "Artichoke", "Asparagus" };
@@ -53,16 +54,16 @@ public static class MobWalkCheck
         StringBuilder report = new StringBuilder();
         foreach (string id in ids)
         foreach (float stageY in new[] { 0f, -400f })
-            Check(id, stageY, report, new MobDef { id = id, displayName = id });
+            Check(id, stageY, report);
         string dir = Path.Combine(Path.GetTempPath(), "opencode");
         Directory.CreateDirectory(dir);
         File.WriteAllText(Path.Combine(dir, "late_mob_walk_check.txt"), report.ToString());
         Debug.Log("Late mob art check OK\n" + report);
     }
 
-    static void Check(string id, float stageY, StringBuilder report, MobDef artDef = null)
+    static void Check(string id, float stageY, StringBuilder report)
     {
-        MobDef def = artDef ?? MobCatalog.Get(id);
+        MobDef def = MobCatalog.Get(id);
         if (def == null) throw new Exception("No MobDef: " + id);
         if (SnackModels.Load(MobCatalog.ModelPath(def)) == null) throw new Exception("Model not loadable: " + id);
 

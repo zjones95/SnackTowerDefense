@@ -5,10 +5,11 @@ after building the first five (Apple, Carrot, Pear, Banana, Watermelon boss), wh
 are the reference implementation. See `MobRoster.md` for *what* each mob is and
 `ARCHITECTURE.md` for the wider codebase.
 
-> **Status:** all 45 mobs have Blender-authored, rigged, walk-animated GLBs.
-> Waves 31–34 plus Granola Mom (now wave 45) are authored in
+> **Status:** all 50 mobs have Blender-authored, rigged, walk-animated GLBs.
+> Waves 31–34 plus Granola Mom (now wave 50) are authored in
 > `tools/blender/mobs_wave31_35.py`. Waves 35–44 are authored in
-> `tools/blender/mobs_wave35_44.py`. Granola Mom has a dedicated humanoid rig;
+> `tools/blender/mobs_wave35_44.py`; waves 45–49 in `mobs_wave45_49.py`.
+> Granola Mom has a dedicated humanoid rig;
 > the other mobs use the shared six-bone rig. Movement-speed playback still
 > needs play-testing.
 
@@ -24,9 +25,8 @@ All five are armless and reuse the shipped stubby feet and six-bone walk rig.
 Both GLB mirrors are exported. Blender checks all 25 keyed frames for loop seams,
 rig weights and ground contact; `MobWalkCheck.VerifyLateWaveArt` verifies Unity
 Legacy imports and sampled walk motion without requiring catalog entries.
-These are staged art assets: the live catalog/wave table still has 45 waves.
-Planned placement is Caesar Salad at 45, the four regulars at 46-49, and existing
-Granola Mom moved to final wave 50 when gameplay integration is requested.
+The live roster has Caesar Salad at 45, the four regulars at 46-49, and existing
+Granola Mom at final wave 50.
 
 | Model | Faces | Vertices |
 |---|---:|---:|
