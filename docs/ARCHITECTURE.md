@@ -65,6 +65,7 @@ MainMenu ─┬─ DifficultySelect ── StartingRun ── Playing ─┬─ 
 | `Net/MatchSync.cs` | Per-board state relay + independent waves; difficulty |
 | `Net/SpectateSync.cs` | Board snapshot streaming (host fan-out, ~20 Hz) |
 | `Net/FxSync.cs` | Best-effort cosmetic FX channel (`td.fx` / `td.fxall`) |
+| `Net/BoardAudioSync.cs` | Best-effort board-tagged SFX (`td.audio` / `td.audioall`); only viewed board is audible |
 | `Net/BoardSnapshot.cs` | Compact quantised board state |
 | `Net/BoardLayout.cs` | Where each player's board sits in the world |
 | `Net/ChatSync.cs` | Relay chat + typing flag |

@@ -97,6 +97,7 @@ public partial class TDGameManager
         NetworkSession ns = NetworkSession.Instance;
         if (ns == null || slot < 0 || slot >= ns.Players.Count) return;
 
+        if (slot != viewSlot && TDAudio.Instance != null) TDAudio.Instance.StopBoardSounds();
         viewSlot = slot;
         viewOffset = BoardLayout.Position(slot, Mathf.Max(1, slotCount));
         camFocus = viewOffset;
@@ -155,6 +156,7 @@ public partial class TDGameManager
 
     void LeaveMultiplayer()
     {
+        if (TDAudio.Instance != null) TDAudio.Instance.StopBoardSounds();
         if (NetworkSession.Instance != null)
         {
             NetworkSession.Instance.MatchStarted -= OnMatchStarted;
@@ -200,6 +202,7 @@ public partial class TDGameManager
         SpectateSync.Ensure().Begin();
         ChatSync.Ensure().Begin();
         FxSync.Ensure().Begin();
+        BoardAudioSync.Ensure().Begin();
         message = "Multiplayer: " + count + " player(s)";
         messageTimer = 2.5f;
     }
@@ -283,6 +286,7 @@ public partial class TDGameManager
             if (haveSelf)
             {
                 remoteBoardsDirty = false;
+                if (TDAudio.Instance != null) TDAudio.Instance.StopBoardSounds();
                 mySlot = slot;
                 viewSlot = slot;
                 slotCount = Mathf.Max(1, ns.PlayerCount);
@@ -365,6 +369,7 @@ public partial class TDGameManager
 
     void ReturnToLobby()
     {
+        if (TDAudio.Instance != null) TDAudio.Instance.StopBoardSounds();
         ClearWorld();
         remoteBoards.Clear();
         mpActive = false;
@@ -392,11 +397,45 @@ public partial class TDGameManager
         {
             MatchSync.BoardState b = ms.Boards[i];
             string name = string.IsNullOrEmpty(b.Name) ? ("Player " + b.ClientId) : b.Name;
-            string line = name.PadRight(18) + "wave " + b.Wave + "    " + b.Lives + " lives    $" + b.Money +
-                          (b.Eliminated ? "    OUT" : "");
-            GUI.Label(new Rect(Screen.width * 0.5f - 280f, y + i * 22f, 560f, 20f), line,
-                Style(15, TextAnchor.MiddleLeft, b.Eliminated ? new Color(0.8f, 0.65f, 0.65f) : Color.white));
+            float w = Mathf.Min(700f, Screen.width - 24f);
+            float x = (Screen.width - w) * 0.5f;
+            GUIStyle st = Style(15, TextAnchor.MiddleLeft,
+                b.Eliminated ? new Color(0.8f, 0.65f, 0.65f) : Color.white);
+            st.wordWrap = false;
+            st.clipping = TextClipping.Clip;
+            string stats = "wave " + b.Wave + "    " + b.Lives + " lives    $" + b.Money +
+                           (b.Eliminated ? "    OUT" : "");
+            float statsW = Mathf.Min(w * .60f, st.CalcSize(new GUIContent(stats)).x + 4f);
+            float nameW = Mathf.Max(0f, w - statsW - 8f);
+            GUI.Label(new Rect(x, y + i * 22f, nameW, 20f), FitScoreName(name, st, nameW), st);
+            GUI.Label(new Rect(x + nameW + 8f, y + i * 22f, statsW, 20f), stats, st);
         }
+    }
+
+    /// <summary>Remote board SFX only on the currently viewed slot.</summary>
+    public bool HearingRemoteBoard(ulong boardId)
+    {
+        return mpActive && !ViewingOwnBoard && CurrentViewClientId() == boardId;
+    }
+
+    /// <summary>Keep one-line names within their column, even with status badges.</summary>
+    static string FitScoreName(string name, GUIStyle style, float width)
+    {
+        if (width <= 0f) return "";
+        GUIContent text = new GUIContent(name);
+        if (style.CalcSize(text).x <= width) return name;
+        const string dots = "...";
+        text.text = dots;
+        if (style.CalcSize(text).x > width) return "";
+        int lo = 0, hi = name.Length;
+        while (lo < hi)
+        {
+            int mid = (lo + hi + 1) / 2;
+            text.text = name.Substring(0, mid) + dots;
+            if (style.CalcSize(text).x <= width) lo = mid;
+            else hi = mid - 1;
+        }
+        return name.Substring(0, lo) + dots;
     }
 
     // ------------------------------------------------- in-match MP overlays
@@ -459,7 +498,7 @@ public partial class TDGameManager
         MatchSync ms = MatchSync.Instance;
         if (ms == null) return;
 
-        const float w = 306f;
+        float w = Mathf.Min(460f, Screen.width - 16f);
         const float tabW = 96f;
         float x0 = Screen.width - w - 8f;
         float y = 112f;
@@ -475,7 +514,7 @@ public partial class TDGameManager
         }
 
         int rows = ms.Boards.Count;
-        float panelH = 30f + rows * 20f;
+        float panelH = 50f + rows * 20f;
 
         Color old = GUI.color;
         GUI.color = new Color(0.04f, 0.05f, 0.08f, 0.82f);
@@ -490,11 +529,14 @@ public partial class TDGameManager
         }
 
         GUIStyle hdr = Style(11, TextAnchor.MiddleLeft, new Color(0.62f, 0.68f, 0.76f));
-        GUI.Label(new Rect(x0 + 6f, y + 4f, 98f, 18f), "Name", hdr);
-        GUI.Label(new Rect(x0 + 106f, y + 4f, 30f, 18f), "Wv", hdr);
-        GUI.Label(new Rect(x0 + 138f, y + 4f, 40f, 18f), "Lives", hdr);
-        GUI.Label(new Rect(x0 + 180f, y + 4f, 62f, 18f), "Gold", hdr);
-        GUI.Label(new Rect(x0 + 244f, y + 4f, 56f, 18f), "Tower", hdr);
+        float nameW = Mathf.Max(0f, w - 245f);
+        float waveX = x0 + w - 239f, livesX = x0 + w - 203f;
+        float goldX = x0 + w - 155f, towerX = x0 + w - 80f;
+        GUI.Label(new Rect(x0 + 6f, y + 4f, nameW, 18f), "Name", hdr);
+        GUI.Label(new Rect(waveX, y + 4f, 32f, 18f), "Wv", hdr);
+        GUI.Label(new Rect(livesX, y + 4f, 44f, 18f), "Lives", hdr);
+        GUI.Label(new Rect(goldX, y + 4f, 70f, 18f), "Gold", hdr);
+        GUI.Label(new Rect(towerX, y + 4f, 74f, 18f), "Tower", hdr);
 
         ulong me = NetworkSession.LocalClientId;
         for (int i = 0; i < rows; i++)
@@ -512,19 +554,26 @@ public partial class TDGameManager
                     : mine ? new Color(1f, 0.9f, 0.5f)
                     : new Color(0.88f, 0.92f, 1f);
             GUIStyle st = Style(12, TextAnchor.MiddleLeft, c);
-            GUI.Label(new Rect(x0 + 6f, ry, 98f, 18f), nm, st);
-            GUI.Label(new Rect(x0 + 106f, ry, 30f, 18f), b.Wave.ToString(), st);
-            GUI.Label(new Rect(x0 + 138f, ry, 40f, 18f), b.Lives.ToString(), st);
-            GUI.Label(new Rect(x0 + 180f, ry, 62f, 18f), "$" + b.GoldGenerated, st);
-            GUI.Label(new Rect(x0 + 244f, ry, 56f, 18f), "$" + b.TowerValue, st);
+            st.wordWrap = false;
+            st.clipping = TextClipping.Clip;
+            GUI.Label(new Rect(x0 + 6f, ry, nameW, 18f), FitScoreName(nm, st, nameW), st);
+            GUI.Label(new Rect(waveX, ry, 32f, 18f), b.Wave.ToString(), st);
+            GUI.Label(new Rect(livesX, ry, 44f, 18f), b.Lives.ToString(), st);
+            GUI.Label(new Rect(goldX, ry, 70f, 18f), "$" + b.GoldGenerated, st);
+            GUI.Label(new Rect(towerX, ry, 74f, 18f), "$" + b.TowerValue, st);
         }
 
         // Join code, so a dropped player can re-enter it (auto-rejoin normally
         // beats them to it, but the code is here if they need it).
         NetworkSession ns = NetworkSession.Instance;
         if (ns != null && !string.IsNullOrEmpty(ns.Address))
-            GUI.Label(new Rect(x0, y + 30f + rows * 20f, w, 18f), "Code: " + ns.Address,
-                Style(12, TextAnchor.MiddleLeft, new Color(0.6f, 0.85f, 0.65f)));
+        {
+            GUIStyle code = Style(12, TextAnchor.MiddleLeft, new Color(0.6f, 0.85f, 0.65f));
+            code.wordWrap = false;
+            code.clipping = TextClipping.Clip;
+            GUI.Label(new Rect(x0 + 6f, y + 30f + rows * 20f, w - 12f, 18f),
+                FitScoreName("Code: " + ns.Address, code, w - 12f), code);
+        }
     }
 
     /// <summary>Lower-left chat log and input line (issue #27). Shows the last

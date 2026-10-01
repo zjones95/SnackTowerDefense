@@ -127,7 +127,8 @@ public class NetworkSession : MonoBehaviour
     // Match/chat messages are forwarded to whoever registers (MatchSync,
     // SpectateSync, ChatSync), looked up at delivery time so registration order
     // doesn't matter.
-    static readonly string[] matchNames = { "td.state", "td.boards", "td.snap", "td.relay", "td.chat", "td.chatall" };
+    static readonly string[] matchNames = { "td.state", "td.boards", "td.snap", "td.relay",
+        "td.chat", "td.chatall", "td.fx", "td.fxall", "td.audio", "td.audioall" };
     static readonly Dictionary<string, Action<ulong, FastBufferReader>> named =
         new Dictionary<string, Action<ulong, FastBufferReader>>();
 

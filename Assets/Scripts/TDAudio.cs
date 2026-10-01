@@ -8,6 +8,7 @@ public class TDAudio : MonoBehaviour
     const string SfxVolKey = "td_sfx_vol";
 
     private AudioSource src;
+    private AudioSource boardSrc;
     private AudioSource music;
     private AudioClip[] shots;
     private AudioClip death, leak, build, merge, clear, click;
@@ -64,6 +65,9 @@ public class TDAudio : MonoBehaviour
         src = gameObject.AddComponent<AudioSource>();
         src.playOnAwake = false;
         src.spatialBlend = 0f;
+        boardSrc = gameObject.AddComponent<AudioSource>();
+        boardSrc.playOnAwake = false;
+        boardSrc.spatialBlend = 0f;
 
         // index by TowerType
         shots = new AudioClip[]
@@ -117,16 +121,47 @@ public class TDAudio : MonoBehaviour
         if (c != null && src != null) src.PlayOneShot(c, v * sfxVolume);
     }
 
+    void PlayBoard(AudioClip clip, float volume, BoardSound sound, byte tower = 0)
+    {
+        BoardAudioSync.Queue(sound, tower);
+        TDGameManager gm = TDGameManager.Instance;
+        if ((gm == null || gm.ViewingOwnBoard) && clip != null && boardSrc != null)
+            boardSrc.PlayOneShot(clip, volume * sfxVolume);
+    }
+
+    /// <summary>Only invoked by the board-audio receiver; never re-queues a sound.</summary>
+    public void PlayRemoteBoard(BoardSound sound, byte tower)
+    {
+        if (boardSrc == null) return;
+        AudioClip clip = null;
+        float volume = 0f;
+        switch (sound)
+        {
+            case BoardSound.Shot:
+                if (tower < shots.Length) { clip = shots[tower]; volume = .45f; }
+                break;
+            case BoardSound.Death: clip = death; volume = .40f; break;
+            case BoardSound.Leak: clip = leak; volume = .7f; break;
+            case BoardSound.Build: clip = build; volume = .6f; break;
+            case BoardSound.Merge: clip = merge; volume = .7f; break;
+            case BoardSound.RoundClear: clip = clear; volume = .8f; break;
+        }
+        if (clip != null) boardSrc.PlayOneShot(clip, volume * sfxVolume);
+    }
+
+    public void StopBoardSounds() { if (boardSrc != null) boardSrc.Stop(); }
+
     public void Shot(TowerType t)
     {
         int i = (int)t;
-        if (shots != null && i >= 0 && i < shots.Length) Play(shots[i], 0.45f);
+        if (shots != null && i >= 0 && i < shots.Length)
+            PlayBoard(shots[i], .45f, BoardSound.Shot, (byte)i);
     }
 
-    public void Death() { Play(death, 0.40f); }
-    public void Leak() { Play(leak, 0.7f); }
-    public void Build() { Play(build, 0.6f); }
-    public void Merge() { Play(merge, 0.7f); }
-    public void RoundClear() { Play(clear, 0.8f); }
+    public void Death() { PlayBoard(death, .40f, BoardSound.Death); }
+    public void Leak() { PlayBoard(leak, .7f, BoardSound.Leak); }
+    public void Build() { PlayBoard(build, .6f, BoardSound.Build); }
+    public void Merge() { PlayBoard(merge, .7f, BoardSound.Merge); }
+    public void RoundClear() { PlayBoard(clear, .8f, BoardSound.RoundClear); }
     public void Click() { Play(click, 0.5f); }
 }

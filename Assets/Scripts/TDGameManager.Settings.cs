@@ -89,17 +89,23 @@ public partial class TDGameManager
         float by = Screen.height * 0.40f;
         GUIStyle btn = PaperButton(22);
 
-        if (GUI.Button(new Rect(bx, by, bw, bh), "Settings", btn))
+        if (GUI.Button(new Rect(bx, by, bw, bh), SpectatingAfterResult ? "Resume Spectating" : "Resume", btn))
+        {
+            Click();
+            ResumeGame();
+            return;
+        }
+        if (GUI.Button(new Rect(bx, by + 1f * (bh + gap), bw, bh), "Settings", btn))
         {
             Click();
             OpenSettings(true);
         }
-        if (GUI.Button(new Rect(bx, by + 1f * (bh + gap), bw, bh), "Quit to Main Menu", btn))
+        if (GUI.Button(new Rect(bx, by + 2f * (bh + gap), bw, bh), "Quit to Main Menu", btn))
         {
             Click();
             ReturnToMainMenu();
         }
-        if (GUI.Button(new Rect(bx, by + 2f * (bh + gap), bw, bh), "Quit Game", btn))
+        if (GUI.Button(new Rect(bx, by + 3f * (bh + gap), bw, bh), "Quit Game", btn))
         {
             Click();
             QuitGame();
