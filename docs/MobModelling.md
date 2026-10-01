@@ -16,6 +16,27 @@ are the reference implementation. See `MobRoster.md` for *what* each mob is and
 
 ## Files
 
+### Approved next-wave art (2026-09-30)
+
+`tools/blender/mobs_wave45_49.py` authors CaesarSalad, Starfruit,
+PomegranateSeed, Artichoke and Asparagus from the approved GenAI concepts.
+All five are armless and reuse the shipped stubby feet and six-bone walk rig.
+Both GLB mirrors are exported. Blender checks all 25 keyed frames for loop seams,
+rig weights and ground contact; `MobWalkCheck.VerifyLateWaveArt` verifies Unity
+Legacy imports and sampled walk motion without requiring catalog entries.
+These are staged art assets: the live catalog/wave table still has 45 waves.
+Planned placement is Caesar Salad at 45, the four regulars at 46-49, and existing
+Granola Mom moved to final wave 50 when gameplay integration is requested.
+
+| Model | Faces | Vertices |
+|---|---:|---:|
+| CaesarSalad | 500 | 492 |
+| Starfruit | 151 | 190 |
+| PomegranateSeed | 144 | 162 |
+| Artichoke | 338 | 290 |
+| Asparagus | 260 | 238 |
+| **Total** | **1393** | **1372** |
+
 | Path | Purpose |
 |---|---|
 | `tools/blender/mobs_first5.py` | Authoring script for the first five: geometry, rig, walk cycle, export |

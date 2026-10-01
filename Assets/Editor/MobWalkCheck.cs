@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text;
+using UnityEditor;
 using UnityEngine;
 
 // Unity -batchmode -projectPath <project> -executeMethod MobWalkCheck.Verify -quit
@@ -34,9 +35,34 @@ public static class MobWalkCheck
         Debug.Log("MobWalkCheck OK\n" + report + "\nWrote " + file);
     }
 
-    static void Check(string id, float stageY, StringBuilder report)
+    // Art can be verified before its wave/catalog entry is introduced.
+    public static void VerifyLateWaveArt()
     {
-        MobDef def = MobCatalog.Get(id);
+        string[] ids = { "CaesarSalad", "Starfruit", "PomegranateSeed", "Artichoke", "Asparagus" };
+        foreach (string id in ids)
+        foreach (string folder in new[] { "Assets/Models/Mobs/", "Assets/Resources/Snack/Mobs/" })
+        {
+            AssetImporter importer = AssetImporter.GetAtPath(folder + id + ".glb");
+            if (importer == null) throw new Exception("Missing importer: " + folder + id);
+            SerializedObject settings = new SerializedObject(importer);
+            SerializedProperty method = settings.FindProperty("importSettings.animationMethod");
+            if (method == null) throw new Exception("Missing glTF animation setting: " + id);
+            method.intValue = (int)GLTFast.AnimationMethod.Legacy;
+            if (settings.ApplyModifiedPropertiesWithoutUndo()) importer.SaveAndReimport();
+        }
+        StringBuilder report = new StringBuilder();
+        foreach (string id in ids)
+        foreach (float stageY in new[] { 0f, -400f })
+            Check(id, stageY, report, new MobDef { id = id, displayName = id });
+        string dir = Path.Combine(Path.GetTempPath(), "opencode");
+        Directory.CreateDirectory(dir);
+        File.WriteAllText(Path.Combine(dir, "late_mob_walk_check.txt"), report.ToString());
+        Debug.Log("Late mob art check OK\n" + report);
+    }
+
+    static void Check(string id, float stageY, StringBuilder report, MobDef artDef = null)
+    {
+        MobDef def = artDef ?? MobCatalog.Get(id);
         if (def == null) throw new Exception("No MobDef: " + id);
         if (SnackModels.Load(MobCatalog.ModelPath(def)) == null) throw new Exception("Model not loadable: " + id);
 
