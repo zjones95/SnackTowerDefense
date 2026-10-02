@@ -94,6 +94,88 @@ public static class NewSnackTowerCheck
         Debug.Log("NewSnackTowerCheck OK: five models, 30 tiers, sour armour, aura stacking/radius");
     }
 
+    /// <summary>Renders the five new towers at tiers 1/3/6 through the real
+    /// TowerVisual path so bases and centring can be checked after a model change.</summary>
+    public static void RenderNewTowers()
+    {
+        GameObject lightGO = new GameObject("PreviewLight");
+        Light l = lightGO.AddComponent<Light>();
+        l.type = LightType.Directional;
+        l.color = new Color(1f, .90f, .74f);
+        l.intensity = 1.15f;
+        l.shadows = LightShadows.Soft;
+        l.transform.rotation = Quaternion.Euler(48f, -35f, 0f);
+        RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+        RenderSettings.ambientLight = new Color(.26f, .21f, .17f);
+
+        GameObject ground = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        UnityEngine.Object.DestroyImmediate(ground.GetComponent<Collider>());
+        ground.transform.position = new Vector3(0f, -.5f, 0f);
+        ground.transform.localScale = new Vector3(30f, 1f, 16f);
+        ground.GetComponent<Renderer>().sharedMaterial = TDVisuals.Mat(new Color(.22f, .28f, .22f), 0f, .2f);
+
+        TowerType[] types = { TowerType.HotSauce, TowerType.CoffeeMug, TowerType.PopTartToaster,
+                              TowerType.CookieCrumbler, TowerType.SourFizz };
+        int[] tiers = { 1, 3, 6 };
+        for (int i = 0; i < types.Length; i++)
+        {
+            for (int j = 0; j < tiers.Length; j++)
+            {
+                GameObject go = new GameObject("T_" + types[i] + "_" + tiers[j]);
+                go.transform.position = new Vector3(-6f + i * 3f, 0f, 2.6f - j * 2.8f);
+                go.AddComponent<Tower>().Setup(types[i], tiers[j], 0, 0);
+            }
+        }
+
+        GameObject camGO = new GameObject("PreviewCam");
+        camGO.tag = "MainCamera";
+        Camera cam = camGO.AddComponent<Camera>();
+        cam.orthographic = true;
+        cam.orthographicSize = 6.5f;
+        cam.clearFlags = CameraClearFlags.SolidColor;
+        cam.backgroundColor = new Color(.075f, .065f, .06f);
+        cam.transform.position = new Vector3(-9f, 13f, -16f);
+        cam.transform.LookAt(new Vector3(0f, .5f, 0f));
+
+        int w = 1400, h = 820;
+        RenderTexture rt = new RenderTexture(w, h, 24);
+        rt.antiAliasing = 8;
+        cam.targetTexture = rt;
+        cam.Render();
+        RenderTexture.active = rt;
+        Texture2D tex = new Texture2D(w, h, TextureFormat.RGB24, false);
+        tex.ReadPixels(new Rect(0, 0, w, h), 0, 0);
+        tex.Apply();
+        RenderTexture.active = null;
+        string dir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "opencode");
+        System.IO.Directory.CreateDirectory(dir);
+        System.IO.File.WriteAllBytes(System.IO.Path.Combine(dir, "snack_new_towers_render.png"), tex.EncodeToPNG());
+        Debug.Log("NewSnackTowerCheck: wrote snack_new_towers_render.png");
+    }
+
+    /// <summary>Logs each new tower model's renderer bounds so centring/size
+    /// problems can be measured rather than eyeballed.</summary>
+    public static void DumpBounds()
+    {
+        TowerType[] types = { TowerType.CoffeeMug, TowerType.HotSauce, TowerType.PopTartToaster,
+                              TowerType.CookieCrumbler, TowerType.SourFizz, TowerType.SingleShot };
+        foreach (TowerType type in types)
+        {
+            GameObject prefab = SnackModels.Load(SnackModels.TowerPath(type));
+            if (prefab == null) { Debug.Log(type + ": MISSING"); continue; }
+            GameObject go = UnityEngine.Object.Instantiate(prefab);
+            Renderer[] rs = go.GetComponentsInChildren<Renderer>();
+            Bounds b = rs[0].bounds;
+            for (int i = 1; i < rs.Length; i++) b.Encapsulate(rs[i].bounds);
+            Debug.Log(type + ": union center=" + b.center.ToString("F3") + " size=" + b.size.ToString("F3")
+                      + " min=" + b.min.ToString("F3"));
+            for (int i = 0; i < rs.Length; i++)
+                Debug.Log("    " + rs[i].name + " center=" + rs[i].bounds.center.ToString("F3")
+                          + " size=" + rs[i].bounds.size.ToString("F3"));
+            UnityEngine.Object.DestroyImmediate(go);
+        }
+    }
+
     /// <summary>Writes the shield/sword/lightning badges side by side for a quick
     /// visual check that each icon is filled in.</summary>
     public static void RenderIcons()

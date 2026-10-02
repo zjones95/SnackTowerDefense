@@ -1,6 +1,8 @@
 # Approved v3 snack towers
 
-Issue: #61. Art-only deliverable; no catalog, combat, projectile, or gameplay changes.
+Issue: #61. Originally an art-only deliverable; this folder now also carries the
+follow-up integration fixes — the shared wooden tower base and the Coffee Mug's
+size/centring.
 
 Authoring: `new_snack_towers_v3.py` (Blender 5.2.2); source:
 `source/new_snack_towers_v3.blend`. Existing startup scene preserved separately in
@@ -8,13 +10,27 @@ the blend. The authoring scene displays models in a spaced lineup; **exports wer
 made with each object's location reset to zero**. Do not export the lineup offsets.
 Build in a fresh scene/session without objects bearing these exact asset names.
 
-All five are flat-shaded, unrigged static meshes, 1 meter tall, grounded at z=0,
-centered in X/Y, with baked rotation/scale and a UV map. Forward is Blender -Y.
-Material colors are Principled PBR inputs, not viewport-only colors. There are no
-external texture dependencies. No faces, steam particles or floating crumbs.
-Cookie Crumbler has three large cookies nested inside its open hopper, two beside
-each other and a third behind, not hovering above it. Front chute crumbs are static
-and supported by its floor.
+The art is flat-shaded, unrigged static meshes with baked rotation/scale and a UV
+map. Forward is Blender -Y. Material colors are Principled PBR inputs, not
+viewport-only colors. There are no external texture dependencies. No faces, steam
+particles or floating crumbs. Cookie Crumbler has three large cookies nested inside
+its open hopper, two beside each other and a third behind, not hovering above it.
+Front chute crumbs are static and supported by its floor.
+
+## Wooden base + Coffee Mug fix
+
+Each shipped GLB carries the same `pedestal` + `rim` wooden base as the original 12
+towers, baked on with `add_base_new_towers.py` (reusing `wooden_base.py`). The art
+is lifted onto the base top (z = 0.18), so a full tower is ~1.18 units tall.
+Pipeline from art-only GLBs:
+
+1. `new_snack_towers_v3.py` — art-only GLBs.
+2. `add_base_new_towers.py` — base for HotSauce, PopTartToaster, CookieCrumbler, SourFizz.
+3. `fix_coffee_mug_base.py` — the mug is built with its handle on +X and front
+   barrel on -Y, so `join_asset()` had centred the silhouette rather than the cup.
+   This recentres the cup body on the slot, scales the mug to 80%, and bakes its base.
+
+Art authoring counts (before the base bake; the base adds ~66 faces per tower):
 
 | Asset / sole mesh object | Vertices | Faces | Triangles | Material primitives |
 |---|---:|---:|---:|---:|
@@ -29,20 +45,16 @@ The vertex/face counts are Blender authoring counts. GLB splits vertices for fla
 normals and UV seams; material primitives become submeshes/draw calls on import.
 
 Exports: identical `<Asset>.glb` files in both `Assets/Resources/Snack/Towers/` and
-`Assets/Models/Towers/`, made with Blender MCP `export_scene` (named object only).
+`Assets/Models/Towers/`, made with Blender MCP exports (base + art selected).
 
 Verified:
 - Blender renders and viewport screenshot, scene object inventory.
 - No loose vertices, identity mesh scale/rotation.
-- `python tools/blender/verify_new_snack_towers_v3.py`: GLB 2.0 structure,
-  byte-identical mirrors, one mesh/node per file, normals/UVs, triangle counts,
-  centered geometry and Y-up bounds [0,1], origin translation, no scene props.
-- `git diff --check` passed (an unrelated AGENTS.md line-ending warning remains).
+- `python tools/blender/verify_new_snack_towers_v3.py`: GLB 2.0 structure, byte-identical
+  mirrors, art + `pedestal` + `rim` nodes, normals/UVs, triangle counts, base centred on
+  X/Z, grounded at y = 0, total height 0.98 (mug) / 1.18 (rest).
+- `git diff --check` passed.
 
-Previews were opened individually and as a contact sheet. Reassemble/open using
-`preview_new_snack_towers_v3.ps1`. PNGs are in
-`C:\Users\Desktop\AppData\Local\Temp\opencode\`:
-`tower_<Asset>_model_v3.png`, `new_towers_model_contact_sheet_v3.png`.
-
-Not verified: Unity import/render, gameplay or player build. Use the Unity CLI for
-that next stage. No gameplay claims follow from the Blender/GLB checks.
+Not verified by these Blender/GLB checks alone: Unity import/render and gameplay. The
+Unity CLI check `NewSnackTowerCheck.Verify` imports the models and renders them
+(`NewSnackTowerCheck.RenderNewTowers`); run it for that stage.
