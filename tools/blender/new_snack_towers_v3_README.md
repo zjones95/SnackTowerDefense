@@ -30,6 +30,14 @@ Pipeline from art-only GLBs:
    barrel on -Y, so `join_asset()` had centred the silhouette rather than the cup.
    This recentres the cup body on the slot, scales the mug to 80%, and bakes its base.
 
+Follow-up shell tuning (edited the based GLBs in place, keeping the shared base):
+
+- **HotSauce** — the black elbow/nozzle extends forward, so `join_asset()` left the
+  bottle body off the base centre. The body axis (bottom-slice centroid) was shifted
+  back by 0.095 on Y.
+- **PopTartToaster** — the art is scaled to 70% about the base top (0.18) and recentred
+  0.05 on X, so the toaster no longer overhangs its base. Full height is now ~0.88.
+
 Art authoring counts (before the base bake; the base adds ~66 faces per tower):
 
 | Asset / sole mesh object | Vertices | Faces | Triangles | Material primitives |
@@ -52,7 +60,7 @@ Verified:
 - No loose vertices, identity mesh scale/rotation.
 - `python tools/blender/verify_new_snack_towers_v3.py`: GLB 2.0 structure, byte-identical
   mirrors, art + `pedestal` + `rim` nodes, normals/UVs, triangle counts, base centred on
-  X/Z, grounded at y = 0, total height 0.98 (mug) / 1.18 (rest).
+  X/Z, grounded at y = 0, total height 0.88 (toaster) / 0.98 (mug) / 1.18 (rest).
 - `git diff --check` passed.
 
 Not verified by these Blender/GLB checks alone: Unity import/render and gameplay. The

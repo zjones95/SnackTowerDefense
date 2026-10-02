@@ -299,6 +299,9 @@ public class OutlinedText : MonoBehaviour
         root.transform.SetParent(parent, false);
         root.transform.localPosition = localPos;
         OutlinedText ot = root.AddComponent<OutlinedText>();
+        // TextMesh reads from its -Z face; the mob health bar billboards with
+        // LookRotation, which mirrors text, so face the camera explicitly.
+        root.AddComponent<BillboardLabel>();
 
         Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         if (font == null) font = Resources.GetBuiltinResource<Font>("Arial.ttf");

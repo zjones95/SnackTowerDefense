@@ -1588,37 +1588,49 @@ public partial class TDGameManager : MonoBehaviour
             float selY = btnTop - 8f - 344f;
             float tx = selX + 8f;
             GUI.Box(new Rect(selX, selY, 440, 344), GUIContent.none);
+            // Effective per-hit damage and fire rate: catalog stats times this
+            // tower's support-aura buffs and the run's roguelike modifiers.
+            float dmgMult = RogueMods.DamageMult() * Selected.DamageMultiplier;
+            float rateMult = RogueMods.EffRate(RogueMods.IsBossWave(Wave)) * (1f + Selected.SpeedBuff);
+            float effDamage = s.damage * dmgMult;
+            float effRate = s.fireInterval / Mathf.Max(0.0001f, rateMult);
+
             string info = Selected.DisplayName + "  -  Tier " + Selected.Tier + "\n";
             if (Selected.Type == TowerType.Gold)
-                info += "Gold +" + s.goldPerHit + " per hit    Rate " + s.fireInterval.ToString("0.00") + "s";
+                info += "Gold +" + s.goldPerHit + " per hit    Rate " + effRate.ToString("0.00") + "s";
             else if (s.auraRadius > 0f)
-                info += "Damage " + s.damage + "    Rate " + s.fireInterval.ToString("0.00") + "s\n" +
+                info += "Damage " + effDamage.ToString("0.#") + "    Rate " + effRate.ToString("0.00") + "s\n" +
                     "+" + Mathf.RoundToInt(s.auraBonus * 100f) + "% " +
                     (Selected.Type == TowerType.HotSauce ? "damage" : "attack speed") +
                     " aura    Radius " + s.auraRadius.ToString("0.#");
             else if (Selected.Type == TowerType.SourFizz)
-                info += "Damage " + s.damage + "    Rate " + s.fireInterval.ToString("0.00") + "s\n" +
+                info += "Damage " + effDamage.ToString("0.#") + "    Rate " + effRate.ToString("0.00") + "s\n" +
                     "-" + Mathf.RoundToInt(s.sourArmourReduction * 100f) + "% flat armour";
             else if (Selected.Type == TowerType.PopTartToaster)
-                info += "3 x " + s.toastSmallDamage + " + splash " + s.damage + "    Cycle " + s.fireInterval.ToString("0.00") + "s";
+                info += "3 x " + (s.toastSmallDamage * dmgMult).ToString("0.#") + " + splash " + effDamage.ToString("0.#") +
+                    "    Cycle " + effRate.ToString("0.00") + "s";
             else if (Selected.Type == TowerType.CookieCrumbler)
-                info += s.crumbCount + " crumbs x " + s.damage + "    Rate " + s.fireInterval.ToString("0.00") + "s";
+                info += s.crumbCount + " crumbs x " + effDamage.ToString("0.#") + "    Rate " + effRate.ToString("0.00") + "s";
             else
-                info += "Damage " + s.damage + "    Rate " + s.fireInterval.ToString("0.00") + "s";
+                info += "Damage " + effDamage.ToString("0.#") + "    Rate " + effRate.ToString("0.00") + "s";
 
-            // Buffs actually in effect on this tower: support auras plus the
-            // run's roguelike damage / attack-speed / range upgrades.
-            float dmgMult = RogueMods.DamageMult() * Selected.DamageMultiplier;
-            float rateMult = RogueMods.EffRate(RogueMods.IsBossWave(Wave)) * (1f + Selected.SpeedBuff);
-            float rangeMult = RogueMods.Range;
-            string buffText = "";
+            // Split the readout so a global run bonus is never mistaken for an aura.
+            string auraText = "";
+            if (Selected.DamageBuff > 0.0005f)
+                auraText += "+" + Mathf.RoundToInt(Selected.DamageBuff * 100f) + "% DMG";
+            if (Selected.SpeedBuff > 0.0005f)
+                auraText += (auraText.Length > 0 ? " " : "") + "+" + Mathf.RoundToInt(Selected.SpeedBuff * 100f) + "% SPD";
+            string runText = "";
             if (dmgMult > 1.005f)
-                buffText += "+" + Mathf.RoundToInt((dmgMult - 1f) * 100f) + "% DMG";
+                runText += "+" + Mathf.RoundToInt((dmgMult - 1f) * 100f) + "% DMG";
             if (rateMult > 1.005f)
-                buffText += (buffText.Length > 0 ? "   " : "") + "+" + Mathf.RoundToInt((rateMult - 1f) * 100f) + "% SPD";
-            if (Mathf.Abs(rangeMult - 1f) > 0.005f)
-                buffText += (buffText.Length > 0 ? "   " : "") + (rangeMult >= 1f ? "+" : "") +
-                    Mathf.RoundToInt((rangeMult - 1f) * 100f) + "% RNG";
+                runText += (runText.Length > 0 ? " " : "") + "+" + Mathf.RoundToInt((rateMult - 1f) * 100f) + "% SPD";
+            if (Mathf.Abs(RogueMods.Range - 1f) > 0.005f)
+                runText += (runText.Length > 0 ? " " : "") + (RogueMods.Range >= 1f ? "+" : "") +
+                    Mathf.RoundToInt((RogueMods.Range - 1f) * 100f) + "% RNG";
+            string buffText = "";
+            if (auraText.Length > 0) buffText += "aura " + auraText;
+            if (runText.Length > 0) buffText += (buffText.Length > 0 ? "   " : "") + "run " + runText;
             if (buffText.Length > 0) info += "\nBuffs: " + buffText;
 
             info += "\nDamage done: " + Mathf.RoundToInt(Selected.DamageDone);

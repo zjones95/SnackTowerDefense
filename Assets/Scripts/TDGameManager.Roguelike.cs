@@ -97,7 +97,7 @@ public partial class TDGameManager : MonoBehaviour
             case "lucky": RogueMods.CritChance += 0.08f; break;
             case "caramel": RogueMods.Caramelized = true; break;
             case "happy": RogueMods.HappyHour = true; break;
-            case "dessert": break;   // passive: +1%/cleared wave, read live
+            case "dessert": RogueMods.Dessert = true; break;   // +1%/cleared wave, read live
             case "scoop": RogueMods.DoubleScoop = true; break;
             case "sour": RogueMods.SourPower = true; break;
             case "combo": RogueMods.ComboMeal = true; break;

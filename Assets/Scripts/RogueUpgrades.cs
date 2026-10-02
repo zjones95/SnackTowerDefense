@@ -93,6 +93,7 @@ public static class RogueMods
     public static bool Artillery;
     public static bool Overdrive;
     public static bool GiantSlayer;
+    public static bool Dessert;
 
     public static readonly List<string> Owned = new List<string>();
     public static readonly List<RogueTier> OwnedTiers = new List<RogueTier>();
@@ -109,7 +110,7 @@ public static class RogueMods
         Wage = 0;
         WavesCleared = 0;
         Caramelized = HappyHour = DoubleScoop = SourPower = false;
-        ComboMeal = Artillery = Overdrive = GiantSlayer = false;
+        ComboMeal = Artillery = Overdrive = GiantSlayer = Dessert = false;
         Owned.Clear();
         OwnedTiers.Clear();
         ComboMult = 1f;
@@ -119,7 +120,10 @@ public static class RogueMods
     /// <summary>All tower damage scales with the local run's roguelike mods.</summary>
     public static float DamageMult()
     {
-        return Damage * (1f + 0.01f * WavesCleared) * ComboMult;
+        // The +1%/wave is Dessert's effect only. It used to apply to every run,
+        // which quietly handed out free damage that grew with the wave count.
+        float dessert = Dessert ? 0.01f * WavesCleared : 0f;
+        return Damage * (1f + dessert) * ComboMult;
     }
 
     /// <summary>Effective fire-rate multiplier (Overdrive only on boss waves).</summary>

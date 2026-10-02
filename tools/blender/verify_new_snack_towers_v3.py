@@ -51,8 +51,8 @@ for name in names:
                 hi[k] = max(hi[k], a['max'][k] * s[k] + t[k])
 
     assert abs(lo[1]) < 1e-4, f'{name}: not grounded (min y {lo[1]})'
-    # Model totals: base top 0.18 + art. The mug art is deliberately shorter.
-    assert 0.9 < hi[1] < 1.25, f'{name}: unexpected height {hi[1]}'
+    # Model totals: base top 0.18 + art. Mug (80%) and Toaster (70%) are shorter.
+    assert 0.85 < hi[1] < 1.25, f'{name}: unexpected height {hi[1]}'
 
     row = {'name': name, 'bytes': len(data), 'triangles': tris,
            'bounds_y_up': [[round(v, 4) for v in lo], [round(v, 4) for v in hi]],
