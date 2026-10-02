@@ -84,8 +84,13 @@ public static class TowerVisual
                 (!hasRim && (n == "base" || n == "stand" || n == "plate"));
             if (!tint) continue;
             Material m = rs[i].material;
+            // glTFast imports use the glTF shader (baseColorFactor), while
+            // procedural parts use Standard (_Color/_BaseColor) — set both.
+            if (m.HasProperty("baseColorFactor")) m.SetColor("baseColorFactor", c);
             if (m.HasProperty("_Color")) m.SetColor("_Color", c);
             if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", c);
+            if (m.HasProperty("emissiveFactor"))
+                m.SetColor("emissiveFactor", new Color(c.r * 0.45f, c.g * 0.45f, c.b * 0.45f));
             if (m.HasProperty("_EmissionColor"))
             {
                 m.EnableKeyword("_EMISSION");
