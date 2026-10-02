@@ -4,7 +4,7 @@ using UnityEngine;
 /// <summary>How a tower chooses which mob to shoot.</summary>
 public enum TowerTargeting { Default, Nearest, Farthest, Random, HighestHealth, LowestHealth }
 
-public class Tower : MonoBehaviour
+public partial class Tower : MonoBehaviour
 {
     public TowerType Type;
     public int Tier = 1;
@@ -98,7 +98,7 @@ public class Tower : MonoBehaviour
             }
         }
 
-        TowerVisual.BuildTierLabel(transform, Tier);
+        tierLabel = TowerVisual.BuildTierLabel(transform, Tier);
         BuildRangeRing();
     }
 
@@ -212,13 +212,15 @@ public class Tower : MonoBehaviour
     void Update()
     {
         TowerTierStats s = Stats;
+        UpdateSnackBuffs();
         if (rangeRing != null && rangeRing.gameObject.activeSelf)
         {
-            float r = EffRange(s);
+            float r = s.auraRadius > 0f ? s.auraRadius : EffRange(s);
             rangeRing.localScale = new Vector3(r * 2f, r * 2f, 1f);
         }
         var mobs = TDGameManager.Instance != null ? TDGameManager.Instance.Mobs : null;
 
+        if (Type == TowerType.HotSauce || Type == TowerType.CoffeeMug) return;
         Mob target = PickTarget(mobs, EffRange(s));
 
         if (turret != null && target != null)
@@ -256,11 +258,17 @@ public class Tower : MonoBehaviour
         }
 
         if (target == null) return;
+        if (Type == TowerType.PopTartToaster || Type == TowerType.CookieCrumbler || Type == TowerType.SourFizz)
+        {
+            FireNewSnackTower(target, s);
+            if (Targeting == TowerTargeting.Random) randomTarget = null;
+            return;
+        }
         // Bobarista ramps the interval from fireInterval down to rateMinInterval.
         float interval = s.fireInterval;
         if (Type == TowerType.BobaBlaster && s.rateMinInterval > 0f && s.spinUpTime > 0f)
             interval = Mathf.Lerp(s.fireInterval, s.rateMinInterval, Mathf.Clamp01(bobaSpin / s.spinUpTime));
-        cooldown = interval / RogueMods.EffRate(BossWaveNow());
+        cooldown = interval / (RogueMods.EffRate(BossWaveNow()) * SpeedMultiplier);
         if (Type == TowerType.BobaBlaster) bobaLastFire = Time.time;   // spin persists across targets; idleness resets it
         if (TDAudio.Instance != null) TDAudio.Instance.Shot(Type);
 
@@ -537,7 +545,7 @@ public class Tower : MonoBehaviour
         RankInRange(inRange);
 
         int shots = Mathf.Min((s.multiShot > 0 ? s.multiShot : 1) + (RogueMods.DoubleScoop && s.multiShot > 1 ? 1 : 0), inRange.Count);
-        cooldown = s.fireInterval / RogueMods.EffRate(BossWaveNow());
+        cooldown = s.fireInterval / (RogueMods.EffRate(BossWaveNow()) * SpeedMultiplier);
         if (TDAudio.Instance != null) TDAudio.Instance.Shot(Type);
 
         Vector3 muzzle = Muzzle();

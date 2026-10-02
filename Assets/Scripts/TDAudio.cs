@@ -84,7 +84,12 @@ public class TDAudio : MonoBehaviour
             TDSynth.Shot(1), // FondueFountain
             TDSynth.Shot(3), // IceCreamTruck
             TDSynth.Shot(0), // BobaBlaster
-            TDSynth.Shot(1)  // PizzaOven
+            TDSynth.Shot(1), // PizzaOven
+            TDSynth.Shot(3), // HotSauce
+            TDSynth.Shot(3), // CoffeeMug
+            TDSynth.Shot(0), // PopTartToaster
+            TDSynth.Shot(0), // CookieCrumbler
+            TDSynth.Shot(1)  // SourFizz
         };
         death = TDSynth.Death();
         leak = TDSynth.Leak();

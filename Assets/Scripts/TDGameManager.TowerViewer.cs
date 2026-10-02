@@ -97,6 +97,8 @@ public partial class TDGameManager
                 "T" + (t7 ? TowerCatalog.MaxTier : (t + 1)), head);
 
         string[] rows = { "Damage", "Range", "Rate", "Special" };
+        bool support = def.type == TowerType.HotSauce || def.type == TowerType.CoffeeMug;
+        if (support) { rows[0] = "Aura"; rows[1] = "Radius"; rows[2] = "Role"; }
         for (int r = 0; r < rows.Length; r++)
         {
             float y = area.y + (r + 1) * rowH;
@@ -145,6 +147,16 @@ public partial class TDGameManager
 
     static string StatText(TowerType t, int row, TowerTierStats s)
     {
+        if (t == TowerType.HotSauce || t == TowerType.CoffeeMug)
+        {
+            switch (row)
+            {
+                case 0: return "+" + Mathf.RoundToInt(s.auraBonus * 100f) + "%";
+                case 1: return s.auraRadius.ToString("0.#");
+                case 2: return "passive";
+                default: return t == TowerType.HotSauce ? "damage" : "speed";
+            }
+        }
         switch (row)
         {
             case 0: return s.damage > 0 ? s.damage.ToString() : "none";
@@ -168,6 +180,9 @@ public partial class TDGameManager
                     case TowerType.IceCreamTruck: return Mathf.RoundToInt(s.stunChance * 100f) + "% stun";
                     case TowerType.BobaBlaster: return s.rateMinInterval > 0f ? ("-> " + s.rateMinInterval.ToString("0.00") + "s") : "-";
                     case TowerType.PizzaOven: return s.zoneDps.ToString("0.#") + " dps";
+                    case TowerType.PopTartToaster: return "3+1 spl";
+                    case TowerType.CookieCrumbler: return "x" + s.crumbCount + " fan";
+                    case TowerType.SourFizz: return "-" + Mathf.RoundToInt(s.sourArmourReduction * 100f) + "% arm";
                     default: return "-";
                 }
         }
@@ -196,6 +211,11 @@ public partial class TDGameManager
             case TowerType.IceCreamTruck: return "Tier 7 fusion. Splash cones that can stun everything caught (20%).";
             case TowerType.BobaBlaster: return "Tier 7 fusion. Single-target DPS that ramps its fire rate on one target.";
             case TowerType.PizzaOven: return "Tier 7 fusion. Lands a hit and leaves a 5s damaging pizza zone.";
+            case TowerType.HotSauce: return "Passive damage aura. Same-type auras do not stack; the strongest wins.";
+            case TowerType.CoffeeMug: return "Passive attack-speed aura. Same-type auras do not stack; the strongest wins.";
+            case TowerType.PopTartToaster: return "Three quick small pastries, then one large splash pastry.";
+            case TowerType.CookieCrumbler: return "Rapid short-range crumb fan; each crumb can hit one mob.";
+            case TowerType.SourFizz: return "Sour bubbles reduce a mob's flat armour for a short time.";
             default: return "";
         }
     }

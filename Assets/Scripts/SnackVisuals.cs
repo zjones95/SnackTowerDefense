@@ -331,7 +331,7 @@ public static class MobVisual
         return hp.transform;
     }
 
-    static Material burnIconMat, slowIconMat, tarIconMat, stunIconMat, dipIconMat;
+    static Material burnIconMat, slowIconMat, tarIconMat, stunIconMat, dipIconMat, armourIconMat;
     static Shader iconShader;
 
     /// <summary>Tiny status icon quads sit at the top-right of the floating bar:
@@ -347,12 +347,14 @@ public static class MobVisual
         if (tarIconMat == null) tarIconMat = IconMaterial(TDTextures.IconTar());
         if (stunIconMat == null) stunIconMat = IconMaterial(TDTextures.IconStun());
         if (dipIconMat == null) dipIconMat = IconMaterial(TDTextures.IconDip());
+        if (armourIconMat == null) armourIconMat = IconMaterial(TDTextures.IconArmour());
 
         float burnX = -(BarWidth * 0.5f + 0.16f);
         float slowX = -(BarWidth * 0.5f + 0.38f);
         float tarX = -(BarWidth * 0.5f + 0.60f);
         float stunX = -(BarWidth * 0.5f + 0.82f);
         float dipX = -(BarWidth * 0.5f + 1.04f);
+        float armourX = -(BarWidth * 0.5f + 1.26f);
 
         GameObject burn = TDVisuals.Quad(hp, "IconBurn",
             new Vector3(burnX, 0.10f, 0f), 0.24f, burnIconMat);
@@ -364,11 +366,14 @@ public static class MobVisual
             new Vector3(stunX, 0.10f, 0f), 0.24f, stunIconMat);
         GameObject dip = TDVisuals.Quad(hp, "IconDip",
             new Vector3(dipX, 0.10f, 0f), 0.24f, dipIconMat);
+        GameObject armour = TDVisuals.Quad(hp, "IconArmour",
+            new Vector3(armourX, 0.10f, 0f), 0.24f, armourIconMat);
         NoShadow(burn);
         NoShadow(slow);
         NoShadow(tar);
         NoShadow(stun);
         NoShadow(dip);
+        NoShadow(armour);
 
         GameObject labelGO = new GameObject("Stacks");
         labelGO.transform.SetParent(hp, false);
@@ -408,14 +413,31 @@ public static class MobVisual
             if (dmr != null) dmr.sharedMaterial = font.material;
         }
 
+        GameObject armourLabelGO = new GameObject("ArmourPct");
+        armourLabelGO.transform.SetParent(hp, false);
+        armourLabelGO.transform.localPosition = new Vector3(armourX - .17f, .25f, .005f);
+        armourLabelGO.AddComponent<BillboardLabel>();
+        TextMesh armourTm = armourLabelGO.AddComponent<TextMesh>();
+        armourTm.text = "-0% ARM";
+        armourTm.characterSize = .025f; armourTm.fontSize = 90;
+        armourTm.anchor = TextAnchor.LowerLeft; armourTm.alignment = TextAlignment.Left;
+        armourTm.color = Color.white;
+        if (font != null)
+        {
+            armourTm.font = font;
+            armourLabelGO.GetComponent<MeshRenderer>().sharedMaterial = font.material;
+        }
+
         MobStatusIcons icons = hp.gameObject.AddComponent<MobStatusIcons>();
         icons.Burn = burn.transform;
         icons.Slow = slow.transform;
         icons.Tar = tar.transform;
         icons.Stun = stun.transform;
         icons.Dip = dip.transform;
+        icons.Armour = armour.transform;
         icons.Stacks = tm;
         icons.DipPct = dipTm;
+        icons.ArmourPct = armourTm;
         icons.Set(false, false, false, 0, false, false, 0f);
     }
 
@@ -472,8 +494,10 @@ public class MobStatusIcons : MonoBehaviour
     public Transform Tar;
     public Transform Stun;
     public Transform Dip;
+    public Transform Armour;
     public TextMesh Stacks;
     public TextMesh DipPct;
+    public TextMesh ArmourPct;
 
     public static MobStatusIcons Get(Transform barRoot)
     {
@@ -482,13 +506,20 @@ public class MobStatusIcons : MonoBehaviour
 
     /// <summary>Toggles the five icons and updates the burn stack count and
     /// the dipped bonus percentage. Slow and stun are independent badges now.</summary>
-    public void Set(bool slowed, bool stunned, bool burning, int stacks, bool tarred, bool dipped, float dipBonus)
+    public void Set(bool slowed, bool stunned, bool burning, int stacks, bool tarred, bool dipped, float dipBonus, float armourReduction = 0f)
     {
         Toggle(Slow, slowed && !stunned);
         Toggle(Stun, stunned);
         Toggle(Burn, burning);
         Toggle(Tar, tarred);
         Toggle(Dip, dipped);
+        Toggle(Armour, armourReduction > 0f);
+        Toggle(ArmourPct != null ? ArmourPct.transform : null, armourReduction > 0f);
+        if (ArmourPct != null && armourReduction > 0f)
+        {
+            string text = "-" + Mathf.RoundToInt(armourReduction * 100f) + "% ARM";
+            if (ArmourPct.text != text) ArmourPct.text = text;
+        }
 
         if (Stacks == null) return;
         bool show = burning && stacks > 0;

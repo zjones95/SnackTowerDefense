@@ -1565,6 +1565,16 @@ public partial class TDGameManager : MonoBehaviour
             string info = Selected.DisplayName + "  -  Tier " + Selected.Tier + "\n";
             if (Selected.Type == TowerType.Gold)
                 info += "Gold +" + s.goldPerHit + " per hit    Rate " + s.fireInterval.ToString("0.00") + "s";
+            else if (s.auraRadius > 0f)
+                info += "+" + Mathf.RoundToInt(s.auraBonus * 100f) + "% " +
+                    (Selected.Type == TowerType.HotSauce ? "damage" : "attack speed") +
+                    " aura    Radius " + s.auraRadius.ToString("0.#");
+            else if (Selected.Type == TowerType.SourFizz)
+                info += "-" + Mathf.RoundToInt(s.sourArmourReduction * 100f) + "% flat armour    Rate " + s.fireInterval.ToString("0.00") + "s";
+            else if (Selected.Type == TowerType.PopTartToaster)
+                info += "3 x " + s.toastSmallDamage + " + splash " + s.damage + "    Cycle " + s.fireInterval.ToString("0.00") + "s";
+            else if (Selected.Type == TowerType.CookieCrumbler)
+                info += s.crumbCount + " crumbs x " + s.damage + "    Rate " + s.fireInterval.ToString("0.00") + "s";
             else
                 info += "Damage " + s.damage + "    Rate " + s.fireInterval.ToString("0.00") + "s";
             info += "\nDamage done: " + Mathf.RoundToInt(Selected.DamageDone);
@@ -1811,7 +1821,7 @@ public partial class TDGameManager : MonoBehaviour
         float frac;
         bool bSlowed, bPoisoned;
         bool bStunned;
-        float bDipPct;
+        float bDipPct, bSourPct;
         int bStacks;
         bool bTarred;
         if (ViewingOwnBoard)
@@ -1831,12 +1841,13 @@ public partial class TDGameManager : MonoBehaviour
             bPoisoned = bStacks > 0;
             bTarred = boss.IsTarred;
             bDipPct = boss.DipStacks > 0 ? boss.DipBonusTotal() : 0f;
+            bSourPct = boss.SourReduction;
         }
         else
         {
             RemoteBoard rb = BoardForSlot(viewSlot);
             bool rbStunned;
-            if (rb == null || !rb.TryGetBoss(out name, out frac, out bSlowed, out rbStunned, out bPoisoned, out bStacks, out bTarred)) return;
+            if (rb == null || !rb.TryGetBoss(out name, out frac, out bSlowed, out rbStunned, out bPoisoned, out bStacks, out bTarred, out bSourPct)) return;
             bStunned = rbStunned;
             bDipPct = 0f;   // dipped has no snapshot channel: local-only
         }
@@ -1860,14 +1871,14 @@ public partial class TDGameManager : MonoBehaviour
             name.ToUpper() + "   " + Mathf.CeilToInt(frac * 100f) + "%",
             Style(18, TextAnchor.MiddleCenter, Color.white));
 
-        DrawBossStatusIcons(x + w + 10f, y + h * 0.5f, bSlowed, bStunned, bPoisoned, bStacks, bTarred, bDipPct);
+        DrawBossStatusIcons(x + w + 10f, y + h * 0.5f, bSlowed, bStunned, bPoisoned, bStacks, bTarred, bDipPct, bSourPct);
     }
 
     /// <summary>Small status badges just right of the boss HUD bar, using the same
     /// procedural icon textures as the floating mob bars so a boss reads the same
     /// on your own board and on a spectated one. Dipped shows its total bonus
     /// as white text over the chocolate icon (local board only).</summary>
-    void DrawBossStatusIcons(float cx, float cy, bool slowed, bool stunned, bool poisoned, int stacks, bool tarred, float dipPct)
+    void DrawBossStatusIcons(float cx, float cy, bool slowed, bool stunned, bool poisoned, int stacks, bool tarred, float dipPct, float sourPct)
     {
         const float size = 30f;
         const float gap = 8f;
@@ -1902,6 +1913,13 @@ public partial class TDGameManager : MonoBehaviour
             GUI.DrawTexture(new Rect(x, top, size, size), TDTextures.IconDip(), ScaleMode.ScaleToFit, true);
             GUI.Label(new Rect(x - 7f, top + size - 6f, size + 14f, 18f), "+" + Mathf.RoundToInt(dipPct * 100f) + "%",
                 Style(13, TextAnchor.MiddleCenter, Color.white));
+            x += size + gap;
+        }
+        if (sourPct > 0f)
+        {
+            GUI.DrawTexture(new Rect(x, top, size, size), TDTextures.IconArmour(), ScaleMode.ScaleToFit, true);
+            GUI.Label(new Rect(x - 10f, top + size - 5f, size + 44f, 18f), "-" + Mathf.RoundToInt(sourPct * 100f) + "% ARM",
+                Style(13, TextAnchor.MiddleLeft, Color.white));
         }
     }
 

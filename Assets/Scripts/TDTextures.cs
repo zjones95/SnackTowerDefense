@@ -1312,7 +1312,26 @@ public static class TDTextures
     }
 
     // ------------------------------------------------------ mob status icons
-    static Texture2D iconBurn, iconSlow, iconTar, iconStun, iconDip;
+    static Texture2D iconBurn, iconSlow, iconTar, iconStun, iconDip, iconArmour;
+
+    /// <summary>Shield badge for Sour Fizz's flat-armour reduction.</summary>
+    public static Texture2D IconArmour()
+    {
+        if (iconArmour != null) return iconArmour;
+        Texture2D t = New(64);
+        t.wrapMode = TextureWrapMode.Clamp;
+        for (int y = 0; y < 64; y++) for (int x = 0; x < 64; x++)
+        {
+            float u = Mathf.Abs((x - 31.5f) / 32f);
+            float v = (y - 31.5f) / 32f;
+            float width = v > .1f ? .63f : .63f * Mathf.Clamp01((v + .85f) / .95f);
+            bool inside = v > -.87f && v < .78f && u < width;
+            bool edge = u > width - .13f || v > .65f;
+            t.SetPixel(x, y, inside ? (edge ? new Color(.85f, .96f, 1f, 1f) :
+                new Color(.25f, .52f, .85f, 1f)) : Color.clear);
+        }
+        t.Apply(); iconArmour = t; return t;
+    }
 
     /// <summary>Orange burn flame on a transparent background — the
     /// damage-over-time status (replaced the green poison droplet).</summary>

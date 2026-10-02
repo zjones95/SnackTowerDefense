@@ -27,6 +27,8 @@ public class Projectile : MonoBehaviour
     public float TarDamageBonus = 0f;          // Slow T6: damage-taken bonus while slowed
     public float TarLinger = 0f;
     public int GoldPerHit = 0;   // Gold tower: money awarded on a confirmed hit
+    public float SourReduction, SourDuration, SourSpreadRadius, SourDeathRadius;
+    public float ZoneDps, ZoneDuration;
 
     public Color Tint = new Color(0.4f, 0.7f, 1f);
     public bool Spin = true;   // false = liquid blob, wobbles instead
@@ -118,6 +120,22 @@ public class Projectile : MonoBehaviour
         }
         else if (Target != null)
         {
+            if (SourReduction > 0f)
+            {
+                Target.ApplySour(SourReduction, SourDuration, Source, SourDeathRadius);
+                if (SourSpreadRadius > 0f && mobs != null)
+                {
+                    Mob next = null;
+                    float best = SourSpreadRadius;
+                    foreach (Mob m in mobs)
+                    {
+                        if (m == null || m == Target) continue;
+                        float dist = Vector3.Distance(m.transform.position, Target.transform.position);
+                        if (dist <= best) { best = dist; next = m; }
+                    }
+                    if (next != null) next.ApplySour(SourReduction, SourDuration, Source, SourDeathRadius);
+                }
+            }
             if (SlowFactor > 0f) Target.ApplySlow(SlowFactor, SlowDuration);
             if (PoisonDps > 0f)
                 Target.ApplyPoison(PoisonDps, PoisonDuration, PoisonMaxStacks, Source,
@@ -136,6 +154,16 @@ public class Projectile : MonoBehaviour
                 if (gm != null) gm.AwardMoney(gold);
                 if (Source != null) Source.GoldEarned += gold;
             }
+        }
+
+        if (ZoneDps > 0f && ZoneDuration > 0f)
+        {
+            GameObject zone = new GameObject("ToastedPatch");
+            zone.transform.position = new Vector3(transform.position.x, 0f, transform.position.z);
+            if (gm != null && gm.ProjectilesRoot != null) zone.transform.SetParent(gm.ProjectilesRoot, true);
+            PizzaZone z = zone.AddComponent<PizzaZone>();
+            z.Source = Source; z.Radius = SplashRadius; z.Dps = ZoneDps; z.Duration = ZoneDuration;
+            z.Toasted = Type == TowerType.PopTartToaster;
         }
 
         // ricochet to the nearest other enemy (continues even if the impact killed

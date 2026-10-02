@@ -38,6 +38,8 @@ public class BoardSnapshot
             if (m.IsSlowed) status |= 1;   // bit0: slowed (or stunned)
             if (m.IsStunned) status |= 2;  // bit1: stunned
             if (m.IsTarred) status |= 4;   // bit2: tar (+damage taken)
+            // Upper nibble: Sour Fizz armour reduction in 5% increments (0..75%).
+            status |= (byte)(Mathf.Clamp(Mathf.RoundToInt(m.SourReduction * 20f), 0, 15) << 4);
             Mobs.Add(new MobSnap
             {
                 Id = m.NetId,

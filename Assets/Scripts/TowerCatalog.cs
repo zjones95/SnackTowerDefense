@@ -3,7 +3,7 @@ using UnityEngine;
 
 // NOTE: append new types to the END only — TowerType is serialised as a byte in
 // BoardSnapshot, so existing ordinals must never shift (network compatibility).
-public enum TowerType { SingleShot, Splash, Slow, Sniper, Chain, Pierce, Poison, Gold, FondueFountain, IceCreamTruck, BobaBlaster, PizzaOven }
+public enum TowerType { SingleShot, Splash, Slow, Sniper, Chain, Pierce, Poison, Gold, FondueFountain, IceCreamTruck, BobaBlaster, PizzaOven, HotSauce, CoffeeMug, PopTartToaster, CookieCrumbler, SourFizz }
 
 [System.Serializable]
 public class TowerTierStats
@@ -79,6 +79,14 @@ public class TowerTierStats
     // Pizza Oven
     public float zoneDps = 0f;             // persistent ground zone damage per second
     public float zoneDuration = 0f;        // zone radius reuses splashRadius
+    public float auraBonus = 0f;           // Hot Sauce damage or Coffee attack speed
+    public float auraRadius = 0f;
+    public float sourArmourReduction = 0f;
+    public float sourDuration = 0f;
+    public float sourSpreadRadius = 0f;    // T5: one more target; T6: on-death spread
+    public int crumbCount = 0;
+    public float crumbCone = 0f;
+    public int toastSmallDamage = 0;
 }
 
 [System.Serializable]
@@ -125,7 +133,9 @@ public static class TowerCatalog
     public static readonly TowerType[] AllTypes =
     {
         TowerType.SingleShot, TowerType.Splash, TowerType.Slow, TowerType.Sniper,
-        TowerType.Chain, TowerType.Pierce, TowerType.Poison, TowerType.Gold
+        TowerType.Chain, TowerType.Pierce, TowerType.Poison, TowerType.Gold,
+        TowerType.HotSauce, TowerType.CoffeeMug, TowerType.PopTartToaster,
+        TowerType.CookieCrumbler, TowerType.SourFizz
     };
 
     /// <summary>Everything the Tower Viewer gallery browses: the buildable types
@@ -134,7 +144,9 @@ public static class TowerCatalog
     {
         TowerType.SingleShot, TowerType.Splash, TowerType.Slow, TowerType.Sniper,
         TowerType.Chain, TowerType.Pierce, TowerType.Poison, TowerType.Gold,
-        TowerType.FondueFountain, TowerType.IceCreamTruck, TowerType.BobaBlaster, TowerType.PizzaOven
+        TowerType.FondueFountain, TowerType.IceCreamTruck, TowerType.BobaBlaster, TowerType.PizzaOven,
+        TowerType.HotSauce, TowerType.CoffeeMug, TowerType.PopTartToaster,
+        TowerType.CookieCrumbler, TowerType.SourFizz
     };
 
     /// <summary>Types a random build / merge / re-roll may produce. Gold is
@@ -142,7 +154,9 @@ public static class TowerCatalog
     public static readonly TowerType[] RandomTypes =
     {
         TowerType.SingleShot, TowerType.Splash, TowerType.Slow, TowerType.Sniper,
-        TowerType.Chain, TowerType.Pierce, TowerType.Poison
+        TowerType.Chain, TowerType.Pierce, TowerType.Poison,
+        TowerType.HotSauce, TowerType.CoffeeMug, TowerType.PopTartToaster,
+        TowerType.CookieCrumbler, TowerType.SourFizz
     };
 
     public static TowerType RandomType() { return RandomTypes[Random.Range(0, RandomTypes.Length)]; }
@@ -201,6 +215,11 @@ public static class TowerCatalog
                 case TowerType.Chain: return "Twin Lash - arcs branch to 2 more enemies, 10% chance to stun 1.5s";
                 case TowerType.Pierce: return "Wide Skewer - a wider line that skewers more enemies";
                 case TowerType.Poison: return "Extra Hot - burn stacks up to 5 times";
+                case TowerType.HotSauce: return "Extra Heat - stronger damage aura (+28%)";
+                case TowerType.CoffeeMug: return "Double Brew - stronger speed aura (+15%)";
+                case TowerType.PopTartToaster: return "Double Toasted - big pastry leaves a hot spot";
+                case TowerType.CookieCrumbler: return "Wide Crumble - crumb fan 25% wider";
+                case TowerType.SourFizz: return "Fizz Splash - sour bubble coats a second mob";
             }
         }
         else if (tier == 6)
@@ -214,6 +233,11 @@ public static class TowerCatalog
                 case TowerType.Chain: return "Sticky Sour - full-damage jumps + slow, plus T5 Twin Lash branches and stun";
                 case TowerType.Pierce: return "Boomerang Skewer - returns and skewers again, plus T5 Wide Skewer";
                 case TowerType.Poison: return "Ghost Pepper - burn death explosion, plus T5 Extra Hot stacking";
+                case TowerType.HotSauce: return "Flavor Boost - +1% damage per other Hot Sauce (max +5%), plus T5";
+                case TowerType.CoffeeMug: return "Morning Boost - +1% speed per other Coffee Mug (max +5%), plus T5";
+                case TowerType.PopTartToaster: return "Breakfast Rush - +1% speed per shot (max +100%), resets after 5s idle; hot spot";
+                case TowerType.CookieCrumbler: return "Crumble Storm - +1 crumb per second firing (max +8); wide fan";
+                case TowerType.SourFizz: return "Sour Burst - soured mobs spread debuff on death, plus T5 splash";
             }
         }
         return null;
@@ -345,6 +369,54 @@ public static class TowerCatalog
         d.type = TowerType.PizzaOven; d.displayName = "Pizza Oven"; d.color = new Color(0.90f, 0.45f, 0.22f);
         for (int i = 0; i < TowerCatalog.MaxTier - 1; i++) d.tiers.Add(new TowerTierStats());
         d.tiers.Add(new TowerTierStats { damage = 140, range = 10f, fireInterval = 2.0f, projectileSpeed = 18f, splashRadius = 2.5f, zoneDps = 240f, zoneDuration = 5f });
+        defs[d.type] = d;
+
+        d = new TowerDef();
+        d.type = TowerType.HotSauce; d.displayName = "Hot Sauce Bottle"; d.color = new Color(0.98f, 0.27f, 0.10f);
+        float[] hotBonus = { .08f, .12f, .16f, .20f, .28f, .32f };
+        for (int i = 0; i < 6; i++) d.tiers.Add(new TowerTierStats { auraBonus = hotBonus[i], auraRadius = 3.5f + .5f * i });
+        defs[d.type] = d;
+
+        d = new TowerDef();
+        d.type = TowerType.CoffeeMug; d.displayName = "Coffee Mug"; d.color = new Color(0.63f, 0.37f, 0.19f);
+        float[] coffeeBonus = { .05f, .07f, .09f, .11f, .15f, .18f };
+        for (int i = 0; i < 6; i++) d.tiers.Add(new TowerTierStats { auraBonus = coffeeBonus[i], auraRadius = 3.5f + .5f * i });
+        defs[d.type] = d;
+
+        d = new TowerDef();
+        d.type = TowerType.PopTartToaster; d.displayName = "Pop-Tart Toaster"; d.color = new Color(0.95f, 0.70f, 0.66f);
+        int[] small = { 4, 6, 9, 12, 16, 20 };
+        int[] large = { 12, 18, 27, 36, 48, 60 };
+        float[] radius = { 1.5f, 1.7f, 1.9f, 2.2f, 2.4f, 2.6f };
+        float[] cycle = { 1.6f, 1.45f, 1.32f, 1.2f, 1.1f, 1.0f };
+        for (int i = 0; i < 6; i++) d.tiers.Add(new TowerTierStats {
+            damage = large[i], toastSmallDamage = small[i], splashRadius = radius[i],
+            range = 4.5f + .5f * i, fireInterval = cycle[i], projectileSpeed = 23f,
+            zoneDps = i >= 4 ? (i == 4 ? 12f : 18f) : 0f, zoneDuration = i >= 4 ? 2f : 0f
+        });
+        defs[d.type] = d;
+
+        d = new TowerDef();
+        d.type = TowerType.CookieCrumbler; d.displayName = "Cookie Crumbler"; d.color = new Color(0.75f, 0.48f, 0.20f);
+        int[] crumbs = { 6, 7, 8, 9, 10, 11 };
+        int[] crumbDmg = { 3, 4, 6, 9, 12, 15 };
+        float[] crumbRate = { .35f, .32f, .29f, .27f, .25f, .23f };
+        float[] crumbReach = { 2.5f, 2.65f, 2.8f, 3f, 3.1f, 3.2f };
+        for (int i = 0; i < 6; i++) d.tiers.Add(new TowerTierStats {
+            damage = crumbDmg[i], crumbCount = crumbs[i], crumbCone = i >= 4 ? 75f : 60f,
+            range = crumbReach[i], fireInterval = crumbRate[i]
+        });
+        defs[d.type] = d;
+
+        d = new TowerDef();
+        d.type = TowerType.SourFizz; d.displayName = "Sour Fizz"; d.color = new Color(0.98f, 0.36f, 0.65f);
+        float[] armour = { .20f, .25f, .30f, .35f, .40f, .45f };
+        float[] sourTime = { 2f, 2.5f, 3f, 3.5f, 3.75f, 4f };
+        float[] sourRate = { .8f, .7f, .62f, .55f, .5f, .45f };
+        for (int i = 0; i < 6; i++) d.tiers.Add(new TowerTierStats {
+            damage = 0f, range = 4.5f + .5f * i, fireInterval = sourRate[i], projectileSpeed = 20f,
+            sourArmourReduction = armour[i], sourDuration = sourTime[i], sourSpreadRadius = i >= 4 ? 1.5f : 0f
+        });
         defs[d.type] = d;
     }
 }

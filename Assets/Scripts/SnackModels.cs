@@ -38,6 +38,11 @@ public static class SnackModels
             case TowerType.IceCreamTruck: return "IceCreamTruck";
             case TowerType.BobaBlaster: return "Boba";
             case TowerType.PizzaOven: return "PizzaOven";
+            case TowerType.HotSauce: return "HotSauce";
+            case TowerType.CoffeeMug: return "CoffeeMug";
+            case TowerType.PopTartToaster: return "PopTartToaster";
+            case TowerType.CookieCrumbler: return "CookieCrumbler";
+            case TowerType.SourFizz: return "SourFizz";
             default: return "Popcorn";
         }
     }

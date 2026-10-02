@@ -34,6 +34,8 @@ public class Mob : MonoBehaviour
     // Dipped (Fondue T7): concurrent damage-taken stacks, each with its own timer.
     private class DipStack { public float bonus; public float timer; }
     private readonly List<DipStack> dipStacks = new List<DipStack>();
+    private float sourReduction, sourTimer, sourDuration, sourDeathRadius;
+    private Tower sourSource;
 
     private Transform hpRoot;
     private Transform hpFill;
@@ -44,6 +46,8 @@ public class Mob : MonoBehaviour
     private bool lastSlowed, lastStunned, lastTarred, lastDipped;
     private int lastStacks;
     private float lastDipBonus;
+    private float lastSourReduction;
+    public float SourReduction => sourTimer > 0f ? sourReduction : 0f;
 
     /// <summary>Slowed (or stunned, which also stops movement).</summary>
     public bool IsSlowed => slowTimer > 0f || stunTimer > 0f;
@@ -92,14 +96,16 @@ public class Mob : MonoBehaviour
         bool dipped = dipStacks.Count > 0;
         float dipBonus = dipped ? DipTotal() : 0f;
         if (slowed == lastSlowed && stunned == lastStunned && stacks == lastStacks && tarred == lastTarred &&
-            dipped == lastDipped && Mathf.Abs(dipBonus - lastDipBonus) < 0.001f) return;
+            dipped == lastDipped && Mathf.Abs(dipBonus - lastDipBonus) < 0.001f &&
+            Mathf.Abs(SourReduction - lastSourReduction) < 0.001f) return;
         lastSlowed = slowed;
         lastStunned = stunned;
         lastStacks = stacks;
         lastTarred = tarred;
         lastDipped = dipped;
         lastDipBonus = dipBonus;
-        if (statusIcons != null) statusIcons.Set(slowed, stunned, stacks > 0, stacks, tarred, dipped, dipBonus);
+        lastSourReduction = SourReduction;
+        if (statusIcons != null) statusIcons.Set(slowed, stunned, stacks > 0, stacks, tarred, dipped, dipBonus, SourReduction);
     }
 
     void Update()
@@ -142,6 +148,7 @@ public class Mob : MonoBehaviour
 
         // tar lingers independently so it outlives the slow (Slow T6)
         if (tarTimer > 0f) tarTimer -= Time.deltaTime;
+        if (sourTimer > 0f) sourTimer -= Time.deltaTime;
 
         if (poisonStacks.Count > 0)
         {
@@ -229,6 +236,20 @@ public class Mob : MonoBehaviour
         if (slowTimer <= 0f) return;   // tar only sticks when a slow actually lands
         tarBonus = Mathf.Max(tarBonus, bonus);
         tarTimer = Mathf.Max(tarTimer, slowTimer + Mathf.Max(0f, linger));
+    }
+
+    public void ApplySour(float reduction, float duration, Tower source, float deathRadius)
+    {
+        if (Def == null || reduction <= 0f || duration <= 0f) return;
+        if (sourTimer <= 0f || reduction >= sourReduction)
+        {
+            sourReduction = Mathf.Clamp01(reduction);
+            sourDuration = duration;
+            sourDeathRadius = deathRadius;
+            sourSource = source;
+            sourTimer = Mathf.Max(sourTimer, duration);
+        }
+        RefreshStatusIcons();
     }
 
     /// <summary>Poison T5 "Extra Hot": up to <paramref name="maxStacks"/>
@@ -344,6 +365,9 @@ public class Mob : MonoBehaviour
         dmg *= RogueMods.DamageMult();
         if (src != null)
         {
+            // All tower-originated damage benefits from Hot Sauce; the poison
+            // stack tick above has its own damage path.
+            dmg *= src.DamageMultiplier;
             if (RogueMods.Artillery && src.Type == TowerType.Sniper) dmg *= 1.3f;
             if (RogueMods.Caramelized && poisonStacks.Count > 0) dmg *= 1.25f;
             if (RogueMods.GiantSlayer && RogueMods.MaxTier > 0 && src.Tier == RogueMods.MaxTier)
@@ -354,7 +378,7 @@ public class Mob : MonoBehaviour
         if (tarBonus > 0f && tarTimer > 0f) dmg *= 1f + tarBonus;   // tar hits every source
         if (dipStacks.Count > 0) dmg *= 1f + DipTotal();            // Fondue T7: dipped enemies take more
         if (!ignoreArmour)
-            dmg = Mathf.Max(0f, dmg - Def.armour);   // armoured bosses shrug off flat damage
+            dmg = Mathf.Max(0f, dmg - Def.armour * (1f - SourReduction));
         if (dmg <= 0f) return;
         if (Def.invincible)
         {
@@ -384,6 +408,14 @@ public class Mob : MonoBehaviour
         // (which can chain into further detonations).
         if (poisonDetonateRadius > 0f && poisonDetonateFraction > 0f && poisonStacks.Count > 0)
             PoisonDetonate();
+
+        if (SourReduction > 0f && sourDeathRadius > 0f && game != null)
+        {
+            foreach (Mob other in game.Mobs)
+                if (other != null && other != this &&
+                    Vector3.Distance(other.transform.position, transform.position) <= sourDeathRadius)
+                    other.ApplySour(sourReduction, sourDuration, sourSource, sourDeathRadius);
+        }
 
         if (TDAudio.Instance != null) TDAudio.Instance.Death();
         if (game != null) game.OnMobKilled(this);

@@ -193,6 +193,13 @@ public class RemoteBoard : MonoBehaviour
     public bool TryGetBoss(out string name, out float fraction,
                            out bool slowed, out bool stunned, out bool poisoned, out int stacks, out bool tarred)
     {
+        float sour;
+        return TryGetBoss(out name, out fraction, out slowed, out stunned, out poisoned, out stacks, out tarred, out sour);
+    }
+
+    public bool TryGetBoss(out string name, out float fraction,
+                           out bool slowed, out bool stunned, out bool poisoned, out int stacks, out bool tarred, out float sour)
+    {
         foreach (var kv in mobs)
         {
             RemoteMob rm = kv.Value;
@@ -205,6 +212,7 @@ public class RemoteBoard : MonoBehaviour
                 poisoned = rm.Stacks > 0;
                 stacks = rm.Stacks;
                 tarred = (rm.Status & 4) != 0;
+                sour = (rm.Status >> 4) * .05f;
                 return true;
             }
         }
@@ -215,6 +223,7 @@ public class RemoteBoard : MonoBehaviour
         poisoned = false;
         stacks = 0;
         tarred = false;
+        sour = 0f;
         return false;
     }
 
@@ -257,7 +266,8 @@ public class RemoteBoard : MonoBehaviour
                 bool stunned = (ms.Status & 2) != 0;   // bit1: stunned (distinct badge)
                 bool slowed = (ms.Status & 1) != 0 && !stunned;
                 bool tarred = (ms.Status & 4) != 0;    // bit2: tar (+damage taken)
-                rm.Icons.Set(slowed, stunned, ms.Stacks > 0, ms.Stacks, tarred, false, 0f);
+                rm.Icons.Set(slowed, stunned, ms.Stacks > 0, ms.Stacks, tarred, false, 0f,
+                    (ms.Status >> 4) * .05f);
             }
         }
 
