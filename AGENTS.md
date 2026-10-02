@@ -50,6 +50,12 @@ should add a `-executeMethod` check like these rather than relying on a bare com
 > the `webgl` branch.
 
 - **Never claim a behavioural change works** from a compile alone.
+- **After every moderate or major change, build the Windows x64 player** with
+  `CI_BUILD_TARGET=StandaloneWindows64` and `CICompileCheck.Build`. Commit and
+  push first so the player version stamp contains the new commit SHA. Confirm
+  `CICompileCheck: BUILD OK` in the log and that
+  `build/StandaloneWindows64/SnackTowerDefense.exe` exists. A batch compile
+  alone is enough for small, low-impact edits such as docs or comments.
 - **Play mode and networking cannot be tested by an agent** — the editor pauses
   when unfocused. Ask the user to play-test and report back.
 
@@ -106,8 +112,9 @@ should add a `-executeMethod` check like these rather than relying on a bare com
 2. Make the change; keep it consistent with surrounding style.
 3. Verify by compiling in batch mode (and rendering, if visual). For generated art,
    follow `docs/MobModelling.md`: GenAI concept first, **get approval**, then model.
-4. Commit and push to `main`; **then** build if needed (a player's version stamp is
-   `HEAD`'s sha, so commit *before* building). Ask the user to play-test behaviour.
+4. Commit and push to `main`; **then always kick off a Windows x64 build for
+   moderate or major changes** (a player's version stamp is `HEAD`'s sha, so
+   commit *before* building). Ask the user to play-test behaviour.
 5. **Only build WebGL when explicitly asked** (use the `webgl-build` skill); commit
    does not imply a WebGL publish. For a matched multiplayer test, build Windows too
    — both players must run the same `0.5.0+<sha>` version.
