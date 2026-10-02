@@ -164,6 +164,7 @@ public partial class TDGameManager
             NetworkSession.Instance.Leave();
         }
         if (ChatSync.Instance != null) ChatSync.Instance.Close();
+        if (BoardPreview.Instance != null) BoardPreview.Instance.Close();
         mpActive = false;
         mpScoreboardCollapsed = true;
         mpScreen = MpScreen.Menu;
@@ -175,6 +176,7 @@ public partial class TDGameManager
 
     void OnMatchStarted()
     {
+        if (BoardPreview.Instance != null) BoardPreview.Instance.Close();
         mpActive = true;
         cleared = false;
         eliminated = false;
@@ -890,10 +892,12 @@ public partial class TDGameManager
         }
 
         // ---- your board (every player picks their own) -------------------
-        // Sits to the left of the roster column so it doesn't fight the list
-        // length for vertical space.
+        // Sits left of the roster column; rotating preview mirrors the
+        // single-player difficulty screen.
+        BoardPreview lobbyPreview = BoardPreview.Ensure();
+        if (!lobbyPreview.IsOpen) lobbyPreview.Open();
         float bbw = 44f, bbh = 38f;
-        float bbx = cx - 500f;
+        float bbx = cx - 560f;
         GUI.Label(new Rect(bbx, listY, 244f, 26f), "Your board:", Style(17, TextAnchor.MiddleLeft, new Color(0.75f, 0.8f, 0.85f)));
         if (GUI.Button(new Rect(bbx, listY + 30f, bbw, bbh), "<", PaperButton(18)))
         {
@@ -909,8 +913,13 @@ public partial class TDGameManager
         }
         GUIStyle boardBlurb = Style(12, TextAnchor.UpperLeft, new Color(0.72f, 0.76f, 0.82f));
         boardBlurb.wordWrap = true;
-        GUI.Label(new Rect(bbx, listY + 76f, 268f, 62f), TDBoardBuilder.ThemeBlurb(ActiveTheme), boardBlurb);
-        GUI.Label(new Rect(bbx, listY + 140f, 268f, 44f),
+        float lobbyBox = 150f;
+        float lobbyBoxY = listY + 76f;
+        DrawPanel(new Rect(bbx, lobbyBoxY, lobbyBox, lobbyBox));
+        lobbyPreview.Show(ActiveTheme);
+        GUI.DrawTexture(new Rect(bbx, lobbyBoxY, lobbyBox, lobbyBox), lobbyPreview.Texture, ScaleMode.ScaleToFit, false);
+        GUI.Label(new Rect(bbx, lobbyBoxY + lobbyBox + 8f, 268f, 62f), TDBoardBuilder.ThemeBlurb(ActiveTheme), boardBlurb);
+        GUI.Label(new Rect(bbx, lobbyBoxY + lobbyBox + 74f, 268f, 44f),
             "Only your own board changes - everyone else keeps theirs.",
             Style(12, TextAnchor.UpperLeft, new Color(0.6f, 0.63f, 0.68f)));
 
@@ -930,14 +939,16 @@ public partial class TDGameManager
                 Difficulty d = (Difficulty)i;
                 bool sel = (int)ns.MatchDifficulty == i;
                 GUIStyle st = PaperButton(14);
-                st.normal.textColor = Color.black;
                 st.fontStyle = sel ? FontStyle.Bold : FontStyle.Normal;
+                Color prevBg = GUI.backgroundColor;
+                if (sel) GUI.backgroundColor = ActiveButtonTint();
                 if (GUI.Button(new Rect(dx + i * (dbw + gap), dy + 26f, dbw, dbh),
                         (sel ? "> " : "") + TDBalance.DifficultyName(d), st))
                 {
                     Click();
                     ns.SetDifficulty(d);
                 }
+                GUI.backgroundColor = prevBg;
             }
         }
         else

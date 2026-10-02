@@ -343,8 +343,8 @@ public partial class TDGameManager
         GUIStyle style = PaperButton(size);
         if (active)
         {
-            style.normal.background = TDTextures.ButtonHover();
-            style.focused.background = TDTextures.ButtonHover();
+            style.normal.background = TDTextures.ButtonPressed();
+            style.focused.background = TDTextures.ButtonPressed();
         }
         return GUI.Button(r, label, style);
     }

@@ -618,6 +618,16 @@ public partial class TDGameManager : MonoBehaviour
             return;
         }
 
+        // Damage Test: frozen wave state, but the camera stays live and Esc
+        // aborts back to Victory (previously this locked with no UI/actions).
+        if (State == GameState.DamageTest)
+        {
+            UpdateCamera(Time.deltaTime);
+            if (!ChatSync.IsTyping && Input.GetKeyDown(KeyCode.Escape)) EndDamageTest();
+            if (mpActive) { UpdateRemoteBoards(); UpdateSpectate(); }
+            return;
+        }
+
         if (State != GameState.Playing)
         {
             HideHover();
@@ -1321,6 +1331,10 @@ public partial class TDGameManager : MonoBehaviour
         GUI.Box(rect, GUIContent.none);
     }
 
+    /// <summary>Dark tint marking a toggled/active button; clearly darker
+    /// than the default green so the on-state reads at a glance.</summary>
+    static Color ActiveButtonTint() { return new Color(0.42f, 0.60f, 0.46f); }
+
     /// <summary>Shared green gradient button for menus and overlays.</summary>
     GUIStyle PaperButton(int size)
     {
@@ -1607,7 +1621,7 @@ public partial class TDGameManager : MonoBehaviour
             {
                 bool on = Selected.Targeting == tmodes[i];
                 Color oldBg = GUI.backgroundColor;
-                if (on) GUI.backgroundColor = new Color(0.72f, 1f, 0.76f);
+                if (on) GUI.backgroundColor = ActiveButtonTint();
                 int col = i % 3, row = i / 3;
                 if (GUI.Button(new Rect(tx + col * 140, selY + 170 + row * 28, 132, 26), tnames[i]))
                 {
@@ -1704,7 +1718,7 @@ public partial class TDGameManager : MonoBehaviour
             float slotX = (Screen.width - (slotW * 2f + slotGap)) * 0.5f;
 
             Color prevBg = GUI.backgroundColor;
-            if (building) GUI.backgroundColor = new Color(0.45f, 1f, 0.5f);
+            if (building) GUI.backgroundColor = ActiveButtonTint();
             if (GUI.Button(new Rect(slotX, btnY, slotW, ToolbarButtonH),
                 "Tower (B)  $" + TDBalance.BuildCost))
                 ToggleBuildMode();
@@ -1714,7 +1728,7 @@ public partial class TDGameManager : MonoBehaviour
             int goldCount = GoldTowerCount();
             bool goldCapped = goldCount >= TowerCatalog.MaxGoldTowers;
             prevBg = GUI.backgroundColor;
-            if (goldBuilding) GUI.backgroundColor = new Color(0.72f, 1f, 0.76f);
+            if (goldBuilding) GUI.backgroundColor = ActiveButtonTint();
             GUI.enabled = goldBuilding || !goldCapped;   // always allow toggling off
             if (GUI.Button(new Rect(slotX, btnY, slotW, ToolbarButtonH),
                 "Gold Tower (G)  " + goldCount + "/" + TowerCatalog.MaxGoldTowers))

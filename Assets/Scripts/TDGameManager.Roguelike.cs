@@ -22,7 +22,7 @@ public partial class TDGameManager : MonoBehaviour
         count = 0;
         if (wave == 5 || wave == 15) { pool = RogueUpgrades.Commons; count = 3; return true; }
         if (wave == 25 || wave == 35) { pool = RogueUpgrades.Rares; count = 3; return true; }
-        if (wave == 45) { pool = RogueUpgrades.Epics; count = 1; return true; }
+        if (wave == 45) { pool = RogueUpgrades.Epics; count = 2; return true; }
         return false;
     }
 

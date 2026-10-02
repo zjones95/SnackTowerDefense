@@ -64,7 +64,8 @@ public class Mob : MonoBehaviour
         Def = def;
         path = waypoints;
         game = g;
-        waveSpeed = speedMult;
+        // Bosses move 30% faster (enrage/dash stack on top, untouched).
+        waveSpeed = speedMult * (def.archetype == MobArchetype.Boss ? 1.3f : 1f);
         MaxHealth = def.health * healthMult * TDBalance.MobHealthScale;
         Health = MaxHealth;
         pathIndex = 1;
@@ -196,6 +197,7 @@ public class Mob : MonoBehaviour
     public void ApplySlow(float removedFraction, float duration)
     {
         if (Def.slowResist >= 1f) return;   // a fully slow-immune boss
+        removedFraction *= 0.5f;            // balance: slow strength halved across the board
         float mul = 1f - Mathf.Clamp01(removedFraction * RogueMods.SlowStrength * (1f - Def.slowResist));
         if (mul < speedMul) speedMul = mul;
         slowTimer = Mathf.Max(slowTimer, duration);

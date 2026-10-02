@@ -1228,6 +1228,34 @@ public static class TDTextures
         return t;
     }
 
+    /// <summary>Faint filled disc with a brighter rim for the tower range
+    /// indicator (white; tint via the Fx material color). Build-safe.</summary>
+    public static Texture2D RangeDisc() { return rangeDisc != null ? rangeDisc : (rangeDisc = BuildRangeDisc()); }
+
+    static Texture2D rangeDisc;
+
+    static Texture2D BuildRangeDisc()
+    {
+        const int S = 128;
+        Texture2D t = new Texture2D(S, S, TextureFormat.RGBA32, false);
+        t.wrapMode = TextureWrapMode.Clamp;
+        t.filterMode = FilterMode.Bilinear;
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float u = (x + 0.5f) / S * 2f - 1f;
+                float v = (y + 0.5f) / S * 2f - 1f;
+                float d = Mathf.Sqrt(u * u + v * v);
+                float edge = Mathf.Clamp01(1f - Mathf.Abs(d - 0.93f) / 0.07f);
+                float a = d > 1f ? 0f : 0.10f + 0.25f * edge;
+                t.SetPixel(x, y, new Color(1f, 1f, 1f, a));
+            }
+        }
+        t.Apply();
+        return t;
+    }
+
     // Top lighter than bottom; hover lifts the fill, pressed darkens it.
     static Texture2D BuildButton(int state)
     {

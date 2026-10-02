@@ -17,6 +17,29 @@ public class Tower : MonoBehaviour
     private float cooldown;
     private Transform turret;
     private bool isSelected;
+    private Transform rangeRing;
+
+    static readonly Dictionary<TowerType, Material> ringMats = new Dictionary<TowerType, Material>();
+
+    /// <summary>Faint range disc material tinted with the tower colour (build-safe Fx shader).</summary>
+    static Material RingMat(TowerType t)
+    {
+        Material m;
+        if (ringMats.TryGetValue(t, out m) && m != null) return m;
+        Shader fx = Shader.Find("Snack/Fx");
+        if (fx != null)
+        {
+            m = new Material(fx);
+            m.mainTexture = TDTextures.RangeDisc();
+            if (m.HasProperty("_Color")) m.SetColor("_Color", TowerCatalog.Get(t).color);
+        }
+        else
+        {
+            m = TDVisuals.TransparentMat(TowerCatalog.Get(t).color, 0.10f, 0.4f);
+        }
+        ringMats[t] = m;
+        return m;
+    }
 
     // Random targeting keeps one choice so the turret doesn't jitter; it is
     // re-rolled after each shot.
@@ -76,6 +99,28 @@ public class Tower : MonoBehaviour
         }
 
         TowerVisual.BuildTierLabel(transform, Tier);
+        BuildRangeRing();
+    }
+
+    /// <summary>Faint range disc shown while selected (10% opacity, just above ground).</summary>
+    void BuildRangeRing()
+    {
+        GameObject ring = GameObject.CreatePrimitive(PrimitiveType.Quad);
+        Collider rc = ring.GetComponent<Collider>();
+        if (rc != null) Destroy(rc);
+        ring.name = "RangeRing";
+        ring.transform.SetParent(transform, false);
+        ring.transform.localPosition = new Vector3(0f, 0.06f, 0f);
+        ring.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f);
+        ring.GetComponent<Renderer>().sharedMaterial = RingMat(Type);
+        Renderer rr = ring.GetComponent<Renderer>();
+        if (rr != null)
+        {
+            rr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            rr.receiveShadows = false;
+        }
+        rangeRing = ring.transform;
+        rangeRing.gameObject.SetActive(isSelected);
     }
 
     /// <summary>Selection is only state now — the visual is the yellow tile
@@ -83,6 +128,7 @@ public class Tower : MonoBehaviour
     public void SetSelected(bool on)
     {
         isSelected = on;
+        if (rangeRing != null) rangeRing.gameObject.SetActive(on);
     }
 
     /// <summary>Changes the targeting mode (random re-rolls on the next shot).</summary>
@@ -166,6 +212,11 @@ public class Tower : MonoBehaviour
     void Update()
     {
         TowerTierStats s = Stats;
+        if (rangeRing != null && rangeRing.gameObject.activeSelf)
+        {
+            float r = EffRange(s);
+            rangeRing.localScale = new Vector3(r * 2f, r * 2f, 1f);
+        }
         var mobs = TDGameManager.Instance != null ? TDGameManager.Instance.Mobs : null;
 
         Mob target = PickTarget(mobs, EffRange(s));

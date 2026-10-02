@@ -102,10 +102,9 @@ public static class TDBalance
     }
 
     // Mob health: keep the early 13% growth (waves 1-10), then taper from
-    // 7.5% to 5%/wave. The old 13%->10% curve reached 122x on wave 45:
-    // Granola Mom had ~198k HP on Normal despite only ~$3k baseline cash.
-    // Keep the existing wave 1-45 curve when extending the run. From wave 46
-    // onward, growth stays at 5%/wave; Granola Mom has ~49k HP on Normal at 50.
+    // 8% to 5.5%/wave (buffed from 7.5%->5% to pressure late-game builds).
+    // Keep the existing wave 1-45 curve shape when extending the run. From wave 46
+    // onward, growth stays at 5.5%/wave.
     public static float HealthMult(int wave)
     {
         int n = Mathf.Max(0, wave - 1);
@@ -113,7 +112,7 @@ public static class TDBalance
         for (int i = 0; i < n; i++)
         {
             float g = i < 9 ? 1.13f
-                : Mathf.Lerp(1.075f, 1.05f, Mathf.Clamp01((i - 9) / 34f));
+                : Mathf.Lerp(1.08f, 1.055f, Mathf.Clamp01((i - 9) / 34f));
             log += Mathf.Log(g);
         }
         return Mathf.Exp(log);

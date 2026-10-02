@@ -24,6 +24,16 @@ public partial class TDGameManager
         if (State != GameState.Victory || mpActive) return;   // solo Victory only
         if (map == null || mobsRoot == null) return;          // world was cleared
 
+        // Enter clean: no pause/time-freeze, modes or pick modal may leak in.
+        paused = false;
+        settingsOpen = false;
+        RestoreTimeScale();
+        CancelMode();
+        SetSelected(null);
+        rogueOpen = false;
+        rogueOffered = null;
+        Round = RoundState.Preparing;
+
         // The field is normally empty at Victory; clear it defensively.
         for (int i = Mobs.Count - 1; i >= 0; i--)
             if (Mobs[i] != null) Destroy(Mobs[i].gameObject);
@@ -94,7 +104,7 @@ public partial class TDGameManager
     }
 
     /// <summary>Running total and time-left readout drawn at the top while the
-    /// test is live.</summary>
+    /// test is live, plus an abort button (Esc works too).</summary>
     void DrawDamageTestHud()
     {
         GUI.Label(new Rect(0f, 10f, Screen.width, 34f),
@@ -103,6 +113,12 @@ public partial class TDGameManager
         GUI.Label(new Rect(0f, 46f, Screen.width, 24f),
             "Time left " + Mathf.CeilToInt(Mathf.Max(0f, damageTestTimer)) + "s   -   invincible dummy",
             Style(16, TextAnchor.MiddleCenter, new Color(0.9f, 0.94f, 1f)));
+        if (GUI.Button(new Rect((Screen.width - 220f) * 0.5f, Screen.height - 66f, 220f, 40f),
+            "End Test (Esc)", PaperButton(18)))
+        {
+            Click();
+            EndDamageTest();
+        }
     }
 
     /// <summary>Final-total banner drawn over the Victory screen; fades out over
