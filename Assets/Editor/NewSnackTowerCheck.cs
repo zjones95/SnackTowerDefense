@@ -50,6 +50,16 @@ public static class NewSnackTowerCheck
         if (drawn.Count != TowerCatalog.RandomTypes.Length)
             throw new Exception("Random draw bag repeated a type within one full cycle");
 
+        // Attack-speed bonuses must add flatly, never compound.
+        RogueMods.Reset();
+        RogueMods.Rate = 0.25f + 0.25f;   // two Overclock picks
+        if (Mathf.Abs(RogueMods.EffRate(false) - 1.50f) > 0.0001f)
+            throw new Exception("Attack-speed bonuses compounded instead of adding");
+        RogueMods.Overdrive = true;
+        if (Mathf.Abs(RogueMods.EffRate(true) - 1.80f) > 0.0001f)
+            throw new Exception("Overdrive did not add flatly on a boss wave");
+        RogueMods.Reset();
+
         // Support towers now also fire: weak single shots plus the aura.
         if (TowerCatalog.Get(TowerType.HotSauce).Stats(1).damage <= 0f ||
             TowerCatalog.Get(TowerType.CoffeeMug).Stats(6).damage <= 0f ||

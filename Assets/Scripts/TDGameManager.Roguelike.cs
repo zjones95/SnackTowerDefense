@@ -87,13 +87,13 @@ public partial class TDGameManager : MonoBehaviour
         switch (def.id)
         {
             case "heavy": RogueMods.Damage *= 1.10f; break;
-            case "sugar": RogueMods.Rate *= 1.10f; break;
+            case "sugar": RogueMods.Rate += 0.10f; break;
             case "straws": RogueMods.Range *= 1.12f; break;
             case "salt": RogueMods.SlowStrength *= 1.15f; break;
             case "sweet": Money += 100; break;
             case "merger": RogueMods.MergeMult = 0.5f; break;
             case "allow": RogueMods.Wage += 40; break;
-            case "overclock": RogueMods.Rate *= 1.25f; RogueMods.Range *= 0.9f; break;
+            case "overclock": RogueMods.Rate += 0.25f; RogueMods.Range *= 0.9f; break;
             case "lucky": RogueMods.CritChance += 0.08f; break;
             case "caramel": RogueMods.Caramelized = true; break;
             case "happy": RogueMods.HappyHour = true; break;

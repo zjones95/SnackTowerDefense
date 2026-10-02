@@ -70,13 +70,14 @@ public static class RogueUpgrades
     }
 }
 
-/// <summary>Live run-scoped modifiers for the local board. Multipliers stack
-/// multiplicatively across repeat picks. Reset on every new run; the Damage
-/// Test intentionally keeps them (it reuses the victory board).</summary>
+/// <summary>Live run-scoped modifiers for the local board. Damage and range
+/// stack multiplicatively across repeat picks, but attack speed adds flatly
+/// (Rate is an additive bonus). Reset on every new run; the Damage Test
+/// intentionally keeps them (it reuses the victory board).</summary>
 public static class RogueMods
 {
     public static float Damage = 1f;
-    public static float Rate = 1f;
+    public static float Rate = 0f;    // additive attack-speed bonus (0 = +0%)
     public static float Range = 1f;
     public static float SlowStrength = 1f;
     public static float CritChance = 0f;
@@ -104,7 +105,8 @@ public static class RogueMods
 
     public static void Reset()
     {
-        Damage = Rate = Range = SlowStrength = 1f;
+        Damage = Range = SlowStrength = 1f;
+        Rate = 0f;
         CritChance = 0f;
         MergeMult = 1f;
         Wage = 0;
@@ -126,10 +128,12 @@ public static class RogueMods
         return Damage * (1f + dessert) * ComboMult;
     }
 
-    /// <summary>Effective fire-rate multiplier (Overdrive only on boss waves).</summary>
+    /// <summary>Effective fire-rate multiplier. Every attack-speed source adds
+    /// flatly (Sugar/Overclock picks, Overdrive on boss waves) rather than
+    /// compounding; support auras add their own flat bonus on top.</summary>
     public static float EffRate(bool bossWave)
     {
-        return Rate * (Overdrive && bossWave ? 1.3f : 1f);
+        return 1f + Rate + (Overdrive && bossWave ? 0.30f : 0f);
     }
 
     /// <summary>Effective range multiplier (Overclock trims range).</summary>

@@ -15,7 +15,6 @@ public partial class Tower
     private float crumbActiveTime;
 
     public float DamageMultiplier { get { return 1f + damageBuff; } }
-    private float SpeedMultiplier { get { return 1f + speedBuff; } }
     public float DamageBuff { get { return damageBuff; } }
     public float SpeedBuff { get { return speedBuff; } }
 
@@ -104,7 +103,7 @@ public partial class Tower
     void FireNewSnackTower(Mob target, TowerTierStats s)
     {
         if (Time.time - lastSnackShot >= 5f) { toastStacks = 0; crumbRamp = 0; crumbActiveTime = 0f; }
-        float rate = RogueMods.EffRate(BossWaveNow()) * SpeedMultiplier;
+        float rate = EffRateMult();
         if (Type == TowerType.PopTartToaster)
         {
             // The fourth shot is the big one; all four advance Breakfast Rush.
@@ -113,8 +112,9 @@ public partial class Tower
                 big ? s.splashRadius : 0f, big ? .38f : .20f, s);
             toastShot = (toastShot + 1) % 4;
             if (Tier >= 6) toastStacks = Mathf.Min(100, toastStacks + 1);
-            float ramp = 1f + toastStacks * .01f;
-            cooldown = (big ? s.fireInterval - .54f : .18f) / (rate * ramp);
+            // Breakfast Rush adds flatly too: +1% per shot, capped at +100%.
+            float toastRate = rate + toastStacks * .01f;
+            cooldown = (big ? s.fireInterval - .54f : .18f) / toastRate;
         }
         else if (Type == TowerType.CookieCrumbler)
         {

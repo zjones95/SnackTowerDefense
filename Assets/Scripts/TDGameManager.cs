@@ -1593,7 +1593,7 @@ public partial class TDGameManager : MonoBehaviour
             float runDmg = RogueMods.DamageMult();
             float runRate = RogueMods.EffRate(RogueMods.IsBossWave(Wave));
             float dmgMult = runDmg * Selected.DamageMultiplier;
-            float rateMult = runRate * (1f + Selected.SpeedBuff);
+            float rateMult = runRate + Selected.SpeedBuff;   // attack speed adds flatly
             float effDamage = s.damage * dmgMult;
             float effRate = s.fireInterval / Mathf.Max(0.0001f, rateMult);
 

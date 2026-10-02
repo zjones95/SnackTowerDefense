@@ -67,6 +67,10 @@ public partial class Tower : MonoBehaviour
     /// <summary>Range after roguelike mods (never mutates the shared catalog stats).</summary>
     float EffRange(TowerTierStats s) { return RogueMods.EffRange(s.range); }
 
+    /// <summary>Attack-speed multiplier. Every source — roguelike picks, Overdrive
+    /// on boss waves and support auras — adds flatly rather than compounding.</summary>
+    float EffRateMult() { return RogueMods.EffRate(BossWaveNow()) + speedBuff; }
+
     bool BossWaveNow()
     {
         TDGameManager gm = TDGameManager.Instance;
@@ -268,7 +272,7 @@ public partial class Tower : MonoBehaviour
         float interval = s.fireInterval;
         if (Type == TowerType.BobaBlaster && s.rateMinInterval > 0f && s.spinUpTime > 0f)
             interval = Mathf.Lerp(s.fireInterval, s.rateMinInterval, Mathf.Clamp01(bobaSpin / s.spinUpTime));
-        cooldown = interval / (RogueMods.EffRate(BossWaveNow()) * SpeedMultiplier);
+        cooldown = interval / EffRateMult();
         if (Type == TowerType.BobaBlaster) bobaLastFire = Time.time;   // spin persists across targets; idleness resets it
         if (TDAudio.Instance != null) TDAudio.Instance.Shot(Type);
 
@@ -545,7 +549,7 @@ public partial class Tower : MonoBehaviour
         RankInRange(inRange);
 
         int shots = Mathf.Min((s.multiShot > 0 ? s.multiShot : 1) + (RogueMods.DoubleScoop && s.multiShot > 1 ? 1 : 0), inRange.Count);
-        cooldown = s.fireInterval / (RogueMods.EffRate(BossWaveNow()) * SpeedMultiplier);
+        cooldown = s.fireInterval / EffRateMult();
         if (TDAudio.Instance != null) TDAudio.Instance.Shot(Type);
 
         Vector3 muzzle = Muzzle();
