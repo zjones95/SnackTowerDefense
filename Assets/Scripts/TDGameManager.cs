@@ -1207,8 +1207,44 @@ public partial class TDGameManager : MonoBehaviour
     }
 
     // --------------------------------------------------------------- GUI
+    GUISkin uiSkin;
+
+    void ApplyUiSkin()
+    {
+        if (uiSkin == null)
+        {
+            uiSkin = Instantiate(GUI.skin);
+            StyleButton(uiSkin.button);
+            uiSkin.box.normal.background = TDTextures.Panel();
+            uiSkin.box.normal.textColor = Color.white;
+            uiSkin.box.border = new RectOffset(0, 0, 0, 0);
+            uiSkin.textField.normal.background = TDTextures.Field();
+            uiSkin.textField.focused.background = TDTextures.Field();
+            uiSkin.textField.normal.textColor = Color.white;
+            uiSkin.textField.focused.textColor = Color.white;
+            uiSkin.textField.border = new RectOffset(0, 0, 0, 0);
+            uiSkin.textField.padding = new RectOffset(8, 8, 4, 4);
+            uiSkin.horizontalSlider.normal.background = TDTextures.Field();
+            uiSkin.horizontalSliderThumb.normal.background = TDTextures.Button();
+            uiSkin.horizontalSliderThumb.hover.background = TDTextures.ButtonHover();
+            uiSkin.horizontalSliderThumb.active.background = TDTextures.ButtonPressed();
+        }
+        GUI.skin = uiSkin;
+    }
+
+    static void StyleButton(GUIStyle s)
+    {
+        s.border = new RectOffset(0, 0, 0, 0);
+        s.normal.background = s.focused.background = s.onNormal.background = TDTextures.Button();
+        s.hover.background = s.onHover.background = TDTextures.ButtonHover();
+        s.active.background = s.onActive.background = TDTextures.ButtonPressed();
+        s.normal.textColor = s.focused.textColor = s.onNormal.textColor = Color.white;
+        s.hover.textColor = s.active.textColor = s.onHover.textColor = s.onActive.textColor = Color.white;
+    }
+
     void OnGUI()
     {
+        ApplyUiSkin();
         if (State == GameState.MainMenu) DrawMenu();
         else if (State == GameState.DifficultySelect) DrawDifficulty();
         else if (State == GameState.TowerViewer) DrawTowerViewer();
@@ -1242,25 +1278,14 @@ public partial class TDGameManager : MonoBehaviour
         return s;
     }
 
-    /// <summary>
-    /// Menu button drawn on a light construction-paper texture with black text
-    /// (hover/active use slightly darker sheets).
-    /// </summary>
+    /// <summary>Shared green gradient button for menus and overlays.</summary>
     GUIStyle PaperButton(int size)
     {
         GUIStyle s = new GUIStyle(GUI.skin.button);
         s.fontSize = size;
         s.alignment = TextAnchor.MiddleCenter;
         s.padding = new RectOffset(10, 10, 6, 6);
-        s.border = new RectOffset(0, 0, 0, 0);   // stretch the sheet flat, no 9-slice edges
-        s.normal.background = TDTextures.Paper();
-        s.hover.background = TDTextures.PaperHover();
-        s.active.background = TDTextures.PaperPressed();
-        s.focused.background = TDTextures.Paper();
-        s.normal.textColor = Color.black;
-        s.hover.textColor = Color.black;
-        s.active.textColor = new Color(0.14f, 0.14f, 0.14f);
-        s.focused.textColor = Color.black;
+        StyleButton(s);
         return s;
     }
 
@@ -1446,6 +1471,8 @@ public partial class TDGameManager : MonoBehaviour
 
     void DrawHud()
     {
+        GUI.DrawTexture(new Rect(4f, 4f, 310f, 84f), TDTextures.Panel());
+        GUI.DrawTexture(new Rect(Screen.width - 304f, 4f, 300f, mpActive ? 108f : 84f), TDTextures.Panel());
         GUIStyle hud = Style(18, TextAnchor.MiddleLeft, Color.white);
         GUI.Label(new Rect(12, 10, 300, 24), "Money: $" + Money, hud);
         GUI.Label(new Rect(12, 34, 300, 24), "Lives: " + Lives, hud);
@@ -1528,7 +1555,7 @@ public partial class TDGameManager : MonoBehaviour
             {
                 bool on = Selected.Targeting == tmodes[i];
                 Color oldBg = GUI.backgroundColor;
-                if (on) GUI.backgroundColor = new Color(1f, 0.9f, 0.45f);
+                if (on) GUI.backgroundColor = new Color(0.72f, 1f, 0.76f);
                 int col = i % 3, row = i / 3;
                 if (GUI.Button(new Rect(20 + col * 140, 288 + row * 28, 132, 26), tnames[i]))
                 {
@@ -1635,7 +1662,7 @@ public partial class TDGameManager : MonoBehaviour
             int goldCount = GoldTowerCount();
             bool goldCapped = goldCount >= TowerCatalog.MaxGoldTowers;
             prevBg = GUI.backgroundColor;
-            if (goldBuilding) GUI.backgroundColor = new Color(1f, 0.85f, 0.3f);
+            if (goldBuilding) GUI.backgroundColor = new Color(0.72f, 1f, 0.76f);
             GUI.enabled = goldBuilding || !goldCapped;   // always allow toggling off
             if (GUI.Button(new Rect(slotX, btnY, slotW, ToolbarButtonH),
                 "Gold Tower (G)  " + goldCount + "/" + TowerCatalog.MaxGoldTowers))

@@ -25,7 +25,7 @@ public partial class TDGameManager
         MobDef def = v.Current;
 
         Color old = GUI.color;
-        GUI.color = new Color(0.04f, 0.05f, 0.08f, 0.96f);
+        GUI.color = new Color(0.10f, 0.11f, 0.12f, 0.96f);
         GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.whiteTexture);
         GUI.color = old;
 

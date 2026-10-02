@@ -466,7 +466,7 @@ public partial class TDGameManager
         float y = Screen.height * 0.30f;
 
         Color old = GUI.color;
-        GUI.color = new Color(0.03f, 0.04f, 0.07f, 0.92f);
+        GUI.color = new Color(0.12f, 0.13f, 0.14f, 0.92f);
         GUI.DrawTexture(new Rect(x, y, w, h), Texture2D.whiteTexture);
         GUI.color = old;
 
@@ -517,7 +517,7 @@ public partial class TDGameManager
         float panelH = 50f + rows * 20f;
 
         Color old = GUI.color;
-        GUI.color = new Color(0.04f, 0.05f, 0.08f, 0.82f);
+        GUI.color = new Color(0.12f, 0.13f, 0.14f, 0.88f);
         GUI.DrawTexture(new Rect(x0 - 6f, y - 8f, w + 12f, panelH + 12f), Texture2D.whiteTexture);
         GUI.color = old;
 
@@ -597,7 +597,7 @@ public partial class TDGameManager
 
         float top = (chat.Open ? logTop - 18f : logTop) - 5f;
         Color old = GUI.color;
-        GUI.color = new Color(0f, 0f, 0f, 0.45f);
+        GUI.color = new Color(0.12f, 0.13f, 0.14f, 0.85f);
         GUI.DrawTexture(new Rect(x - 6f, top, w + 12f, (inputBottom + 5f) - top), Texture2D.whiteTexture);
         GUI.color = old;
 
@@ -689,7 +689,7 @@ public partial class TDGameManager
         NetworkSession ns = NetworkSession.Instance;
 
         Color old = GUI.color;
-        GUI.color = new Color(0.05f, 0.06f, 0.09f, 0.94f);
+        GUI.color = new Color(0.10f, 0.11f, 0.12f, 0.96f);
         GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
         GUI.color = old;
 

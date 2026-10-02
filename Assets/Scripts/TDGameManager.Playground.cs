@@ -335,84 +335,39 @@ public partial class TDGameManager
     }
 
     // --------------------------------------------------------------------- GUI
-    // Crisp flat button background. The default GUI.skin.button texture is a
-    // small rounded-corner bitmap that goes blurry when stretched over our
-    // larger panel buttons — a plain white texture tinted via
-    // GUI.backgroundColor stays pixel-sharp at any size.
-    static Texture2D pgFlatBg;
-    static Texture2D PgFlatBg()
-    {
-        if (pgFlatBg != null) return pgFlatBg;
-        pgFlatBg = new Texture2D(4, 4, TextureFormat.RGBA32, false);
-        pgFlatBg.filterMode = FilterMode.Point;
-        pgFlatBg.wrapMode = TextureWrapMode.Clamp;
-        Color[] px = new Color[16];
-        for (int i = 0; i < px.Length; i++) px[i] = Color.white;
-        pgFlatBg.SetPixels(px);
-        pgFlatBg.Apply();
-        return pgFlatBg;
-    }
-
-    GUIStyle TronButton(int size)
-    {
-        GUIStyle s = new GUIStyle(GUI.skin.button);
-        s.fontSize = size;
-        s.fontStyle = FontStyle.Bold;
-        s.alignment = TextAnchor.MiddleCenter;
-        s.normal.textColor = new Color(0.55f, 0.95f, 1f);
-        s.hover.textColor = Color.white;
-        s.active.textColor = new Color(0.35f, 0.75f, 0.85f);
-        s.focused.textColor = new Color(0.55f, 0.95f, 1f);
-        Texture2D bg = PgFlatBg();
-        s.normal.background = bg;
-        s.hover.background = bg;
-        s.active.background = bg;
-        s.focused.background = bg;
-        s.onNormal.background = bg;
-        s.onHover.background = bg;
-        s.onActive.background = bg;
-        s.padding = new RectOffset(6, 6, 4, 4);
-        s.margin = new RectOffset(2, 2, 2, 2);
-        s.border = new RectOffset(0, 0, 0, 0);
-        return s;
-    }
-
     bool PgButton(Rect r, string label, bool active, int size)
     {
-        // 1px darker outline behind the button so the flat fill reads as a
-        // deliberate panel control rather than floating text.
-        Color prev = GUI.color;
-        GUI.color = new Color(0.04f, 0.22f, 0.27f);
-        GUI.DrawTexture(new Rect(r.x - 1f, r.y - 1f, r.width + 2f, r.height + 2f), PgFlatBg());
-        GUI.color = prev;
-
-        prev = GUI.backgroundColor;
-        GUI.backgroundColor = active ? new Color(0.10f, 0.45f, 0.55f) : new Color(0.02f, 0.06f, 0.09f);
-        bool hit = GUI.Button(r, label, TronButton(size));
-        GUI.backgroundColor = prev;
-        return hit;
+        if (active)
+        {
+            Color previous = GUI.color;
+            GUI.color = new Color(0.40f, 0.78f, 0.43f);
+            GUI.DrawTexture(new Rect(r.x - 2f, r.y - 2f, r.width + 4f, r.height + 4f), Texture2D.whiteTexture);
+            GUI.color = previous;
+        }
+        return GUI.Button(r, label, PaperButton(size));
     }
 
     void DrawPlayground()
     {
         // status (top-left)
-        GUI.Label(new Rect(12f, 6f, 460f, 24f), "PLAYGROUND", Style(22, TextAnchor.MiddleLeft, new Color(0.05f, 0.35f, 0.40f)));
+        GUI.Label(new Rect(12f, 6f, 460f, 24f), "PLAYGROUND", Style(22, TextAnchor.MiddleLeft, Color.white));
         GUI.Label(new Rect(12f, 32f, 460f, 20f), "Enemies " + Mobs.Count + "    Towers " + towers.Count,
-            Style(15, TextAnchor.MiddleLeft, new Color(0.25f, 0.28f, 0.32f)));
+            Style(15, TextAnchor.MiddleLeft, Color.white));
         GUI.Label(new Rect(12f, 52f, 460f, 20f), "Money inf    Lives inf",
-            Style(15, TextAnchor.MiddleLeft, new Color(0.25f, 0.28f, 0.32f)));
+            Style(15, TextAnchor.MiddleLeft, Color.white));
 
         // wave bar (top-center)
         float barW = 660f;
         float bx = (Screen.width - barW) * 0.5f;
         float by = 8f;
         pgWavePanel = new Rect(bx - 8f, by - 4f, barW + 16f, 52f);
+        GUI.DrawTexture(pgWavePanel, TDTextures.Panel());
 
         if (PgButton(new Rect(bx, by, 40f, 40f), "<", false, 20)) { pgWave = Mathf.Max(1, pgWave - 1); Click(); }
         string wn = MobCatalog.Get(TDBalance.Waves[Mathf.Clamp(pgWave, 1, TDBalance.TotalWaves) - 1].mob).displayName;
         GUI.Label(new Rect(bx + 46f, by, 192f, 40f),
             "Wave " + pgWave + " / " + TDBalance.TotalWaves + "\n" + wn,
-            Style(13, TextAnchor.MiddleCenter, new Color(0.45f, 0.33f, 0.05f)));
+             Style(13, TextAnchor.MiddleCenter, Color.white));
         if (PgButton(new Rect(bx + 244f, by, 40f, 40f), ">", false, 20)) { pgWave = Mathf.Min(TDBalance.TotalWaves, pgWave + 1); Click(); }
         if (PgButton(new Rect(bx + 292f, by, 80f, 40f), "Waves", pgShowWaves, 14)) { pgShowWaves = !pgShowWaves; Click(); }
         if (PgButton(new Rect(bx + 380f, by, 140f, 40f), "SEND WAVE", false, 15)) { PlaygroundSendWave(); Click(); }
@@ -424,7 +379,8 @@ public partial class TDGameManager
         float px = Screen.width - 212f;
         float py = 70f;
         pgTowerPanel = new Rect(px - 10f, py - 34f, 212f, 30f + TowerCatalog.GalleryTypes.Length * 27f + 14f);
-        GUI.Label(new Rect(px, py, 200f, 24f), "TOWER", Style(16, TextAnchor.MiddleLeft, new Color(0.35f, 0.18f, 0.45f)));
+        GUI.DrawTexture(pgTowerPanel, TDTextures.Panel());
+        GUI.Label(new Rect(px, py, 200f, 24f), "TOWER", Style(16, TextAnchor.MiddleLeft, Color.white));
         float ty = py + 30f;
         for (int i = 0; i < TowerCatalog.GalleryTypes.Length; i++)
         {
@@ -436,7 +392,8 @@ public partial class TDGameManager
 
         // tier picker (right, under tower list)
         pgTierPanel = new Rect(px - 10f, ty + 2f, 212f, 46f);
-        GUI.Label(new Rect(px, ty + 4f, 200f, 18f), "TIER", Style(13, TextAnchor.MiddleLeft, new Color(0.35f, 0.18f, 0.45f)));
+        GUI.DrawTexture(pgTierPanel, TDTextures.Panel());
+        GUI.Label(new Rect(px, ty + 4f, 200f, 18f), "TIER", Style(13, TextAnchor.MiddleLeft, Color.white));
         float ttx = px;
         float tty = ty + 24f;
         for (int t = 1; t <= TowerCatalog.MaxTier; t++)
@@ -453,6 +410,7 @@ public partial class TDGameManager
 
         // bottom toolbar
         pgToolbar = new Rect(0f, Screen.height - 62f, Screen.width, 62f);
+        GUI.DrawTexture(pgToolbar, TDTextures.Panel());
         float tbX = 12f;
         if (PgButton(new Rect(tbX, Screen.height - 52f, 90f, 40f), "Place", pgPlacing, 15)) { pgPlacing = !pgPlacing; pgDeleting = false; Click(); }
         tbX += 96f;
@@ -471,7 +429,7 @@ public partial class TDGameManager
             GUI.Label(new Rect(0f, 90f, Screen.width, 24f), message, Style(16, TextAnchor.MiddleCenter, new Color(0.10f, 0.45f, 0.15f)));
         GUI.Label(new Rect(0f, Screen.height - 66f, Screen.width, 14f),
             "Left-click: place / select    Right-click: cancel    Space: send wave    WASD / middle-drag / scroll: camera    Esc: back",
-            Style(11, TextAnchor.MiddleCenter, new Color(0.35f, 0.38f, 0.42f)));
+             Style(11, TextAnchor.MiddleCenter, Color.white));
 
         DrawWaveIntro();
         DrawBossBar();
@@ -488,7 +446,7 @@ public partial class TDGameManager
         pgWaveGrid = new Rect(gx, gy, w, h);
 
         Color old = GUI.color;
-        GUI.color = new Color(0.02f, 0.05f, 0.08f, 0.96f);
+        GUI.color = new Color(0.12f, 0.13f, 0.14f, 0.96f);
         GUI.DrawTexture(pgWaveGrid, Texture2D.whiteTexture);
         GUI.color = old;
 
@@ -516,7 +474,7 @@ public partial class TDGameManager
         pgSelPanel = new Rect(12f, 90f, 440f, 320f);
 
         Color old = GUI.color;
-        GUI.color = new Color(0.02f, 0.05f, 0.08f, 0.94f);
+        GUI.color = new Color(0.12f, 0.13f, 0.14f, 0.94f);
         GUI.DrawTexture(pgSelPanel, Texture2D.whiteTexture);
         GUI.color = old;
 

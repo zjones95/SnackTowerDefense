@@ -28,7 +28,7 @@ public partial class TDGameManager
     {
         // scrim over the settings underneath
         Color old = GUI.color;
-        GUI.color = new Color(0.03f, 0.04f, 0.06f, 0.85f);
+        GUI.color = new Color(0.10f, 0.11f, 0.12f, 0.94f);
         GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.whiteTexture);
         GUI.color = old;
 
@@ -65,7 +65,7 @@ public partial class TDGameManager
 
         // panel behind the rows
         old = GUI.color;
-        GUI.color = new Color(0f, 0f, 0f, 0.35f);
+        GUI.color = new Color(0.12f, 0.13f, 0.14f, 0.94f);
         GUI.DrawTexture(new Rect(x - 24f, y - 20f, w + 48f, panelH), Texture2D.whiteTexture);
         GUI.color = old;
 

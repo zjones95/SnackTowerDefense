@@ -1167,66 +1167,48 @@ public static class TDTextures
         return t;
     }
 
-    // ------------------------------------------------------------ paper (UI)
-    static Texture2D paper, paperHover, paperPressed, menuFade;
+    // ---------------------------------------------------------- shared UI
+    static Texture2D button, buttonHover, buttonPressed, panel, field, menuFade;
 
-    /// <summary>Off-white construction paper (≈ #F2EEE4) for menu buttons.</summary>
-    public static Texture2D Paper() { return paper != null ? paper : (paper = BuildPaper(1f)); }
+    public static Texture2D Button() { return button != null ? button : (button = BuildButton(0)); }
+    public static Texture2D ButtonHover() { return buttonHover != null ? buttonHover : (buttonHover = BuildButton(1)); }
+    public static Texture2D ButtonPressed() { return buttonPressed != null ? buttonPressed : (buttonPressed = BuildButton(2)); }
+    public static Texture2D Panel() { return panel != null ? panel : (panel = Solid(new Color(0.12f, 0.13f, 0.14f, 0.96f))); }
+    public static Texture2D Field() { return field != null ? field : (field = Solid(new Color(0.08f, 0.09f, 0.10f))); }
 
-    /// <summary>Paper a touch darker, for the hover state of a paper button.</summary>
-    public static Texture2D PaperHover() { return paperHover != null ? paperHover : (paperHover = BuildPaper(0.94f)); }
-
-    /// <summary>Paper darker still, for the pressed state of a paper button.</summary>
-    public static Texture2D PaperPressed() { return paperPressed != null ? paperPressed : (paperPressed = BuildPaper(0.87f)); }
-
-    // Light sheet with subtle mottling, fine grain, pressed fibres and flecks.
-    // Kept deliberately light so black UI text stays crisp on top.
-    static Texture2D BuildPaper(float shade)
+    static Texture2D Solid(Color color)
     {
-        int S = 128;
-        Texture2D t = New(S);
-        t.wrapMode = TextureWrapMode.Clamp;      // stretched across the button, not tiled
-        Color baseC = new Color(0.949f, 0.933f, 0.894f); // ~#F2EEE4
-        for (int y = 0; y < S; y++)
-        {
-            for (int x = 0; x < S; x++)
-            {
-                float mottle = (N(x / 7, y / 7) - 0.5f) * 0.045f;   // broad blotches
-                float grain = (N(x + 11, y + 53) - 0.5f) * 0.030f;  // fine tooth
-                float fleck = N(x * 5 + 3, y * 5 + 7) > 0.986f ? -0.09f : 0f;
-                float v = mottle + grain + fleck;
-                Color c = new Color(baseC.r + v, baseC.g + v * 0.97f, baseC.b + v * 0.90f) * shade;
-                t.SetPixel(x, y, c);
-            }
-        }
-
-        // Short fibres pressed into the sheet.
-        for (int i = 0; i < 140; i++)
-        {
-            int x0 = (int)(N(i * 17 + 1, 5) * S);
-            int y0 = (int)(N(i * 29 + 3, 11) * S);
-            int len = 3 + (int)(N(i * 13 + 7, 23) * 8f);
-            bool diag = N(i * 31 + 9, 41) > 0.72f;
-            float tone = 0.03f + N(i * 3 + 2, 17) * 0.035f;
-            for (int k = 0; k < len; k++)
-            {
-                int x = (x0 + k) & (S - 1);
-                int y = (diag ? y0 + k : y0) & (S - 1);
-                Color c = t.GetPixel(x, y);
-                c.r -= tone; c.g -= tone * 0.92f; c.b -= tone * 0.80f;
-                t.SetPixel(x, y, c);
-            }
-        }
-
+        Texture2D t = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+        t.wrapMode = TextureWrapMode.Clamp;
+        t.SetPixels(new[] { color, color, color, color });
         t.Apply();
+        return t;
+    }
+
+    // Top lighter than bottom; hover lifts the fill, pressed darkens it.
+    static Texture2D BuildButton(int state)
+    {
+        const int height = 64;
+        Texture2D t = new Texture2D(2, height, TextureFormat.RGBA32, false);
+        t.wrapMode = TextureWrapMode.Clamp;
         t.filterMode = FilterMode.Bilinear;
+        Color bottom = state == 2 ? new Color(0.07f, 0.27f, 0.13f) :
+            state == 1 ? new Color(0.12f, 0.40f, 0.20f) : new Color(0.09f, 0.34f, 0.17f);
+        Color top = state == 2 ? new Color(0.12f, 0.37f, 0.19f) :
+            state == 1 ? new Color(0.22f, 0.55f, 0.29f) : new Color(0.17f, 0.46f, 0.24f);
+        for (int y = 0; y < height; y++)
+        {
+            Color c = Color.Lerp(bottom, top, y / (float)(height - 1));
+            t.SetPixel(0, y, c);
+            t.SetPixel(1, y, c);
+        }
+        t.Apply();
         return t;
     }
 
     /// <summary>
-    /// Full-screen vertical scrim for the menus: nearly clear at the bottom
-    /// (so the orbiting board shows through) and darker at the top (so the
-    /// title and buttons stay readable). 1×N so the gradient is smooth.
+    /// Dark-grey full-screen scrim. Slightly darker at the top to keep titles
+    /// readable while the orbiting board remains faintly visible underneath.
     /// </summary>
     public static Texture2D MenuFade()
     {
@@ -1238,8 +1220,8 @@ public static class TDTextures
         for (int y = 0; y < S; y++)
         {
             float f = y / (float)(S - 1);                     // 1 = top row of the texture
-            float a = Mathf.Lerp(0.22f, 0.62f, f);            // darker toward the top of the screen
-            t.SetPixel(0, y, new Color(0.05f, 0.06f, 0.09f, a));
+            float a = Mathf.Lerp(0.83f, 0.93f, f);
+            t.SetPixel(0, y, new Color(0.10f, 0.11f, 0.12f, a));
         }
         t.Apply();
         menuFade = t;
