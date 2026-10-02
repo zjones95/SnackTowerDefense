@@ -154,7 +154,9 @@ public class Mob : MonoBehaviour
         {
             for (int i = 0; i < poisonStacks.Count; i++)
             {
-                float dmg = poisonStacks[i].dps * RogueMods.DamageMult() * Time.deltaTime;
+                // Burn ticks use the stack's own dps only: damage buffs (run,
+                // auras, tar, dip) deliberately do not scale burn.
+                float dmg = poisonStacks[i].dps * Time.deltaTime;
                 if (Def.invincible)
                     DamageTaken += dmg;   // recorded for scoring; health never drops
                 else

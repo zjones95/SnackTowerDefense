@@ -1126,10 +1126,10 @@ public partial class TDGameManager : MonoBehaviour
 
         int cx = a.CellX, cy = a.CellY;
         int invested = a.InvestedCost + b.InvestedCost + cost;
-        // Carry the player's settings and lifetime stats across the rebuild.
+        // Gold Made carries over; Damage Done restarts on the new tower, and
+        // targeting only survives if the merged type is unchanged.
         TowerTargeting targeting = a.Targeting;
         int gold = a.GoldEarned + b.GoldEarned;
-        float damageDone = a.DamageDone + b.DamageDone;
         towers.Remove(map.Idx(a.CellX, a.CellY));
         towers.Remove(map.Idx(b.CellX, b.CellY));
         a.SetSelected(false);
@@ -1139,9 +1139,8 @@ public partial class TDGameManager : MonoBehaviour
         TowerType result = fuse ? TowerCatalog.RandomT7Type() : TowerCatalog.RandomType();
         Tower nt = CreateTower(cx, cy, result, a.Tier + 1);
         nt.InvestedCost = invested;
-        nt.Targeting = targeting;
+        nt.Targeting = result == a.Type ? targeting : TowerTargeting.Default;
         nt.GoldEarned = gold;
-        nt.DamageDone = damageDone;
         SetSelected(nt);
         if (TDAudio.Instance != null) TDAudio.Instance.Merge();
         message = fuse
@@ -1194,7 +1193,6 @@ public partial class TDGameManager : MonoBehaviour
         int invested = t.InvestedCost + cost;
         TowerTargeting targeting = t.Targeting;
         int gold = t.GoldEarned;
-        float damageDone = t.DamageDone;
 
         towers.Remove(map.Idx(cx, cy));
         t.SetSelected(false);
@@ -1202,9 +1200,8 @@ public partial class TDGameManager : MonoBehaviour
 
         Tower nt = CreateTower(cx, cy, type, next);   // same cell, same type, +1 tier
         nt.InvestedCost = invested;
-        nt.Targeting = targeting;
+        nt.Targeting = targeting;                     // same type, so keep it
         nt.GoldEarned = gold;
-        nt.DamageDone = damageDone;
         SetSelected(nt);
         if (TDAudio.Instance != null)
         {
@@ -1231,9 +1228,7 @@ public partial class TDGameManager : MonoBehaviour
         int tier = a.Tier;
         TowerType old = a.Type;
         int invested = a.InvestedCost + b.InvestedCost;   // b's price is the re-roll fee
-        TowerTargeting targeting = a.Targeting;
         int gold = a.GoldEarned;
-        float damageDone = a.DamageDone;
 
         towers.Remove(map.Idx(a.CellX, a.CellY));
         towers.Remove(map.Idx(b.CellX, b.CellY));
@@ -1244,9 +1239,8 @@ public partial class TDGameManager : MonoBehaviour
         TowerType result = TowerCatalog.RandomTypeExcluding(old);
         Tower nt = CreateTower(cx, cy, result, tier);   // same cell, same tier, new type
         nt.InvestedCost = invested;
-        nt.Targeting = targeting;
+        nt.Targeting = TowerTargeting.Default;          // the type changed, so reset
         nt.GoldEarned = gold;
-        nt.DamageDone = damageDone;
         SetSelected(nt);
         if (TDAudio.Instance != null) TDAudio.Instance.Merge();
         message = "Re-rolled " + TowerCatalog.Get(old).displayName + " into " + nt.DisplayName + " (Tier " + tier + ")";

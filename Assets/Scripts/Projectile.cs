@@ -152,7 +152,12 @@ public class Projectile : MonoBehaviour
             {
                 int gold = gm != null ? RogueMods.EffGold(GoldPerHit, RogueMods.IsBossWave(gm.Wave)) : GoldPerHit;
                 if (gm != null) gm.AwardMoney(gold);
-                if (Source != null) Source.GoldEarned += gold;
+                if (Source != null)
+                {
+                    Source.GoldEarned += gold;
+                    FloatingText.Spawn(Source.transform.position + Vector3.up * 1.15f,
+                        "+$" + gold, new Color(1f, .82f, .22f));
+                }
             }
         }
 

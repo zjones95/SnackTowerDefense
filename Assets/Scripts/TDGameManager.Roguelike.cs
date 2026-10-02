@@ -125,7 +125,9 @@ public partial class TDGameManager : MonoBehaviour
             if (!seen.Contains(key)) seen.Add(key);
         }
         RogueMods.MaxTier = top;
-        RogueMods.ComboBonus = 0.02f * seen.Count;
+        // Combo Meal's bonus applies only if it was actually picked; this is
+        // refreshed on every pick, so it must be gated just like Dessert.
+        RogueMods.ComboBonus = RogueMods.ComboMeal ? 0.02f * seen.Count : 0f;
     }
 
     static GUIStyle[] rogueCardStyles;
