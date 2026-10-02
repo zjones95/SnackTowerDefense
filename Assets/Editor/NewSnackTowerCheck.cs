@@ -41,6 +41,17 @@ public static class NewSnackTowerCheck
             finally { UnityEngine.Object.DestroyImmediate(model); }
         }
 
+        // Support towers now also fire: weak single shots plus the aura.
+        if (TowerCatalog.Get(TowerType.HotSauce).Stats(1).damage <= 0f ||
+            TowerCatalog.Get(TowerType.CoffeeMug).Stats(6).damage <= 0f)
+            throw new Exception("Support towers must still fire single shots");
+        if (Mathf.Abs(TowerCatalog.Get(TowerType.HotSauce).Stats(1).auraRadius - 4.375f) > .001f)
+            throw new Exception("Aura ranges were not expanded by 25%");
+        if (TowerCatalog.Get(TowerType.CookieCrumbler).Stats(3).crumbCount != 5)
+            throw new Exception("Cookie Crumbler must fire five cookie bits");
+        if (Mathf.Abs(TowerCatalog.Get(TowerType.PopTartToaster).Stats(1).splashRadius - .9f) > .001f)
+            throw new Exception("Toaster ground splash was not reduced to 60%");
+
         // Flat armour reduction must be multiplicative on armour, not damage.
         GameObject mobGo = new GameObject("SourDamageCheck");
         try
@@ -80,6 +91,82 @@ public static class NewSnackTowerCheck
         }
         finally { foreach (GameObject obj in objects) UnityEngine.Object.DestroyImmediate(obj); }
         Debug.Log("NewSnackTowerCheck OK: five models, 30 tiers, sour armour, aura stacking/radius");
+    }
+
+    /// <summary>Writes the shield/sword/lightning badges side by side for a quick
+    /// visual check that each icon is filled in.</summary>
+    public static void RenderIcons()
+    {
+        Texture2D[] icons = { TDTextures.IconArmour(), TDTextures.IconSword(), TDTextures.IconLightning() };
+        int cell = 64, pad = 10;
+        int w = icons.Length * cell + (icons.Length + 1) * pad;
+        int h = cell + 2 * pad;
+        Texture2D sheet = new Texture2D(w, h, TextureFormat.RGBA32, false);
+        Color bg = new Color(.12f, .12f, .14f, 1f);
+        for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) sheet.SetPixel(x, y, bg);
+        for (int i = 0; i < icons.Length; i++)
+        {
+            int ox = pad + i * (cell + pad), oy = pad;
+            for (int y = 0; y < cell; y++) for (int x = 0; x < cell; x++)
+            {
+                Color c = icons[i].GetPixel(x, y);
+                sheet.SetPixel(ox + x, oy + y, Color.Lerp(bg, c, c.a));
+            }
+        }
+        sheet.Apply();
+        string dir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "opencode");
+        System.IO.Directory.CreateDirectory(dir);
+        System.IO.File.WriteAllBytes(System.IO.Path.Combine(dir, "snack_buff_icons.png"), sheet.EncodeToPNG());
+        Debug.Log("NewSnackTowerCheck: wrote snack_buff_icons.png");
+    }
+
+    /// <summary>Renders the three badges with their overlaid percentage text so the
+    /// centred layout and black outline can be eyeballed.</summary>
+    public static void RenderBadges()
+    {
+        GameObject lightGO = new GameObject("PreviewLight");
+        Light l = lightGO.AddComponent<Light>();
+        l.type = LightType.Directional;
+        l.color = new Color(1f, .9f, .74f);
+        l.intensity = 1.2f;
+        l.transform.rotation = Quaternion.Euler(48f, -35f, 0f);
+        RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+        RenderSettings.ambientLight = new Color(.30f, .30f, .33f);
+
+        GameObject root = new GameObject("Badges");
+        Badge(root.transform, MobVisual.IconMaterial(TDTextures.IconSword()), "40%", new Vector3(-.7f, 0f, 0f));
+        Badge(root.transform, MobVisual.IconMaterial(TDTextures.IconLightning()), "15%", new Vector3(0f, 0f, 0f));
+        Badge(root.transform, MobVisual.IconMaterial(TDTextures.IconArmour()), "45%", new Vector3(.7f, 0f, 0f));
+
+        GameObject camGO = new GameObject("PreviewCam");
+        camGO.tag = "MainCamera";
+        Camera cam = camGO.AddComponent<Camera>();
+        cam.orthographic = true;
+        cam.orthographicSize = .7f;
+        cam.clearFlags = CameraClearFlags.SolidColor;
+        cam.backgroundColor = new Color(.10f, .10f, .12f);
+        cam.transform.position = new Vector3(0f, 0f, -5f);
+        cam.transform.LookAt(Vector3.zero);
+
+        int w = 720, h = 280;
+        RenderTexture rt = new RenderTexture(w, h, 24);
+        cam.targetTexture = rt;
+        cam.Render();
+        RenderTexture.active = rt;
+        Texture2D tex = new Texture2D(w, h, TextureFormat.RGB24, false);
+        tex.ReadPixels(new Rect(0, 0, w, h), 0, 0);
+        tex.Apply();
+        RenderTexture.active = null;
+        string dir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "opencode");
+        System.IO.Directory.CreateDirectory(dir);
+        System.IO.File.WriteAllBytes(System.IO.Path.Combine(dir, "snack_badge_preview.png"), tex.EncodeToPNG());
+        Debug.Log("NewSnackTowerCheck: wrote snack_badge_preview.png");
+    }
+
+    static void Badge(Transform parent, Material mat, string text, Vector3 pos)
+    {
+        GameObject q = TDVisuals.Quad(parent, "Icon", pos, .5f, mat);
+        OutlinedText.Build(q.transform, text, .036f, Color.white, new Vector3(0f, 0f, -.01f));
     }
 
     static Tower MakeTower(List<GameObject> objects, TowerType type, int tier, float x)

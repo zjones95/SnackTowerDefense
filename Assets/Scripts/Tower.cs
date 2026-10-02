@@ -220,7 +220,6 @@ public partial class Tower : MonoBehaviour
         }
         var mobs = TDGameManager.Instance != null ? TDGameManager.Instance.Mobs : null;
 
-        if (Type == TowerType.HotSauce || Type == TowerType.CoffeeMug) return;
         Mob target = PickTarget(mobs, EffRange(s));
 
         if (turret != null && target != null)

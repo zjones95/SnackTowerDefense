@@ -5,7 +5,9 @@ using UnityEngine;
 public partial class Tower
 {
     private Transform tierLabel;
-    private TextMesh buffLabel;
+    private Transform buffRoot;
+    private GameObject swordBadge, boltBadge;
+    private OutlinedText swordPct, boltPct;
     private float damageBuff, speedBuff;
     private int toastShot, toastStacks;
     private float lastSnackShot = -99f;
@@ -26,36 +28,55 @@ public partial class Tower
         if (gm != null) CalculateSnackBuffs(this, gm.AllTowers, out dmg, out speed);
         damageBuff = dmg;
         speedBuff = speed;
-        // The same floating billboard as the tier digit keeps the two buffs aligned.
+
         if (tierLabel == null) return;
-        if (dmg <= 0f && speed <= 0f)
+        bool showDmg = dmg > 0f, showSpd = speed > 0f;
+        if (!showDmg && !showSpd)
         {
-            if (buffLabel != null) buffLabel.gameObject.SetActive(false);
+            if (buffRoot != null) buffRoot.gameObject.SetActive(false);
             return;
         }
-        if (buffLabel == null)
+        EnsureBuffBadges();
+        if (!buffRoot.gameObject.activeSelf) buffRoot.gameObject.SetActive(true);
+
+        // Sword (damage) and lightning (attack speed) sit side by side above the
+        // tier digit; a lone badge is centred. Their percentages are overlaid.
+        float off = showDmg && showSpd ? .11f : 0f;
+        SetBuffBadge(swordBadge, swordPct, showDmg, showDmg && showSpd ? -off : 0f, dmg);
+        SetBuffBadge(boltBadge, boltPct, showSpd, showSpd && showDmg ? off : 0f, speed);
+    }
+
+    void EnsureBuffBadges()
+    {
+        if (buffRoot != null) return;
+        buffRoot = new GameObject("BuffBadges").transform;
+        buffRoot.SetParent(tierLabel, false);
+        buffRoot.localPosition = new Vector3(0f, .34f, 0f);
+        swordBadge = MakeBuffBadge("DmgBuff", TDTextures.IconSword(), out swordPct);
+        boltBadge = MakeBuffBadge("SpdBuff", TDTextures.IconLightning(), out boltPct);
+    }
+
+    GameObject MakeBuffBadge(string name, Texture2D tex, out OutlinedText pct)
+    {
+        GameObject icon = TDVisuals.Quad(buffRoot, name, Vector3.zero, .19f, MobVisual.IconMaterial(tex));
+        Renderer r = icon.GetComponent<Renderer>();
+        if (r != null)
         {
-            GameObject go = new GameObject("BuffBadges");
-            go.transform.SetParent(tierLabel, false);
-            go.transform.localPosition = new Vector3(0f, .36f, -.005f);
-            buffLabel = go.AddComponent<TextMesh>();
-            buffLabel.characterSize = .025f;
-            buffLabel.fontSize = 100;
-            buffLabel.anchor = TextAnchor.MiddleCenter;
-            buffLabel.alignment = TextAlignment.Center;
-            buffLabel.color = Color.white;
-            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            if (font != null)
-            {
-                buffLabel.font = font;
-                go.GetComponent<MeshRenderer>().sharedMaterial = font.material;
-            }
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            r.receiveShadows = false;
         }
-        if (!buffLabel.gameObject.activeSelf) buffLabel.gameObject.SetActive(true);
-        string label = (dmg > 0f ? "\u25c6 +" + Mathf.RoundToInt(dmg * 100f) + "% DMG" : "") +
-            (dmg > 0f && speed > 0f ? "\n" : "") +
-            (speed > 0f ? "\u2615 +" + Mathf.RoundToInt(speed * 100f) + "% SPD" : "");
-        if (buffLabel.text != label) buffLabel.text = label;
+        pct = OutlinedText.Build(icon.transform, "0%", .014f, Color.white, new Vector3(0f, 0f, -.012f));
+        return icon;
+    }
+
+    static void SetBuffBadge(GameObject badge, OutlinedText pct, bool show, float x, float value)
+    {
+        if (badge == null) return;
+        if (badge.activeSelf != show) badge.SetActive(show);
+        if (!show) return;
+        badge.transform.localPosition = new Vector3(x, 0f, 0f);
+        string text = Mathf.RoundToInt(value * 100f) + "%";
+        if (pct != null) pct.Text = text;
     }
 
     public static void CalculateSnackBuffs(Tower receiver, IEnumerable<Tower> towers, out float damage, out float speed)
@@ -102,7 +123,7 @@ public partial class Tower
                 crumbActiveTime += Time.time - lastSnackShot;
                 crumbRamp = Mathf.Min(8, Mathf.FloorToInt(crumbActiveTime));
             }
-            FireCrumbFan(target, s);
+            SpawnCrumbFan(target, s);
             cooldown = s.fireInterval / rate;
         }
         else
@@ -136,40 +157,39 @@ public partial class Tower
         p.Tint = TowerCatalog.Get(Type).color;
     }
 
-    void FireCrumbFan(Mob target, TowerTierStats s)
+    void SpawnCrumbFan(Mob target, TowerTierStats s)
     {
         Vector3 forward = target.transform.position - transform.position;
         forward.y = 0f;
         if (forward.sqrMagnitude < .001f) forward = transform.forward;
         forward.Normalize();
+
+        // Every bit leaves from the same packed point, then the volley fans out
+        // into a cone as the pieces fly.
         int count = s.crumbCount + (Tier >= 6 ? crumbRamp : 0);
-        var mobs = TDGameManager.Instance != null ? TDGameManager.Instance.Mobs : null;
         Vector3 from = Muzzle();
+        Transform root = TDGameManager.Instance != null ? TDGameManager.Instance.ProjectilesRoot : null;
         for (int i = 0; i < count; i++)
         {
             float angle = count == 1 ? 0f : (i / (float)(count - 1) - .5f) * s.crumbCone;
+            angle += Random.Range(-3f, 3f);
             Vector3 dir = Quaternion.Euler(0f, angle, 0f) * forward;
-            Mob hit = null;
-            float nearest = s.range;
-            if (mobs != null) foreach (Mob m in mobs)
-            {
-                if (m == null) continue;
-                Vector3 offset = m.transform.position - transform.position;
-                offset.y = 0f;
-                float along = Vector3.Dot(offset, dir);
-                if (along < 0f || along > nearest) continue;
-                if ((offset - dir * along).sqrMagnitude > .32f * .32f) continue;
-                nearest = along; hit = m;
-            }
-            if (hit != null)
-            {
-                hit.TakeDamageFromTower(s.damage, this);
-                AddDamage(s.damage);
-            }
-            // A sparse visible sample communicates the full cone without creating
-            // dozens of GameObjects every .23 seconds.
-            if (i % 3 == 0) Tracer(from, from + dir * Mathf.Min(nearest, s.range),
-                new Color(.54f, .29f, .11f), new Color(.92f, .69f, .33f));
+
+            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            Collider collider = go.GetComponent<Collider>();
+            if (collider != null) Destroy(collider);
+            go.name = "CookieBit";
+            go.transform.position = from;
+            go.transform.localScale = Vector3.one * .13f;
+            go.GetComponent<Renderer>().sharedMaterial = TDVisuals.Mat(new Color(.62f, .38f, .18f), 0f, .35f);
+            if (root != null) go.transform.SetParent(root, true);
+
+            CrumbProjectile c = go.AddComponent<CrumbProjectile>();
+            c.Direction = dir;
+            c.Speed = 13f;
+            c.Range = s.range;
+            c.Damage = s.damage;
+            c.Source = this;
         }
     }
 }

@@ -272,6 +272,74 @@ public class BillboardLabel : MonoBehaviour
     }
 }
 
+/// <summary>A TextMesh with a thin black outline, built from offset copies behind
+/// the front glyphs (the same trick the tier digit uses). Setting <see cref="Text"/>
+/// updates every copy at once.</summary>
+public class OutlinedText : MonoBehaviour
+{
+    private TextMesh[] copies;
+    private string value;
+
+    public string Text
+    {
+        get { return value; }
+        set
+        {
+            if (value == this.value) return;
+            this.value = value;
+            if (copies != null)
+                for (int i = 0; i < copies.Length; i++) copies[i].text = value;
+        }
+    }
+
+    public static OutlinedText Build(Transform parent, string text, float charSize,
+                                     Color colour, Vector3 localPos, float outline = .0018f)
+    {
+        GameObject root = new GameObject("OutlinedText");
+        root.transform.SetParent(parent, false);
+        root.transform.localPosition = localPos;
+        OutlinedText ot = root.AddComponent<OutlinedText>();
+
+        Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        if (font == null) font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        Color black = new Color(.02f, .02f, .02f, 1f);
+
+        var list = new List<TextMesh>();
+        for (int i = 0; i < 8; i++)
+        {
+            float a = i / 8f * Mathf.PI * 2f;
+            list.Add(AddCopy(root.transform, text,
+                new Vector3(Mathf.Cos(a) * outline, Mathf.Sin(a) * outline, .004f), black, charSize, font, 0));
+        }
+        list.Add(AddCopy(root.transform, text, Vector3.zero, colour, charSize, font, 1));
+        ot.copies = list.ToArray();
+        ot.value = text;
+        return ot;
+    }
+
+    static TextMesh AddCopy(Transform parent, string text, Vector3 offset, Color colour,
+                            float charSize, Font font, int order)
+    {
+        GameObject go = new GameObject("Glyph");
+        go.transform.SetParent(parent, false);
+        go.transform.localPosition = offset;
+        TextMesh tm = go.AddComponent<TextMesh>();
+        tm.text = text;
+        tm.characterSize = charSize;
+        tm.fontSize = 100;
+        tm.anchor = TextAnchor.MiddleCenter;
+        tm.alignment = TextAlignment.Center;
+        tm.color = colour;
+        if (font != null)
+        {
+            tm.font = font;
+            MeshRenderer mr = go.GetComponent<MeshRenderer>();
+            if (mr != null) { mr.sharedMaterial = font.material; mr.sortingOrder = order; }
+        }
+        return tm;
+    }
+}
+
 /// <summary>Builds a mob's visual (model + health bar) without movement/AI.</summary>
 public static class MobVisual
 {
@@ -413,20 +481,9 @@ public static class MobVisual
             if (dmr != null) dmr.sharedMaterial = font.material;
         }
 
-        GameObject armourLabelGO = new GameObject("ArmourPct");
-        armourLabelGO.transform.SetParent(hp, false);
-        armourLabelGO.transform.localPosition = new Vector3(armourX - .17f, .25f, .005f);
-        armourLabelGO.AddComponent<BillboardLabel>();
-        TextMesh armourTm = armourLabelGO.AddComponent<TextMesh>();
-        armourTm.text = "-0% ARM";
-        armourTm.characterSize = .025f; armourTm.fontSize = 90;
-        armourTm.anchor = TextAnchor.LowerLeft; armourTm.alignment = TextAlignment.Left;
-        armourTm.color = Color.white;
-        if (font != null)
-        {
-            armourTm.font = font;
-            armourLabelGO.GetComponent<MeshRenderer>().sharedMaterial = font.material;
-        }
+        // Percentage centred directly on top of the shield icon.
+        OutlinedText armourTm = OutlinedText.Build(hp, "0%", .019f, Color.white,
+            new Vector3(armourX, 0.10f, -.012f));
 
         MobStatusIcons icons = hp.gameObject.AddComponent<MobStatusIcons>();
         icons.Burn = burn.transform;
@@ -443,7 +500,7 @@ public static class MobVisual
 
     /// <summary>Build-safe alpha material for a status icon (same Resources shader
     /// SplashFX uses, so the transparent variant can't be stripped from a build).</summary>
-    static Material IconMaterial(Texture2D tex)
+    public static Material IconMaterial(Texture2D tex)
     {
         if (iconShader == null) iconShader = Resources.Load<Shader>("Snack/Fx");
         if (iconShader == null) iconShader = Shader.Find("Snack/Fx");
@@ -497,7 +554,7 @@ public class MobStatusIcons : MonoBehaviour
     public Transform Armour;
     public TextMesh Stacks;
     public TextMesh DipPct;
-    public TextMesh ArmourPct;
+    public OutlinedText ArmourPct;
 
     public static MobStatusIcons Get(Transform barRoot)
     {
@@ -516,10 +573,7 @@ public class MobStatusIcons : MonoBehaviour
         Toggle(Armour, armourReduction > 0f);
         Toggle(ArmourPct != null ? ArmourPct.transform : null, armourReduction > 0f);
         if (ArmourPct != null && armourReduction > 0f)
-        {
-            string text = "-" + Mathf.RoundToInt(armourReduction * 100f) + "% ARM";
-            if (ArmourPct.text != text) ArmourPct.text = text;
-        }
+            ArmourPct.Text = Mathf.RoundToInt(armourReduction * 100f) + "%";
 
         if (Stacks == null) return;
         bool show = burning && stacks > 0;

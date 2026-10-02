@@ -1566,7 +1566,8 @@ public partial class TDGameManager : MonoBehaviour
             if (Selected.Type == TowerType.Gold)
                 info += "Gold +" + s.goldPerHit + " per hit    Rate " + s.fireInterval.ToString("0.00") + "s";
             else if (s.auraRadius > 0f)
-                info += "+" + Mathf.RoundToInt(s.auraBonus * 100f) + "% " +
+                info += "Damage " + s.damage + "    Rate " + s.fireInterval.ToString("0.00") + "s\n" +
+                    "+" + Mathf.RoundToInt(s.auraBonus * 100f) + "% " +
                     (Selected.Type == TowerType.HotSauce ? "damage" : "attack speed") +
                     " aura    Radius " + s.auraRadius.ToString("0.#");
             else if (Selected.Type == TowerType.SourFizz)
@@ -1918,8 +1919,11 @@ public partial class TDGameManager : MonoBehaviour
         if (sourPct > 0f)
         {
             GUI.DrawTexture(new Rect(x, top, size, size), TDTextures.IconArmour(), ScaleMode.ScaleToFit, true);
-            GUI.Label(new Rect(x - 10f, top + size - 5f, size + 44f, 18f), "-" + Mathf.RoundToInt(sourPct * 100f) + "% ARM",
-                Style(13, TextAnchor.MiddleLeft, Color.white));
+            string pct = Mathf.RoundToInt(sourPct * 100f) + "%";
+            Rect tr = new Rect(x, top, size, size);
+            GUI.Label(new Rect(tr.x + 1f, tr.y + 1f, tr.width, tr.height), pct,
+                Style(12, TextAnchor.MiddleCenter, new Color(0f, 0f, 0f, .85f)));
+            GUI.Label(tr, pct, Style(12, TextAnchor.MiddleCenter, Color.white));
         }
     }
 

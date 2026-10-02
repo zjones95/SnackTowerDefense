@@ -1312,7 +1312,7 @@ public static class TDTextures
     }
 
     // ------------------------------------------------------ mob status icons
-    static Texture2D iconBurn, iconSlow, iconTar, iconStun, iconDip, iconArmour;
+    static Texture2D iconBurn, iconSlow, iconTar, iconStun, iconDip, iconArmour, iconSword, iconLightning;
 
     /// <summary>Shield badge for Sour Fizz's flat-armour reduction.</summary>
     public static Texture2D IconArmour()
@@ -1331,6 +1331,92 @@ public static class TDTextures
                 new Color(.25f, .52f, .85f, 1f)) : Color.clear);
         }
         t.Apply(); iconArmour = t; return t;
+    }
+
+    /// <summary>Steel sword, filled in, for the Hot Sauce damage-buff badge.</summary>
+    public static Texture2D IconSword()
+    {
+        if (iconSword != null) return iconSword;
+        int S = 64;
+        Texture2D t = New(S);
+        t.wrapMode = TextureWrapMode.Clamp;
+        Color steel = new Color(.86f, .90f, .96f);
+        Color steelEdge = new Color(.44f, .52f, .64f);
+        Color gold = new Color(1f, .80f, .24f);
+        Color goldEdge = new Color(.66f, .43f, .05f);
+        Color grip = new Color(.44f, .26f, .12f);
+        Color gripEdge = new Color(.22f, .11f, .05f);
+
+        for (int y = 0; y < S; y++) for (int x = 0; x < S; x++)
+        {
+            float u = (x + .5f) / S * 2f - 1f;
+            float v = (y + .5f) / S * 2f - 1f;
+
+            float bladeHW = v > .55f ? .15f * Mathf.Clamp01((.80f - v) / .25f) : .15f;
+            float blade = Mathf.Min(bladeHW - Mathf.Abs(u), v + .06f, .80f - v);
+            float guard = Mathf.Min(.46f - Mathf.Abs(u), v + .16f, -.03f - v);
+            float gripS = Mathf.Min(.075f - Mathf.Abs(u), v + .62f, -.14f - v);
+            float pommel = .12f - Mathf.Sqrt(u * u + (v + .70f) * (v + .70f));
+            float d = Mathf.Max(Mathf.Max(blade, guard), Mathf.Max(gripS, pommel));
+            float cov = Mathf.Clamp01(d * S * .5f + .5f);
+            if (cov <= .001f) { t.SetPixel(x, y, Color.clear); continue; }
+
+            Color c;
+            if (blade >= guard && blade >= gripS && blade >= pommel)
+                c = Color.Lerp(steelEdge, steel, Mathf.Clamp01(blade / .06f));
+            else if (gripS > blade && gripS >= guard && gripS >= pommel)
+                c = Color.Lerp(gripEdge, grip, Mathf.Clamp01(gripS / .12f));
+            else
+                c = Color.Lerp(goldEdge, gold, Mathf.Clamp01(d / .15f));
+            c.a = cov;
+            t.SetPixel(x, y, c);
+        }
+        t.Apply(); iconSword = t; return t;
+    }
+
+    /// <summary>Yellow lightning bolt, filled in, for the Coffee Mug speed badge.</summary>
+    public static Texture2D IconLightning()
+    {
+        if (iconLightning != null) return iconLightning;
+        int S = 64;
+        Texture2D t = New(S);
+        t.wrapMode = TextureWrapMode.Clamp;
+        float[] bx = { .14f, -.34f, .00f, -.30f, .34f, .00f, .50f };
+        float[] by = { 1.00f, .06f, .06f, -1.00f, -.06f, -.06f, 1.00f };
+        Color body = new Color(1f, .84f, .14f);
+        Color rim = new Color(.96f, .55f, .04f);
+
+        for (int y = 0; y < S; y++) for (int x = 0; x < S; x++)
+        {
+            float u = (x + .5f) / S * 2f - 1f;
+            float v = (y + .5f) / S * 2f - 1f;
+            int hits = 0;
+            for (int sy = 0; sy < 3; sy++) for (int sx = 0; sx < 3; sx++)
+            {
+                float su = u + (sx - 1) * (2f / S) / 3f;
+                float sv = v + (sy - 1) * (2f / S) / 3f;
+                if (InPoly(bx, by, su, sv)) hits++;
+            }
+            if (hits == 0) { t.SetPixel(x, y, Color.clear); continue; }
+            float cov = hits / 9f;
+            Color c = Color.Lerp(rim, body, Mathf.Clamp01(cov / .8f));
+            c.a = cov;
+            t.SetPixel(x, y, c);
+        }
+        t.Apply(); iconLightning = t; return t;
+    }
+
+    /// <summary>Even-odd point-in-polygon test for procedural icon shapes.</summary>
+    static bool InPoly(float[] xs, float[] ys, float px, float py)
+    {
+        bool inside = false;
+        for (int i = 0, j = xs.Length - 1; i < xs.Length; j = i++)
+        {
+            if (((ys[i] > py) != (ys[j] > py)) &&
+                (px < (xs[j] - xs[i]) * (py - ys[i]) / (ys[j] - ys[i]) + xs[i]))
+                inside = !inside;
+        }
+        return inside;
     }
 
     /// <summary>Orange burn flame on a transparent background — the

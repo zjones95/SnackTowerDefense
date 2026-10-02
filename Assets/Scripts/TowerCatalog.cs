@@ -371,23 +371,34 @@ public static class TowerCatalog
         d.tiers.Add(new TowerTierStats { damage = 140, range = 10f, fireInterval = 2.0f, projectileSpeed = 18f, splashRadius = 2.5f, zoneDps = 240f, zoneDuration = 5f });
         defs[d.type] = d;
 
+        // Support towers still fire single shots, but only ~65% as hard as the
+        // Popcorn Bucket: the aura is what you build them for.
+        float[] supportDmg = { 2.5f, 5f, 10f, 13f, 20f, 21f };
+        float[] supportRange = { 3.8f, 4.7f, 5.5f, 6.4f, 7.2f, 8.1f };
+        float[] supportRate = { .40f, .325f, .25f, .22f, .20f, .20f };
+        float[] supportSpeed = { 20f, 22f, 24f, 25f, 26f, 27f };
+
         d = new TowerDef();
         d.type = TowerType.HotSauce; d.displayName = "Hot Sauce Bottle"; d.color = new Color(0.98f, 0.27f, 0.10f);
         float[] hotBonus = { .08f, .12f, .16f, .20f, .28f, .32f };
-        for (int i = 0; i < 6; i++) d.tiers.Add(new TowerTierStats { auraBonus = hotBonus[i], auraRadius = 3.5f + .5f * i });
+        for (int i = 0; i < 6; i++) d.tiers.Add(new TowerTierStats {
+            damage = supportDmg[i], range = supportRange[i], fireInterval = supportRate[i], projectileSpeed = supportSpeed[i],
+            auraBonus = hotBonus[i], auraRadius = (3.5f + .5f * i) * 1.25f });
         defs[d.type] = d;
 
         d = new TowerDef();
         d.type = TowerType.CoffeeMug; d.displayName = "Coffee Mug"; d.color = new Color(0.63f, 0.37f, 0.19f);
         float[] coffeeBonus = { .05f, .07f, .09f, .11f, .15f, .18f };
-        for (int i = 0; i < 6; i++) d.tiers.Add(new TowerTierStats { auraBonus = coffeeBonus[i], auraRadius = 3.5f + .5f * i });
+        for (int i = 0; i < 6; i++) d.tiers.Add(new TowerTierStats {
+            damage = supportDmg[i], range = supportRange[i], fireInterval = supportRate[i], projectileSpeed = supportSpeed[i],
+            auraBonus = coffeeBonus[i], auraRadius = (3.5f + .5f * i) * 1.25f });
         defs[d.type] = d;
 
         d = new TowerDef();
         d.type = TowerType.PopTartToaster; d.displayName = "Pop-Tart Toaster"; d.color = new Color(0.95f, 0.70f, 0.66f);
         int[] small = { 4, 6, 9, 12, 16, 20 };
         int[] large = { 12, 18, 27, 36, 48, 60 };
-        float[] radius = { 1.5f, 1.7f, 1.9f, 2.2f, 2.4f, 2.6f };
+        float[] radius = { .9f, 1.02f, 1.14f, 1.32f, 1.44f, 1.56f };   // ground splash at 60% of the old size
         float[] cycle = { 1.6f, 1.45f, 1.32f, 1.2f, 1.1f, 1.0f };
         for (int i = 0; i < 6; i++) d.tiers.Add(new TowerTierStats {
             damage = large[i], toastSmallDamage = small[i], splashRadius = radius[i],
@@ -398,7 +409,7 @@ public static class TowerCatalog
 
         d = new TowerDef();
         d.type = TowerType.CookieCrumbler; d.displayName = "Cookie Crumbler"; d.color = new Color(0.75f, 0.48f, 0.20f);
-        int[] crumbs = { 6, 7, 8, 9, 10, 11 };
+        int[] crumbs = { 5, 5, 5, 5, 5, 5 };   // five cookie bits per shot (T6 adds more while firing)
         int[] crumbDmg = { 3, 4, 6, 9, 12, 15 };
         float[] crumbRate = { .35f, .32f, .29f, .27f, .25f, .23f };
         float[] crumbReach = { 2.5f, 2.65f, 2.8f, 3f, 3.1f, 3.2f };
