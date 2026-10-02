@@ -1168,7 +1168,7 @@ public static class TDTextures
     }
 
     // ---------------------------------------------------------- shared UI
-    static Texture2D button, buttonHover, buttonPressed, panel, field, card, cardHover, menuFade;
+    static Texture2D button, buttonHover, buttonPressed, panel, field, menuFade;
 
     public static Texture2D Button() { return button != null ? button : (button = BuildButton(0)); }
     public static Texture2D ButtonHover() { return buttonHover != null ? buttonHover : (buttonHover = BuildButton(1)); }
@@ -1178,15 +1178,36 @@ public static class TDTextures
     public static Texture2D Field() { return field != null ? field :
         (field = Rounded(new Color(0.08f, 0.09f, 0.10f), new Color(0.08f, 0.09f, 0.10f))); }
 
-    /// <summary>Dark upgrade card with a light border (hover lifts both).</summary>
-    public static Texture2D Card() { return card != null ? card : (card = BuildCard(false)); }
-    public static Texture2D CardHover() { return cardHover != null ? cardHover : (cardHover = BuildCard(true)); }
+    /// <summary>Dark upgrade card with a rarity-colored border (hover lifts both).
+    /// Tier index: 0 common (brown), 1 rare (blue), 2 epic (purple).</summary>
+    public static Texture2D Card() { return CardFor(0, false); }
+    public static Texture2D CardHover() { return CardHoverFor(0); }
+    public static Texture2D CardFor(int tier, bool hover)
+    {
+        int t = Mathf.Clamp(tier, 0, 2);
+        if (hover)
+        {
+            if (cardHovers == null) cardHovers = new Texture2D[3];
+            return cardHovers[t] != null ? cardHovers[t] : (cardHovers[t] = BuildCard(t, true));
+        }
+        if (cards == null) cards = new Texture2D[3];
+        return cards[t] != null ? cards[t] : (cards[t] = BuildCard(t, false));
+    }
+    public static Texture2D CardHoverFor(int tier) { return CardFor(tier, true); }
 
-    static Texture2D BuildCard(bool hover)
+    static Texture2D[] cards, cardHovers;
+
+    static Texture2D BuildCard(int tier, bool hover)
     {
         const int size = 64, radius = 6, edge = 3;
         Color fill = hover ? new Color(0.16f, 0.17f, 0.21f, 0.98f) : new Color(0.10f, 0.11f, 0.14f, 0.97f);
-        Color trim = hover ? new Color(1.00f, 0.92f, 0.70f) : new Color(0.82f, 0.76f, 0.60f);
+        Color trim;
+        switch (tier)
+        {
+            case 1: trim = hover ? new Color(0.45f, 0.65f, 1.00f) : new Color(0.35f, 0.55f, 1.00f); break;  // rare blue
+            case 2: trim = hover ? new Color(0.80f, 0.50f, 1.00f) : new Color(0.70f, 0.40f, 0.95f); break;  // epic purple
+            default: trim = hover ? new Color(0.75f, 0.53f, 0.30f) : new Color(0.65f, 0.45f, 0.25f); break;  // common brown
+        }
         Texture2D t = new Texture2D(size, size, TextureFormat.RGBA32, false);
         t.wrapMode = TextureWrapMode.Clamp;
         t.filterMode = FilterMode.Bilinear;

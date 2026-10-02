@@ -63,9 +63,9 @@ public static class RogueUpgrades
     {
         switch (t)
         {
-            case RogueTier.Rare: return new Color(0.55f, 0.55f, 1f);    // blue-violet
-            case RogueTier.Epic: return new Color(1f, 0.85f, 0.35f);    // gold
-            default: return new Color(0.62f, 0.68f, 0.76f);              // grey-blue
+            case RogueTier.Rare: return new Color(0.45f, 0.65f, 1.00f);   // rare blue
+            case RogueTier.Epic: return new Color(0.78f, 0.50f, 1.00f);   // epic purple
+            default: return new Color(0.78f, 0.62f, 0.38f);                // common brown
         }
     }
 }

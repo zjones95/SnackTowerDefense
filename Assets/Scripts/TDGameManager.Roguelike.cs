@@ -128,21 +128,24 @@ public partial class TDGameManager : MonoBehaviour
         RogueMods.ComboMult = 1f + 0.02f * seen.Count;
     }
 
-    static GUIStyle rogueCardStyle;
+    static GUIStyle[] rogueCardStyles;
 
-    static GUIStyle RogueCard()
+    static GUIStyle RogueCard(RogueTier tier)
     {
-        if (rogueCardStyle == null)
+        int t = Mathf.Clamp((int)tier, 0, 2);
+        if (rogueCardStyles == null) rogueCardStyles = new GUIStyle[3];
+        if (rogueCardStyles[t] == null)
         {
-            rogueCardStyle = new GUIStyle(GUI.skin.button);
-            rogueCardStyle.border = new RectOffset(6, 6, 6, 6);
-            rogueCardStyle.padding = new RectOffset(0, 0, 0, 0);
-            rogueCardStyle.normal.background = TDTextures.Card();
-            rogueCardStyle.hover.background = TDTextures.CardHover();
-            rogueCardStyle.active.background = TDTextures.CardHover();
-            rogueCardStyle.focused.background = TDTextures.Card();
+            GUIStyle s = new GUIStyle(GUI.skin.button);
+            s.border = new RectOffset(6, 6, 6, 6);
+            s.padding = new RectOffset(0, 0, 0, 0);
+            s.normal.background = TDTextures.CardFor(t, false);
+            s.hover.background = TDTextures.CardFor(t, true);
+            s.active.background = TDTextures.CardFor(t, true);
+            s.focused.background = TDTextures.CardFor(t, false);
+            rogueCardStyles[t] = s;
         }
-        return rogueCardStyle;
+        return rogueCardStyles[t];
     }
 
     void DrawRogueModal()
@@ -174,10 +177,11 @@ public partial class TDGameManager : MonoBehaviour
                 Style(12, TextAnchor.MiddleCenter, new Color(0.55f, 0.9f, 0.6f)));
         }
 
-        GUIStyle card = RogueCard();
+        GUIStyle card = null;
         for (int i = 0; i < rogueOffered.Count; i++)
         {
             RogueDef def = rogueOffered[i];
+            card = RogueCard(def.tier);
             float cx = x0 + i * (cw + gap);
             float cy = y0 + topH;
             if (GUI.Button(new Rect(cx, cy, cw, ch), GUIContent.none, card))
