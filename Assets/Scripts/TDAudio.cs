@@ -110,11 +110,8 @@ public class TDAudio : MonoBehaviour
         music.Play();
     }
 
-    void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.M)) ToggleMusic();
-    }
-
+    /// <summary>Flipped by the game manager's M hotkey (handled there so it still
+    /// works after death/spectating, where this component can be disabled).</summary>
     public void ToggleMusic()
     {
         MusicOn = !MusicOn;

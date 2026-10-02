@@ -159,7 +159,30 @@ public static class TowerCatalog
         TowerType.CookieCrumbler, TowerType.SourFizz
     };
 
-    public static TowerType RandomType() { return RandomTypes[Random.Range(0, RandomTypes.Length)]; }
+    // A shuffled draw bag so a run cycles through every type before repeating.
+    // Plain Random.Range could hand out the same type several times in a row,
+    // which read as "rigged" on merge results.
+    private static readonly List<TowerType> randomBag = new List<TowerType>();
+
+    /// <summary>Starts a fresh draw cycle (called when a run begins).</summary>
+    public static void ResetRandomBag() { randomBag.Clear(); }
+
+    public static TowerType RandomType()
+    {
+        if (randomBag.Count == 0)
+        {
+            randomBag.AddRange(RandomTypes);
+            for (int i = randomBag.Count - 1; i > 0; i--)
+            {
+                int j = Random.Range(0, i + 1);
+                TowerType tmp = randomBag[i]; randomBag[i] = randomBag[j]; randomBag[j] = tmp;
+            }
+        }
+        int last = randomBag.Count - 1;
+        TowerType t = randomBag[last];
+        randomBag.RemoveAt(last);
+        return t;
+    }
 
     /// <summary>The Tier 7 fusion results. A T6+T6 merge picks one of these at random.</summary>
     public static readonly TowerType[] T7Types =

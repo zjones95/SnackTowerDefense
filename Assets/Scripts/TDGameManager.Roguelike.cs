@@ -90,7 +90,7 @@ public partial class TDGameManager : MonoBehaviour
             case "sugar": RogueMods.Rate *= 1.10f; break;
             case "straws": RogueMods.Range *= 1.12f; break;
             case "salt": RogueMods.SlowStrength *= 1.15f; break;
-            case "sweet": Money += 200; break;
+            case "sweet": Money += 100; break;
             case "merger": RogueMods.MergeMult = 0.5f; break;
             case "allow": RogueMods.Wage += 40; break;
             case "overclock": RogueMods.Rate *= 1.25f; RogueMods.Range *= 0.9f; break;

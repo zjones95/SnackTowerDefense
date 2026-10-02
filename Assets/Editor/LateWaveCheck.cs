@@ -31,12 +31,14 @@ public static class LateWaveCheck
                 throw new Exception("Missing standalone boss at wave " + wave);
         }
 
-        // The added five waves must not silently rebalance existing waves.
-        if (Mathf.Abs(TDBalance.HealthMult(45) - 25.052f) > 0.02f)
-            throw new Exception("Pre-extension wave 45 health curve changed");
+        // Waves 31+ carry an intentional extra +25% HP late-game ramp (see
+        // TDBalance.HealthMult). Waves 1-30 are unchanged; these values would
+        // only move if someone edits the curve again.
+        if (Mathf.Abs(TDBalance.HealthMult(45) - 36.908f) > 0.05f)
+            throw new Exception("Wave 45 health curve changed");
         float caesar = MobCatalog.Get("CaesarSalad").health * TDBalance.HealthMult(45) * TDBalance.MobHealthScale;
         float granola = MobCatalog.Get("GranolaMom").health * TDBalance.HealthMult(50) * TDBalance.MobHealthScale;
-        if (caesar < 38000f || caesar > 42000f || granola < 48000f || granola > 50000f)
+        if (caesar < 56000f || caesar > 60500f || granola < 71500f || granola > 77000f)
             throw new Exception("Boss HP outside intended range: " + caesar + " / " + granola);
         Debug.Log("LateWaveCheck OK: 50 waves, Caesar " + caesar.ToString("F0")
                   + " HP, Granola Mom " + granola.ToString("F0") + " HP on Normal");

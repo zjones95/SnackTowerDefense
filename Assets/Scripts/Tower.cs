@@ -19,26 +19,27 @@ public partial class Tower : MonoBehaviour
     private bool isSelected;
     private Transform rangeRing;
 
-    static readonly Dictionary<TowerType, Material> ringMats = new Dictionary<TowerType, Material>();
+    static Material ringMat;
 
-    /// <summary>Faint range disc material tinted with the tower colour (build-safe Fx shader).</summary>
-    static Material RingMat(TowerType t)
+    /// <summary>Opaque dark-grey range outline, shared by every tower so the ring
+    /// reads the same regardless of type. The Fx shader is alpha-blended, so a
+    /// white texture with alpha 1 on the stroke and 0 inside gives a crisp ring.</summary>
+    static Material RingMat()
     {
-        Material m;
-        if (ringMats.TryGetValue(t, out m) && m != null) return m;
+        if (ringMat != null) return ringMat;
+        Color grey = new Color(0.17f, 0.17f, 0.19f);
         Shader fx = Shader.Find("Snack/Fx");
         if (fx != null)
         {
-            m = new Material(fx);
-            m.mainTexture = TDTextures.RangeDisc();
-            if (m.HasProperty("_Color")) m.SetColor("_Color", TowerCatalog.Get(t).color);
+            ringMat = new Material(fx);
+            ringMat.mainTexture = TDTextures.RangeDisc();
+            if (ringMat.HasProperty("_Color")) ringMat.SetColor("_Color", new Color(grey.r, grey.g, grey.b, 1f));
         }
         else
         {
-            m = TDVisuals.TransparentMat(TowerCatalog.Get(t).color, 0.10f, 0.4f);
+            ringMat = TDVisuals.TransparentMat(grey, 0.75f, 0.4f);
         }
-        ringMats[t] = m;
-        return m;
+        return ringMat;
     }
 
     // Random targeting keeps one choice so the turret doesn't jitter; it is
@@ -112,7 +113,7 @@ public partial class Tower : MonoBehaviour
         ring.transform.SetParent(transform, false);
         ring.transform.localPosition = new Vector3(0f, 0.06f, 0f);
         ring.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f);
-        ring.GetComponent<Renderer>().sharedMaterial = RingMat(Type);
+        ring.GetComponent<Renderer>().sharedMaterial = RingMat();
         Renderer rr = ring.GetComponent<Renderer>();
         if (rr != null)
         {

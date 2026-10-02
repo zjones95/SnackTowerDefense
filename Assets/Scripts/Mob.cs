@@ -404,8 +404,9 @@ public class Mob : MonoBehaviour
         if (Def != null && Def.invincible) return;   // an invincible dummy can never die
 
         // Poison T6 "Ghost Pepper": a poisoned mob detonates on death, dealing a
-        // fraction of its current poison DPS in a radius and re-applying poison
-        // (which can chain into further detonations).
+        // fraction of its current poison DPS in a radius. It deliberately does
+        // NOT re-apply burn: doing so let one detonation seed the next and wiped
+        // whole boards in a single cascade.
         if (poisonDetonateRadius > 0f && poisonDetonateFraction > 0f && poisonStacks.Count > 0)
             PoisonDetonate();
 
@@ -448,8 +449,6 @@ public class Mob : MonoBehaviour
         {
             Mob m = caught[i];
             if (m == null) continue;
-            m.ApplyPoison(dps, poisonSourceDuration, poisonSourceMaxStacks, poisonSource,
-                          poisonDetonateRadius, poisonDetonateFraction);
             m.TakeDamageFromTower(dmg, poisonSource);
             if (poisonSource != null) poisonSource.AddDamage(dmg);
         }

@@ -41,6 +41,15 @@ public static class NewSnackTowerCheck
             finally { UnityEngine.Object.DestroyImmediate(model); }
         }
 
+        // The random draw bag must hand out every type once before repeating, so
+        // merges can't drop the same tower several times in a row.
+        TowerCatalog.ResetRandomBag();
+        var drawn = new HashSet<TowerType>();
+        for (int i = 0; i < TowerCatalog.RandomTypes.Length; i++) drawn.Add(TowerCatalog.RandomType());
+        TowerCatalog.ResetRandomBag();
+        if (drawn.Count != TowerCatalog.RandomTypes.Length)
+            throw new Exception("Random draw bag repeated a type within one full cycle");
+
         // Support towers now also fire: weak single shots plus the aura.
         if (TowerCatalog.Get(TowerType.HotSauce).Stats(1).damage <= 0f ||
             TowerCatalog.Get(TowerType.CoffeeMug).Stats(6).damage <= 0f ||
@@ -94,6 +103,18 @@ public static class NewSnackTowerCheck
         Debug.Log("NewSnackTowerCheck OK: five models, 30 tiers, sour armour, aura stacking/radius");
     }
 
+    /// <summary>Logs the mob-health curve so LateWaveCheck's expected values can
+    /// be re-derived after a deliberate rebalance.</summary>
+    public static void DumpCurve()
+    {
+        for (int w = 25; w <= 50; w += 5)
+            Debug.Log("HealthMult(" + w + ") = " + TDBalance.HealthMult(w).ToString("F4"));
+        MobDef caesar = MobCatalog.Get("CaesarSalad");
+        MobDef granola = MobCatalog.Get("GranolaMom");
+        Debug.Log("CaesarSalad@45 HP = " + (caesar.health * TDBalance.HealthMult(45) * TDBalance.MobHealthScale).ToString("F1"));
+        Debug.Log("GranolaMom@50 HP = " + (granola.health * TDBalance.HealthMult(50) * TDBalance.MobHealthScale).ToString("F1"));
+    }
+
     /// <summary>Renders the five new towers at tiers 1/3/6 through the real
     /// TowerVisual path so bases and centring can be checked after a model change.</summary>
     public static void RenderNewTowers()
@@ -123,7 +144,14 @@ public static class NewSnackTowerCheck
             {
                 GameObject go = new GameObject("T_" + types[i] + "_" + tiers[j]);
                 go.transform.position = new Vector3(-6f + i * 3f, 0f, 2.6f - j * 2.8f);
-                go.AddComponent<Tower>().Setup(types[i], tiers[j], 0, 0);
+                Tower t = go.AddComponent<Tower>();
+                t.Setup(types[i], tiers[j], 0, 0);
+                if (j == 1)   // show the range ring at T3 (Update sizes it at runtime)
+                {
+                    t.SetSelected(true);
+                    Transform ring = go.transform.Find("RangeRing");
+                    if (ring != null) ring.localScale = new Vector3(11f, 11f, 1f);
+                }
             }
         }
 

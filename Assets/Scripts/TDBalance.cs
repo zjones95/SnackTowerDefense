@@ -115,7 +115,10 @@ public static class TDBalance
                 : Mathf.Lerp(1.08f, 1.055f, Mathf.Clamp01((i - 9) / 34f));
             log += Mathf.Log(g);
         }
-        return Mathf.Exp(log);
+        // Late-run pressure: ramp an extra +25% mob HP in smoothly across waves
+        // 30-40 so 41+ are a quarter tougher (waves 1-30 are unchanged).
+        float late = Mathf.Lerp(1f, 1.25f, Mathf.Clamp01((wave - 30f) / 10f));
+        return Mathf.Exp(log) * late;
     }
     public static float SpeedMult(int wave) { return 1f + 0.02f * (wave - 1); }
 

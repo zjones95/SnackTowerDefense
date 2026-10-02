@@ -1236,10 +1236,14 @@ public static class TDTextures
 
     static Texture2D BuildRangeDisc()
     {
-        const int S = 128;
+        // Crisp opaque outline: alpha 1 on a thin stroke, 0 inside/outside. The
+        // material tints it dark grey, so no soft fill is drawn over the board.
+        const int S = 256;
         Texture2D t = new Texture2D(S, S, TextureFormat.RGBA32, false);
         t.wrapMode = TextureWrapMode.Clamp;
         t.filterMode = FilterMode.Bilinear;
+        const float radius = 0.955f;
+        const float halfWidth = 0.012f;
         for (int y = 0; y < S; y++)
         {
             for (int x = 0; x < S; x++)
@@ -1247,8 +1251,7 @@ public static class TDTextures
                 float u = (x + 0.5f) / S * 2f - 1f;
                 float v = (y + 0.5f) / S * 2f - 1f;
                 float d = Mathf.Sqrt(u * u + v * v);
-                float edge = Mathf.Clamp01(1f - Mathf.Abs(d - 0.93f) / 0.07f);
-                float a = d > 1f ? 0f : 0.10f + 0.25f * edge;
+                float a = Mathf.Clamp01((halfWidth - Mathf.Abs(d - radius)) * S + 0.5f);
                 t.SetPixel(x, y, new Color(1f, 1f, 1f, a));
             }
         }

@@ -392,6 +392,7 @@ public partial class TDGameManager : MonoBehaviour
         cleared = false;
         eliminated = false;
         RogueMods.Reset();
+        TowerCatalog.ResetRandomBag();
         rogueOpen = false;
         rogueOffered = null;
         if (worldRoot != null) Destroy(worldRoot.gameObject);
@@ -602,6 +603,12 @@ public partial class TDGameManager : MonoBehaviour
     // -------------------------------------------------------------- update
     void Update()
     {
+        // Music on/off lives here rather than in TDAudio.Update: the audio
+        // component is disabled while chat is open (so M types a letter), and
+        // after dying in multiplayer it could stay disabled, which swallowed M.
+        if (!ChatSync.IsTyping && Input.GetKeyDown(KeyCode.M) && TDAudio.Instance != null)
+            TDAudio.Instance.ToggleMusic();
+
         if (messageTimer > 0f)
         {
             messageTimer -= Time.deltaTime;
@@ -1119,6 +1126,10 @@ public partial class TDGameManager : MonoBehaviour
 
         int cx = a.CellX, cy = a.CellY;
         int invested = a.InvestedCost + b.InvestedCost + cost;
+        // Carry the player's settings and lifetime stats across the rebuild.
+        TowerTargeting targeting = a.Targeting;
+        int gold = a.GoldEarned + b.GoldEarned;
+        float damageDone = a.DamageDone + b.DamageDone;
         towers.Remove(map.Idx(a.CellX, a.CellY));
         towers.Remove(map.Idx(b.CellX, b.CellY));
         a.SetSelected(false);
@@ -1128,6 +1139,9 @@ public partial class TDGameManager : MonoBehaviour
         TowerType result = fuse ? TowerCatalog.RandomT7Type() : TowerCatalog.RandomType();
         Tower nt = CreateTower(cx, cy, result, a.Tier + 1);
         nt.InvestedCost = invested;
+        nt.Targeting = targeting;
+        nt.GoldEarned = gold;
+        nt.DamageDone = damageDone;
         SetSelected(nt);
         if (TDAudio.Instance != null) TDAudio.Instance.Merge();
         message = fuse
@@ -1178,6 +1192,9 @@ public partial class TDGameManager : MonoBehaviour
         TowerType type = t.Type;
         int next = t.Tier + 1;
         int invested = t.InvestedCost + cost;
+        TowerTargeting targeting = t.Targeting;
+        int gold = t.GoldEarned;
+        float damageDone = t.DamageDone;
 
         towers.Remove(map.Idx(cx, cy));
         t.SetSelected(false);
@@ -1185,6 +1202,9 @@ public partial class TDGameManager : MonoBehaviour
 
         Tower nt = CreateTower(cx, cy, type, next);   // same cell, same type, +1 tier
         nt.InvestedCost = invested;
+        nt.Targeting = targeting;
+        nt.GoldEarned = gold;
+        nt.DamageDone = damageDone;
         SetSelected(nt);
         if (TDAudio.Instance != null)
         {
@@ -1211,6 +1231,9 @@ public partial class TDGameManager : MonoBehaviour
         int tier = a.Tier;
         TowerType old = a.Type;
         int invested = a.InvestedCost + b.InvestedCost;   // b's price is the re-roll fee
+        TowerTargeting targeting = a.Targeting;
+        int gold = a.GoldEarned;
+        float damageDone = a.DamageDone;
 
         towers.Remove(map.Idx(a.CellX, a.CellY));
         towers.Remove(map.Idx(b.CellX, b.CellY));
@@ -1221,6 +1244,9 @@ public partial class TDGameManager : MonoBehaviour
         TowerType result = TowerCatalog.RandomTypeExcluding(old);
         Tower nt = CreateTower(cx, cy, result, tier);   // same cell, same tier, new type
         nt.InvestedCost = invested;
+        nt.Targeting = targeting;
+        nt.GoldEarned = gold;
+        nt.DamageDone = damageDone;
         SetSelected(nt);
         if (TDAudio.Instance != null) TDAudio.Instance.Merge();
         message = "Re-rolled " + TowerCatalog.Get(old).displayName + " into " + nt.DisplayName + " (Tier " + tier + ")";
@@ -1579,10 +1605,26 @@ public partial class TDGameManager : MonoBehaviour
                 info += s.crumbCount + " crumbs x " + s.damage + "    Rate " + s.fireInterval.ToString("0.00") + "s";
             else
                 info += "Damage " + s.damage + "    Rate " + s.fireInterval.ToString("0.00") + "s";
+
+            // Buffs actually in effect on this tower: support auras plus the
+            // run's roguelike damage / attack-speed / range upgrades.
+            float dmgMult = RogueMods.DamageMult() * Selected.DamageMultiplier;
+            float rateMult = RogueMods.EffRate(RogueMods.IsBossWave(Wave)) * (1f + Selected.SpeedBuff);
+            float rangeMult = RogueMods.Range;
+            string buffText = "";
+            if (dmgMult > 1.005f)
+                buffText += "+" + Mathf.RoundToInt((dmgMult - 1f) * 100f) + "% DMG";
+            if (rateMult > 1.005f)
+                buffText += (buffText.Length > 0 ? "   " : "") + "+" + Mathf.RoundToInt((rateMult - 1f) * 100f) + "% SPD";
+            if (Mathf.Abs(rangeMult - 1f) > 0.005f)
+                buffText += (buffText.Length > 0 ? "   " : "") + (rangeMult >= 1f ? "+" : "") +
+                    Mathf.RoundToInt((rangeMult - 1f) * 100f) + "% RNG";
+            if (buffText.Length > 0) info += "\nBuffs: " + buffText;
+
             info += "\nDamage done: " + Mathf.RoundToInt(Selected.DamageDone);
             if (Selected.Type == TowerType.Gold)
                 info += "\nGold made: $" + Selected.GoldEarned;
-            GUI.Label(new Rect(tx, selY + 4, 412, 72), info, Style(14, TextAnchor.UpperLeft, Color.white));
+            GUI.Label(new Rect(tx, selY + 4, 412, 92), info, Style(14, TextAnchor.UpperLeft, Color.white));
 
             // unique tier 5/6 modifiers, or the tier 7 fusion tag (word-wrapped)
             string mod5 = TowerCatalog.ModifierText(Selected.Type, 5);
@@ -1592,7 +1634,7 @@ public partial class TDGameManager : MonoBehaviour
             {
                 GUIStyle mod7Style = Style(12, TextAnchor.UpperLeft, new Color(1f, 0.92f, 0.55f));
                 mod7Style.wordWrap = true;
-                GUI.Label(new Rect(tx, selY + 78, 412, 34), "T7: " + mod7, mod7Style);
+                GUI.Label(new Rect(tx, selY + 96, 412, 34), "T7: " + mod7, mod7Style);
             }
             else
             {
@@ -1605,20 +1647,20 @@ public partial class TDGameManager : MonoBehaviour
                     GUIStyle mod5Style = Style(12, TextAnchor.UpperLeft,
                         Selected.Tier >= 5 ? unlocked : locked);
                     mod5Style.wordWrap = true;
-                    GUI.Label(new Rect(tx, selY + 78, 412, 20), "T5: " + mod5, mod5Style);
+                    GUI.Label(new Rect(tx, selY + 96, 412, 20), "T5: " + mod5, mod5Style);
                 }
                 if (mod6 != null)
                 {
                     GUIStyle mod6Style = Style(12, TextAnchor.UpperLeft,
                         Selected.Tier >= 6 ? unlocked : locked);
                     mod6Style.wordWrap = true;
-                    GUI.Label(new Rect(tx, selY + 100, 412, 20), "T6: " + mod6, mod6Style);
+                    GUI.Label(new Rect(tx, selY + 118, 412, 20), "T6: " + mod6, mod6Style);
                 }
                 if (mod5 == null)
                 {
                     GUIStyle noModStyle = Style(12, TextAnchor.UpperLeft, new Color(0.75f, 0.75f, 0.78f));
                     noModStyle.wordWrap = true;
-                    GUI.Label(new Rect(tx, selY + 78, 412, 34), "No tier 5/6 modifiers" +
+                    GUI.Label(new Rect(tx, selY + 96, 412, 34), "No tier 5/6 modifiers" +
                         (Selected.Type == TowerType.Gold ? " (Gold max tier 4)" : ""), noModStyle);
                 }
             }

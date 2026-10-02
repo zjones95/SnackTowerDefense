@@ -22,7 +22,7 @@ public static class RogueUpgrades
         new RogueDef { id = "sugar", name = "Sugar Rush", blurb = "+10% fire rate", tier = RogueTier.Common },
         new RogueDef { id = "straws", name = "Long Straws", blurb = "+12% range", tier = RogueTier.Common },
         new RogueDef { id = "salt", name = "Extra Salt", blurb = "+15% slow strength", tier = RogueTier.Common },
-        new RogueDef { id = "sweet", name = "Sweet Tooth", blurb = "+$200 right now", tier = RogueTier.Common },
+        new RogueDef { id = "sweet", name = "Sweet Tooth", blurb = "+$100 right now", tier = RogueTier.Common },
         new RogueDef { id = "merger", name = "Merger's Market", blurb = "Merge and fuse costs halved", tier = RogueTier.Common },
     };
 

@@ -323,9 +323,11 @@ public partial class TDGameManager
     public void OnMatchOver(bool victory)
     {
         if (!mpActive) return;
+        // Always close chat first: a duplicate result event used to early-return
+        // before this, leaving chat "typing" (and TDAudio disabled) for good.
+        if (ChatSync.Instance != null) ChatSync.Instance.Close();
         // Per-player results: the first result sticks (each board finishes once).
         if (State == GameState.Victory || State == GameState.GameOver) return;
-        if (ChatSync.Instance != null) ChatSync.Instance.Close();
         RestoreTimeScale();
         State = victory ? GameState.Victory : GameState.GameOver;
     }
