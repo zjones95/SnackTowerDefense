@@ -374,10 +374,13 @@ public partial class TDGameManager
 
         if (pgShowWaves) DrawPlaygroundWaveGrid();
 
-        // tower picker (right)
+        // tower picker (right): panel grows from the button list so the last
+        // row never overflows, with 12px padding below it.
         float px = Screen.width - 212f;
         float py = 70f;
-        pgTowerPanel = new Rect(px - 10f, py - 34f, 212f, 30f + TowerCatalog.GalleryTypes.Length * 27f + 14f);
+        int towerCount = TowerCatalog.GalleryTypes.Length;
+        float towerBottom = py + 30f + (towerCount - 1) * 27f + 25f;
+        pgTowerPanel = new Rect(px - 10f, py - 34f, 212f, towerBottom + 12f - (py - 34f));
         DrawPanel(pgTowerPanel);
         GUI.Label(new Rect(px, py, 200f, 24f), "TOWER", Style(16, TextAnchor.MiddleLeft, Color.white));
         float ty = py + 30f;
@@ -389,8 +392,10 @@ public partial class TDGameManager
             ty += 27f;
         }
 
-        // tier picker (right, under tower list)
-        pgTierPanel = new Rect(px - 10f, ty + 2f, 212f, 46f);
+        // tier picker (right, under tower list): panel grows from the tier
+        // buttons with 10px padding so the row never overflows.
+        float tierBottom = ty + 24f + 26f;
+        pgTierPanel = new Rect(px - 10f, ty + 2f, 212f, tierBottom + 10f - (ty + 2f));
         DrawPanel(pgTierPanel);
         GUI.Label(new Rect(px, ty + 4f, 200f, 18f), "TIER", Style(13, TextAnchor.MiddleLeft, Color.white));
         float ttx = px;
