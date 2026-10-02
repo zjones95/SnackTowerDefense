@@ -362,21 +362,28 @@ public class Mob : MonoBehaviour
     void TakeDamage(float dmg, bool ignoreArmour, Tower src)
     {
         if (dmg <= 0f || Health <= 0f) return;
-        dmg *= RogueMods.DamageMult();
+
+        // Every damage bonus adds into one flat pool instead of compounding:
+        // run upgrades, Hot Sauce aura, Artillery/Caramelized, tar and Fondue
+        // dip. Crit stays a separate multiplier, as does Giant Slayer's flat
+        // max-HP add.
+        float bonus = RogueMods.DamageMult() - 1f;
         if (src != null)
         {
             // All tower-originated damage benefits from Hot Sauce; the poison
             // stack tick above has its own damage path.
-            dmg *= src.DamageMultiplier;
-            if (RogueMods.Artillery && src.Type == TowerType.Sniper) dmg *= 1.3f;
-            if (RogueMods.Caramelized && poisonStacks.Count > 0) dmg *= 1.25f;
-            if (RogueMods.GiantSlayer && RogueMods.MaxTier > 0 && src.Tier == RogueMods.MaxTier)
-                dmg += 0.02f * Health;
+            bonus += src.DamageBuff;
+            if (RogueMods.Artillery && src.Type == TowerType.Sniper) bonus += 0.30f;
+            if (RogueMods.Caramelized && poisonStacks.Count > 0) bonus += 0.25f;
         }
+        if (tarBonus > 0f && tarTimer > 0f) bonus += tarBonus;   // tar hits every source
+        if (dipStacks.Count > 0) bonus += DipTotal();            // Fondue T7: dipped enemies take more
+        dmg *= 1f + bonus;
+
+        if (src != null && RogueMods.GiantSlayer && RogueMods.MaxTier > 0 && src.Tier == RogueMods.MaxTier)
+            dmg += 0.02f * Health;
         if (!ignoreArmour && RogueMods.CritChance > 0f && Random.value < RogueMods.CritChance)
             dmg *= RogueMods.CritMult;
-        if (tarBonus > 0f && tarTimer > 0f) dmg *= 1f + tarBonus;   // tar hits every source
-        if (dipStacks.Count > 0) dmg *= 1f + DipTotal();            // Fondue T7: dipped enemies take more
         if (!ignoreArmour)
             dmg = Mathf.Max(0f, dmg - Def.armour * (1f - SourReduction));
         if (dmg <= 0f) return;

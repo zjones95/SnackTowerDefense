@@ -86,7 +86,7 @@ public partial class TDGameManager : MonoBehaviour
         RogueMods.OwnedTiers.Add(def.tier);
         switch (def.id)
         {
-            case "heavy": RogueMods.Damage *= 1.10f; break;
+            case "heavy": RogueMods.Damage += 0.10f; break;
             case "sugar": RogueMods.Rate += 0.10f; break;
             case "straws": RogueMods.Range *= 1.12f; break;
             case "salt": RogueMods.SlowStrength *= 1.15f; break;
@@ -125,7 +125,7 @@ public partial class TDGameManager : MonoBehaviour
             if (!seen.Contains(key)) seen.Add(key);
         }
         RogueMods.MaxTier = top;
-        RogueMods.ComboMult = 1f + 0.02f * seen.Count;
+        RogueMods.ComboBonus = 0.02f * seen.Count;
     }
 
     static GUIStyle[] rogueCardStyles;

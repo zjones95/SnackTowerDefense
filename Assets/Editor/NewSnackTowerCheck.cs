@@ -58,6 +58,11 @@ public static class NewSnackTowerCheck
         RogueMods.Overdrive = true;
         if (Mathf.Abs(RogueMods.EffRate(true) - 1.80f) > 0.0001f)
             throw new Exception("Overdrive did not add flatly on a boss wave");
+        // Damage bonuses must add flatly too (two Heavy picks = +20%, not 1.21x).
+        RogueMods.Reset();
+        RogueMods.Damage = 0.10f + 0.10f;
+        if (Mathf.Abs(RogueMods.DamageMult() - 1.20f) > 0.0001f)
+            throw new Exception("Damage bonuses compounded instead of adding");
         RogueMods.Reset();
 
         // Support towers now also fire: weak single shots plus the aura.

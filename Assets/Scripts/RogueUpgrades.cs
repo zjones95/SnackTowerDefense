@@ -70,13 +70,13 @@ public static class RogueUpgrades
     }
 }
 
-/// <summary>Live run-scoped modifiers for the local board. Damage and range
-/// stack multiplicatively across repeat picks, but attack speed adds flatly
-/// (Rate is an additive bonus). Reset on every new run; the Damage Test
-/// intentionally keeps them (it reuses the victory board).</summary>
+/// <summary>Live run-scoped modifiers for the local board. Damage and attack
+/// speed add flatly (Damage/Rate are additive bonuses); range still stacks
+/// multiplicatively. Reset on every new run; the Damage Test keeps them
+/// (it reuses the victory board).</summary>
 public static class RogueMods
 {
-    public static float Damage = 1f;
+    public static float Damage = 0f;  // additive damage bonus (0 = +0%)
     public static float Rate = 0f;    // additive attack-speed bonus (0 = +0%)
     public static float Range = 1f;
     public static float SlowStrength = 1f;
@@ -100,12 +100,13 @@ public static class RogueMods
     public static readonly List<RogueTier> OwnedTiers = new List<RogueTier>();
 
     // cached census of the live towers (refreshed by the manager)
-    public static float ComboMult = 1f;
+    public static float ComboBonus = 0f;   // additive damage bonus from Combo Meal
     public static int MaxTier;
 
     public static void Reset()
     {
-        Damage = Range = SlowStrength = 1f;
+        Range = SlowStrength = 1f;
+        Damage = 0f;
         Rate = 0f;
         CritChance = 0f;
         MergeMult = 1f;
@@ -115,7 +116,7 @@ public static class RogueMods
         ComboMeal = Artillery = Overdrive = GiantSlayer = Dessert = false;
         Owned.Clear();
         OwnedTiers.Clear();
-        ComboMult = 1f;
+        ComboBonus = 0f;
         MaxTier = 0;
     }
 
@@ -124,8 +125,9 @@ public static class RogueMods
     {
         // The +1%/wave is Dessert's effect only. It used to apply to every run,
         // which quietly handed out free damage that grew with the wave count.
+        // Every damage bonus adds flatly (Damage, Dessert, Combo Meal).
         float dessert = Dessert ? 0.01f * WavesCleared : 0f;
-        return Damage * (1f + dessert) * ComboMult;
+        return 1f + Damage + dessert + ComboBonus;
     }
 
     /// <summary>Effective fire-rate multiplier. Every attack-speed source adds

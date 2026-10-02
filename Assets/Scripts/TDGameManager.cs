@@ -1592,7 +1592,7 @@ public partial class TDGameManager : MonoBehaviour
             // tower's support-aura buffs and the run's roguelike modifiers.
             float runDmg = RogueMods.DamageMult();
             float runRate = RogueMods.EffRate(RogueMods.IsBossWave(Wave));
-            float dmgMult = runDmg * Selected.DamageMultiplier;
+            float dmgMult = runDmg + Selected.DamageBuff;   // damage adds flatly
             float rateMult = runRate + Selected.SpeedBuff;   // attack speed adds flatly
             float effDamage = s.damage * dmgMult;
             float effRate = s.fireInterval / Mathf.Max(0.0001f, rateMult);
