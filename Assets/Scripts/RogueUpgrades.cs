@@ -12,25 +12,28 @@ public struct RogueDef
     public string name;
     public string blurb;
     public RogueTier tier;
+    /// <summary>True when repeat picks still help (numeric bonuses). False for
+    /// one-shot flags, which are filtered out of later offers once owned.</summary>
+    public bool stackable;
 }
 
 public static class RogueUpgrades
 {
     public static readonly RogueDef[] Commons =
     {
-        new RogueDef { id = "heavy", name = "Heavy Snacks", blurb = "+10% all tower damage", tier = RogueTier.Common },
-        new RogueDef { id = "sugar", name = "Sugar Rush", blurb = "+10% fire rate", tier = RogueTier.Common },
-        new RogueDef { id = "straws", name = "Long Straws", blurb = "+12% range", tier = RogueTier.Common },
-        new RogueDef { id = "salt", name = "Extra Salt", blurb = "+15% slow strength", tier = RogueTier.Common },
-        new RogueDef { id = "sweet", name = "Sweet Tooth", blurb = "+$100 right now", tier = RogueTier.Common },
+        new RogueDef { id = "heavy", name = "Heavy Snacks", blurb = "+10% all tower damage", tier = RogueTier.Common, stackable = true },
+        new RogueDef { id = "sugar", name = "Sugar Rush", blurb = "+10% fire rate", tier = RogueTier.Common, stackable = true },
+        new RogueDef { id = "straws", name = "Long Straws", blurb = "+12% range", tier = RogueTier.Common, stackable = true },
+        new RogueDef { id = "salt", name = "Extra Salt", blurb = "+15% slow strength", tier = RogueTier.Common, stackable = true },
+        new RogueDef { id = "sweet", name = "Sweet Tooth", blurb = "+$100 right now", tier = RogueTier.Common, stackable = true },
         new RogueDef { id = "merger", name = "Merger's Market", blurb = "Merge and fuse costs halved", tier = RogueTier.Common },
     };
 
     public static readonly RogueDef[] Rares =
     {
-        new RogueDef { id = "allow", name = "Allowance", blurb = "+$40 every cleared wave", tier = RogueTier.Rare },
-        new RogueDef { id = "overclock", name = "Overclock", blurb = "+25% fire rate, -10% range", tier = RogueTier.Rare },
-        new RogueDef { id = "lucky", name = "Lucky Dip", blurb = "+8% crit chance (x2) all towers", tier = RogueTier.Rare },
+        new RogueDef { id = "allow", name = "Allowance", blurb = "+$40 every cleared wave", tier = RogueTier.Rare, stackable = true },
+        new RogueDef { id = "overclock", name = "Overclock", blurb = "+25% fire rate, -10% range", tier = RogueTier.Rare, stackable = true },
+        new RogueDef { id = "lucky", name = "Lucky Dip", blurb = "+8% crit chance (x2) all towers", tier = RogueTier.Rare, stackable = true },
         new RogueDef { id = "caramel", name = "Caramelized", blurb = "Burning enemies take +25%", tier = RogueTier.Rare },
         new RogueDef { id = "happy", name = "Happy Hour", blurb = "Double gold on boss waves", tier = RogueTier.Rare },
         new RogueDef { id = "dessert", name = "Dessert", blurb = "+1% damage per wave cleared", tier = RogueTier.Rare },
@@ -46,17 +49,28 @@ public static class RogueUpgrades
         new RogueDef { id = "slayer", name = "Giant Slayer", blurb = "Top-tier towers deal +2% current HP per hit", tier = RogueTier.Epic },
     };
 
-    /// <summary>Draws <paramref name="count"/> distinct random options from a pool.</summary>
+    /// <summary>Draws <paramref name="count"/> distinct random options from a pool,
+    /// skipping one-shot upgrades the player already owns (a repeat pick of those
+    /// did nothing). Falls back to the full pool if that would leave no cards.</summary>
     public static List<RogueDef> Offer(RogueDef[] pool, int count)
     {
-        List<RogueDef> opts = new List<RogueDef>(pool);
+        List<RogueDef> opts = new List<RogueDef>();
+        for (int i = 0; i < pool.Length; i++)
+        {
+            RogueDef d = pool[i];
+            if (!d.stackable && RogueMods.Owned.Contains(d.name)) continue;
+            opts.Add(d);
+        }
+        if (opts.Count == 0) opts.AddRange(pool);
+
+        int take = Mathf.Min(count, opts.Count);
         // partial Fisher-Yates: shuffle only as many as needed
-        for (int i = 0; i < Mathf.Min(count, opts.Count); i++)
+        for (int i = 0; i < take; i++)
         {
             int j = Random.Range(i, opts.Count);
             RogueDef tmp = opts[i]; opts[i] = opts[j]; opts[j] = tmp;
         }
-        return opts.GetRange(0, Mathf.Min(count, opts.Count));
+        return opts.GetRange(0, take);
     }
 
     public static Color TierColor(RogueTier t)

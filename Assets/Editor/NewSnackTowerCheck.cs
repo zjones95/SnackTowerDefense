@@ -50,6 +50,14 @@ public static class NewSnackTowerCheck
         if (drawn.Count != TowerCatalog.RandomTypes.Length)
             throw new Exception("Random draw bag repeated a type within one full cycle");
 
+        // Owned one-shot upgrades must not be offered again (the pick did nothing).
+        RogueMods.Reset();
+        RogueMods.Owned.Add("Dessert");
+        foreach (RogueDef d in RogueUpgrades.Offer(RogueUpgrades.Rares, 3))
+            if (d.name == "Dessert")
+                throw new Exception("An owned one-shot upgrade was offered again");
+        RogueMods.Reset();
+
         // Attack-speed bonuses must add flatly, never compound.
         RogueMods.Reset();
         RogueMods.Rate = 0.25f + 0.25f;   // two Overclock picks
