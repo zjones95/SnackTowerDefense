@@ -24,9 +24,39 @@ what was and was not verified.
   `Assets/Resources/Snack/{Towers,Mobs,Projectiles}`, mirrored into
   `Assets/Models/**`.
 
+## Unity entry point — use the CLI
+
+**The `unity` CLI is the main entry point for Unity work in this repo.** Prefer it
+over invoking `Unity.exe` directly: it resolves the right Editor, emits structured
+output, and drives both batch runs and a **live Editor**.
+
+```powershell
+unity .                       # open this project in the resolved Editor
+unity status                  # list connected Editors (port, project, version, PID)
+unity recompile               # recompile a running Editor, report compile errors
+unity test                    # run Edit/Play Mode tests, write an NUnit report
+unity command                 # list commands the connected Editor exposes
+unity command <name>          # run a registered [CliCommand] helper
+unity command eval "<c#>"     # evaluate C# in the live Editor, no recompile/reload
+unity command eval_file <cs>  # evaluate a C# file
+```
+
+- Live-Editor commands (`unity command …`, `unity recompile`) require the
+  **Pipeline package** in the project — install it once with
+  `unity pipeline install`, confirm with `unity pipeline list`. The Editor must be
+  running with this project open, or they fail with "No Unity Editor instances".
+  `unity command eval` is additionally gated behind a security token.
+- When asked to inspect, exercise, or tweak the running game, reach for
+  `unity command eval` / `eval_file` first — it answers in milliseconds against an
+  Editor that is already up, without a full rebuild.
+- New Editor checks should also be exposed as `[CliCommand]` static methods so they
+  show up in `unity command`, alongside the existing `-executeMethod` helpers.
+
 ## Verify changes
 
-The **Unity editor must be closed** for batch mode (it locks `Library/`).
+The **Unity CLI** above is the preferred entry point. A direct `Unity.exe` **batch**
+invocation still requires the editor to be **closed** — it locks `Library/` — so use
+the CLI's live-Editor commands, or close the editor before a batch run.
 
 ```powershell
 # compile
@@ -110,8 +140,9 @@ should add a `-executeMethod` check like these rather than relying on a bare com
 
 1. Read the docs above, then the files you intend to change.
 2. Make the change; keep it consistent with surrounding style.
-3. Verify by compiling in batch mode (and rendering, if visual). For generated art,
-   follow `docs/MobModelling.md`: GenAI concept first, **get approval**, then model.
+3. Verify through the **Unity CLI** (see *Unity entry point* above): `unity recompile`
+   for a running Editor, or a batch compile (and rendering, if visual). For generated
+   art, follow `docs/MobModelling.md`: GenAI concept first, **get approval**, then model.
 4. Commit and push to `main`; **then always kick off a Windows x64 build for
    moderate or major changes** (a player's version stamp is `HEAD`'s sha, so
    commit *before* building). Ask the user to play-test behaviour.
