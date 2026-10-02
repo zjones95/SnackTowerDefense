@@ -14,7 +14,7 @@ public partial class TDGameManager : MonoBehaviour
     private bool roguePendingMP;
     private float rogueComboTimer;
 
-    const float RoguePickSeconds = 15f;
+    const float RoguePickSeconds = 20f;
 
     static bool RogueOfferFor(int wave, out RogueDef[] pool, out int count)
     {
@@ -83,6 +83,7 @@ public partial class TDGameManager : MonoBehaviour
     void ApplyRogue(RogueDef def)
     {
         RogueMods.Owned.Add(def.name);
+        RogueMods.OwnedTiers.Add(def.tier);
         switch (def.id)
         {
             case "heavy": RogueMods.Damage *= 1.10f; break;
@@ -127,6 +128,23 @@ public partial class TDGameManager : MonoBehaviour
         RogueMods.ComboMult = 1f + 0.02f * seen.Count;
     }
 
+    static GUIStyle rogueCardStyle;
+
+    static GUIStyle RogueCard()
+    {
+        if (rogueCardStyle == null)
+        {
+            rogueCardStyle = new GUIStyle(GUI.skin.button);
+            rogueCardStyle.border = new RectOffset(6, 6, 6, 6);
+            rogueCardStyle.padding = new RectOffset(0, 0, 0, 0);
+            rogueCardStyle.normal.background = TDTextures.Card();
+            rogueCardStyle.hover.background = TDTextures.CardHover();
+            rogueCardStyle.active.background = TDTextures.CardHover();
+            rogueCardStyle.focused.background = TDTextures.Card();
+        }
+        return rogueCardStyle;
+    }
+
     void DrawRogueModal()
     {
         Color old = GUI.color;
@@ -136,13 +154,14 @@ public partial class TDGameManager : MonoBehaviour
 
         bool single = rogueOffered != null && rogueOffered.Count == 1;
         if (rogueOffered == null || rogueOffered.Count == 0) return;
-        float cw = single ? 420f : 200f, ch = single ? 120f : 150f, gap = 14f;
+        // tall bordered cards like the reference: 24px padding and margins
+        float cw = single ? 420f : 190f, ch = single ? 170f : 300f, gap = 24f, pad = 24f;
         float w = rogueOffered.Count * cw + (rogueOffered.Count - 1) * gap;
-        float h = 100f + ch + 24f;
+        float topH = RogueMods.Owned.Count > 0 ? 108f : 84f;
+        float h = topH + ch + pad;
         float x0 = (Screen.width - w) * 0.5f;
         float y0 = (Screen.height - h) * 0.5f;
-        float cardsY = y0 + 100f;
-        DrawPanel(new Rect(x0 - 24f, y0 - 24f, w + 48f, h + 48f));
+        DrawPanel(new Rect(x0 - pad, y0 - pad, w + pad * 2f, h + pad * 2f));
 
         GUI.Label(new Rect(x0, y0, w, 40f), single ? "AN EPIC UPGRADE AWAITS" : "WAVE CLEARED - CHOOSE AN UPGRADE",
             Style(26, TextAnchor.MiddleCenter, new Color(1f, 0.88f, 0.45f)));
@@ -155,17 +174,51 @@ public partial class TDGameManager : MonoBehaviour
                 Style(12, TextAnchor.MiddleCenter, new Color(0.55f, 0.9f, 0.6f)));
         }
 
-        GUIStyle btn = PaperButton(15);
+        GUIStyle card = RogueCard();
         for (int i = 0; i < rogueOffered.Count; i++)
         {
             RogueDef def = rogueOffered[i];
-            Rect r = new Rect(x0 + i * (cw + gap), cardsY, cw, ch);
-            string label = def.name + "\n" + def.blurb + (single ? "\n(click to claim)" : "");
-            Color prev = GUI.color;
-            GUI.color = RogueUpgrades.TierColor(def.tier);
-            bool hit = GUI.Button(r, label, btn);
-            GUI.color = prev;
-            if (hit) { Click(); ResolveRoguePick(def); return; }
+            float cx = x0 + i * (cw + gap);
+            float cy = y0 + topH;
+            if (GUI.Button(new Rect(cx, cy, cw, ch), GUIContent.none, card))
+            {
+                Click();
+                ResolveRoguePick(def);
+                return;
+            }
+            Color tierCol = RogueUpgrades.TierColor(def.tier);
+            GUIStyle title = Style(17, TextAnchor.UpperCenter, Color.white);
+            title.wordWrap = true;
+            GUI.Label(new Rect(cx + 16f, cy + 24f, cw - 32f, 60f), def.name, title);
+            GUI.Label(new Rect(cx + 16f, cy + 84f, cw - 32f, 22f), def.tier.ToString().ToUpper(),
+                Style(12, TextAnchor.UpperCenter, tierCol));
+            GUIStyle desc = Style(13, TextAnchor.UpperCenter, new Color(0.78f, 0.81f, 0.87f));
+            desc.wordWrap = true;
+            GUI.Label(new Rect(cx + 16f, cy + 108f, cw - 32f, ch - 132f),
+                def.blurb + (single ? "\n(click to claim)" : ""), desc);
+        }
+    }
+
+    /// <summary>Persistent owned-upgrade list docked right; the container grows
+    /// with each pick. Hidden until the first upgrade is claimed.</summary>
+    void DrawRogueList()
+    {
+        if (RogueMods.Owned.Count == 0 || playgroundActive) return;
+        const float w = 210f, rowH = 20f;
+        float h = 12f + 26f + RogueMods.Owned.Count * rowH + 12f;
+        float x = Screen.width - w - 12f;
+        float y = 146f;
+        if (mpActive && !mpScoreboardCollapsed && MatchSync.Instance != null)
+            y = 112f + (50f + MatchSync.Instance.Boards.Count * 20f + 12f) + 8f;
+        DrawPanel(new Rect(x, y, w, h));
+        GUI.Label(new Rect(x + 10f, y + 12f, w - 20f, 24f), "UPGRADES",
+            Style(14, TextAnchor.MiddleLeft, new Color(1f, 0.88f, 0.45f)));
+        for (int i = 0; i < RogueMods.Owned.Count; i++)
+        {
+            Color c = i < RogueMods.OwnedTiers.Count
+                ? RogueUpgrades.TierColor(RogueMods.OwnedTiers[i]) : Color.white;
+            GUI.Label(new Rect(x + 10f, y + 38f + i * rowH, w - 20f, rowH), RogueMods.Owned[i],
+                Style(12, TextAnchor.MiddleLeft, c));
         }
     }
 }

@@ -95,6 +95,7 @@ public static class RogueMods
     public static bool GiantSlayer;
 
     public static readonly List<string> Owned = new List<string>();
+    public static readonly List<RogueTier> OwnedTiers = new List<RogueTier>();
 
     // cached census of the live towers (refreshed by the manager)
     public static float ComboMult = 1f;
@@ -110,6 +111,7 @@ public static class RogueMods
         Caramelized = HappyHour = DoubleScoop = SourPower = false;
         ComboMeal = Artillery = Overdrive = GiantSlayer = false;
         Owned.Clear();
+        OwnedTiers.Clear();
         ComboMult = 1f;
         MaxTier = 0;
     }

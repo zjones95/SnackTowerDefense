@@ -1168,7 +1168,7 @@ public static class TDTextures
     }
 
     // ---------------------------------------------------------- shared UI
-    static Texture2D button, buttonHover, buttonPressed, panel, field, menuFade;
+    static Texture2D button, buttonHover, buttonPressed, panel, field, card, cardHover, menuFade;
 
     public static Texture2D Button() { return button != null ? button : (button = BuildButton(0)); }
     public static Texture2D ButtonHover() { return buttonHover != null ? buttonHover : (buttonHover = BuildButton(1)); }
@@ -1177,6 +1177,35 @@ public static class TDTextures
         (panel = Rounded(new Color(0.12f, 0.13f, 0.14f, 0.74f), new Color(0.12f, 0.13f, 0.14f, 0.74f))); }
     public static Texture2D Field() { return field != null ? field :
         (field = Rounded(new Color(0.08f, 0.09f, 0.10f), new Color(0.08f, 0.09f, 0.10f))); }
+
+    /// <summary>Dark upgrade card with a light border (hover lifts both).</summary>
+    public static Texture2D Card() { return card != null ? card : (card = BuildCard(false)); }
+    public static Texture2D CardHover() { return cardHover != null ? cardHover : (cardHover = BuildCard(true)); }
+
+    static Texture2D BuildCard(bool hover)
+    {
+        const int size = 64, radius = 6, edge = 3;
+        Color fill = hover ? new Color(0.16f, 0.17f, 0.21f, 0.98f) : new Color(0.10f, 0.11f, 0.14f, 0.97f);
+        Color trim = hover ? new Color(1.00f, 0.92f, 0.70f) : new Color(0.82f, 0.76f, 0.60f);
+        Texture2D t = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        t.wrapMode = TextureWrapMode.Clamp;
+        t.filterMode = FilterMode.Bilinear;
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float dx = Mathf.Max(0f, radius - (x + 0.5f), x + 0.5f - (size - radius));
+                float dy = Mathf.Max(0f, radius - (y + 0.5f), y + 0.5f - (size - radius));
+                float coverage = Mathf.Clamp01(radius + 0.5f - Mathf.Sqrt(dx * dx + dy * dy));
+                float edgeDist = Mathf.Min(Mathf.Min(x, y), Mathf.Min(size - 1 - x, size - 1 - y));
+                Color c = edgeDist < edge ? trim : fill;
+                c.a *= coverage;
+                t.SetPixel(x, y, c);
+            }
+        }
+        t.Apply();
+        return t;
+    }
 
     // Top lighter than bottom; hover lifts the fill, pressed darkens it.
     static Texture2D BuildButton(int state)

@@ -1540,10 +1540,6 @@ public partial class TDGameManager : MonoBehaviour
         if (!string.IsNullOrEmpty(message))
             GUI.Label(new Rect(0, 40, Screen.width, 26), message, Style(16, TextAnchor.MiddleCenter, new Color(0.6f, 1f, 0.6f)));
 
-        if (RogueMods.Owned.Count > 0)
-            GUI.Label(new Rect(0, 66, Screen.width, 18), "Upgrades: " + string.Join(", ", RogueMods.Owned.ToArray()),
-                Style(11, TextAnchor.MiddleCenter, new Color(0.55f, 0.9f, 0.6f)));
-
         if (Selected != null)
         {
             TowerTierStats s = Selected.Stats;
@@ -1728,6 +1724,7 @@ public partial class TDGameManager : MonoBehaviour
             slotX += slotW + slotGap;   // future slot starts here
         }
 
+        DrawRogueList();
         DrawWaveIntro();
         DrawBossBar();
     }
