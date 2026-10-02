@@ -180,10 +180,18 @@ public class RemoteBoard : MonoBehaviour
         return TryGetBoss(out name, out fraction, out slowed, out poisoned, out stacks, out tarred);
     }
 
-    /// <summary>As above, but also reports the boss's slow/poison/tar state for the
-    /// boss HUD's status icons.</summary>
+    /// <summary>As above, but also reports the boss's slow/stun/poison/tar state
+    /// for the boss HUD's status icons (dipped has no snapshot channel, so it
+    /// stays local-only).</summary>
     public bool TryGetBoss(out string name, out float fraction,
                            out bool slowed, out bool poisoned, out int stacks, out bool tarred)
+    {
+        bool stunned;
+        return TryGetBoss(out name, out fraction, out slowed, out stunned, out poisoned, out stacks, out tarred);
+    }
+
+    public bool TryGetBoss(out string name, out float fraction,
+                           out bool slowed, out bool stunned, out bool poisoned, out int stacks, out bool tarred)
     {
         foreach (var kv in mobs)
         {
@@ -192,7 +200,8 @@ public class RemoteBoard : MonoBehaviour
             {
                 name = rm.Def.displayName;
                 fraction = rm.HpFraction;
-                slowed = (rm.Status & 1) != 0;
+                stunned = (rm.Status & 2) != 0;
+                slowed = ((rm.Status & 1) != 0) && !stunned;
                 poisoned = rm.Stacks > 0;
                 stacks = rm.Stacks;
                 tarred = (rm.Status & 4) != 0;
@@ -202,6 +211,7 @@ public class RemoteBoard : MonoBehaviour
         name = null;
         fraction = 0f;
         slowed = false;
+        stunned = false;
         poisoned = false;
         stacks = 0;
         tarred = false;
@@ -244,9 +254,10 @@ public class RemoteBoard : MonoBehaviour
             rm.Stacks = ms.Stacks;
             if (rm.Icons != null)
             {
-                bool slowed = (ms.Status & 1) != 0;    // bit0 covers slow and stun
+                bool stunned = (ms.Status & 2) != 0;   // bit1: stunned (distinct badge)
+                bool slowed = (ms.Status & 1) != 0 && !stunned;
                 bool tarred = (ms.Status & 4) != 0;    // bit2: tar (+damage taken)
-                rm.Icons.Set(slowed, ms.Stacks > 0, ms.Stacks, tarred);
+                rm.Icons.Set(slowed, stunned, ms.Stacks > 0, ms.Stacks, tarred, false, 0f);
             }
         }
 

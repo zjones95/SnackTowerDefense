@@ -331,7 +331,7 @@ public static class MobVisual
         return hp.transform;
     }
 
-    static Material burnIconMat, slowIconMat, tarIconMat;
+    static Material burnIconMat, slowIconMat, tarIconMat, stunIconMat, dipIconMat;
     static Shader iconShader;
 
     /// <summary>Tiny status icon quads sit at the top-right of the floating bar:
@@ -345,10 +345,14 @@ public static class MobVisual
         if (burnIconMat == null) burnIconMat = IconMaterial(TDTextures.IconBurn());
         if (slowIconMat == null) slowIconMat = IconMaterial(TDTextures.IconSlow());
         if (tarIconMat == null) tarIconMat = IconMaterial(TDTextures.IconTar());
+        if (stunIconMat == null) stunIconMat = IconMaterial(TDTextures.IconStun());
+        if (dipIconMat == null) dipIconMat = IconMaterial(TDTextures.IconDip());
 
         float burnX = -(BarWidth * 0.5f + 0.16f);
         float slowX = -(BarWidth * 0.5f + 0.38f);
         float tarX = -(BarWidth * 0.5f + 0.60f);
+        float stunX = -(BarWidth * 0.5f + 0.82f);
+        float dipX = -(BarWidth * 0.5f + 1.04f);
 
         GameObject burn = TDVisuals.Quad(hp, "IconBurn",
             new Vector3(burnX, 0.10f, 0f), 0.24f, burnIconMat);
@@ -356,9 +360,15 @@ public static class MobVisual
             new Vector3(slowX, 0.10f, 0f), 0.24f, slowIconMat);
         GameObject tar = TDVisuals.Quad(hp, "IconTar",
             new Vector3(tarX, 0.10f, 0f), 0.24f, tarIconMat);
+        GameObject stun = TDVisuals.Quad(hp, "IconStun",
+            new Vector3(stunX, 0.10f, 0f), 0.24f, stunIconMat);
+        GameObject dip = TDVisuals.Quad(hp, "IconDip",
+            new Vector3(dipX, 0.10f, 0f), 0.24f, dipIconMat);
         NoShadow(burn);
         NoShadow(slow);
         NoShadow(tar);
+        NoShadow(stun);
+        NoShadow(dip);
 
         GameObject labelGO = new GameObject("Stacks");
         labelGO.transform.SetParent(hp, false);
@@ -380,12 +390,33 @@ public static class MobVisual
             if (mr != null) mr.sharedMaterial = font.material;
         }
 
+        GameObject dipLabelGO = new GameObject("DipPct");
+        dipLabelGO.transform.SetParent(hp, false);
+        dipLabelGO.transform.localPosition = new Vector3(dipX - 0.14f, 0.10f + 0.15f, 0.005f);
+        dipLabelGO.AddComponent<BillboardLabel>();
+        TextMesh dipTm = dipLabelGO.AddComponent<TextMesh>();
+        dipTm.text = "+0%";
+        dipTm.characterSize = 0.028f;
+        dipTm.fontSize = 90;
+        dipTm.anchor = TextAnchor.LowerLeft;
+        dipTm.alignment = TextAlignment.Left;
+        dipTm.color = Color.white;
+        if (font != null)
+        {
+            dipTm.font = font;
+            MeshRenderer dmr = dipLabelGO.GetComponent<MeshRenderer>();
+            if (dmr != null) dmr.sharedMaterial = font.material;
+        }
+
         MobStatusIcons icons = hp.gameObject.AddComponent<MobStatusIcons>();
         icons.Burn = burn.transform;
         icons.Slow = slow.transform;
         icons.Tar = tar.transform;
+        icons.Stun = stun.transform;
+        icons.Dip = dip.transform;
         icons.Stacks = tm;
-        icons.Set(false, false, 0, false);
+        icons.DipPct = dipTm;
+        icons.Set(false, false, false, 0, false, false, 0f);
     }
 
     /// <summary>Build-safe alpha material for a status icon (same Resources shader
@@ -439,20 +470,25 @@ public class MobStatusIcons : MonoBehaviour
     public Transform Burn;
     public Transform Slow;
     public Transform Tar;
+    public Transform Stun;
+    public Transform Dip;
     public TextMesh Stacks;
+    public TextMesh DipPct;
 
     public static MobStatusIcons Get(Transform barRoot)
     {
         return barRoot != null ? barRoot.GetComponent<MobStatusIcons>() : null;
     }
 
-    /// <summary>Toggles the three icons and updates the burn stack count.
-    /// <paramref name="slowed"/> covers both slow and stun.</summary>
-    public void Set(bool slowed, bool burning, int stacks, bool tarred)
+    /// <summary>Toggles the five icons and updates the burn stack count and
+    /// the dipped bonus percentage. Slow and stun are independent badges now.</summary>
+    public void Set(bool slowed, bool stunned, bool burning, int stacks, bool tarred, bool dipped, float dipBonus)
     {
-        Toggle(Slow, slowed);
+        Toggle(Slow, slowed && !stunned);
+        Toggle(Stun, stunned);
         Toggle(Burn, burning);
         Toggle(Tar, tarred);
+        Toggle(Dip, dipped);
 
         if (Stacks == null) return;
         bool show = burning && stacks > 0;
@@ -461,6 +497,14 @@ public class MobStatusIcons : MonoBehaviour
         {
             string s = "x" + stacks;
             if (Stacks.text != s) Stacks.text = s;
+        }
+
+        if (DipPct == null) return;
+        Toggle(DipPct.transform, dipped);
+        if (dipped)
+        {
+            string d = "+" + Mathf.RoundToInt(dipBonus * 100f) + "%";
+            if (DipPct.text != d) DipPct.text = d;
         }
     }
 

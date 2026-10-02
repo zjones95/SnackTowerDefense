@@ -41,8 +41,9 @@ public class Mob : MonoBehaviour
     private float dashTimer;
     private float dashCooldown;
     private MobStatusIcons statusIcons;
-    private bool lastSlowed, lastStunned, lastTarred;
+    private bool lastSlowed, lastStunned, lastTarred, lastDipped;
     private int lastStacks;
+    private float lastDipBonus;
 
     /// <summary>Slowed (or stunned, which also stops movement).</summary>
     public bool IsSlowed => slowTimer > 0f || stunTimer > 0f;
@@ -58,6 +59,9 @@ public class Mob : MonoBehaviour
 
     /// <summary>Number of concurrent "Dipped" stacks currently on the mob.</summary>
     public int DipStacks => dipStacks.Count;
+
+    /// <summary>Total dipped damage-taken bonus (for the status icon percentage).</summary>
+    public float DipBonusTotal() { return DipTotal(); }
 
     public void Init(MobDef def, List<Vector3> waypoints, TDGameManager g, float healthMult, float speedMult)
     {
@@ -85,12 +89,17 @@ public class Mob : MonoBehaviour
         bool stunned = IsStunned;
         int stacks = poisonStacks.Count;
         bool tarred = IsTarred;
-        if (slowed == lastSlowed && stunned == lastStunned && stacks == lastStacks && tarred == lastTarred) return;
+        bool dipped = dipStacks.Count > 0;
+        float dipBonus = dipped ? DipTotal() : 0f;
+        if (slowed == lastSlowed && stunned == lastStunned && stacks == lastStacks && tarred == lastTarred &&
+            dipped == lastDipped && Mathf.Abs(dipBonus - lastDipBonus) < 0.001f) return;
         lastSlowed = slowed;
         lastStunned = stunned;
         lastStacks = stacks;
         lastTarred = tarred;
-        if (statusIcons != null) statusIcons.Set(slowed, stacks > 0, stacks, tarred);
+        lastDipped = dipped;
+        lastDipBonus = dipBonus;
+        if (statusIcons != null) statusIcons.Set(slowed, stunned, stacks > 0, stacks, tarred, dipped, dipBonus);
     }
 
     void Update()

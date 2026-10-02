@@ -1810,6 +1810,8 @@ public partial class TDGameManager : MonoBehaviour
         string name;
         float frac;
         bool bSlowed, bPoisoned;
+        bool bStunned;
+        float bDipPct;
         int bStacks;
         bool bTarred;
         if (ViewingOwnBoard)
@@ -1823,15 +1825,20 @@ public partial class TDGameManager : MonoBehaviour
             if (boss == null) return;
             name = boss.Def.displayName;
             frac = boss.MaxHealth > 0f ? Mathf.Clamp01(boss.Health / boss.MaxHealth) : 0f;
-            bSlowed = boss.IsSlowed;
+            bSlowed = boss.IsSlowed && !boss.IsStunned;
+            bStunned = boss.IsStunned;
             bStacks = boss.PoisonStacks;
             bPoisoned = bStacks > 0;
             bTarred = boss.IsTarred;
+            bDipPct = boss.DipStacks > 0 ? boss.DipBonusTotal() : 0f;
         }
         else
         {
             RemoteBoard rb = BoardForSlot(viewSlot);
-            if (rb == null || !rb.TryGetBoss(out name, out frac, out bSlowed, out bPoisoned, out bStacks, out bTarred)) return;
+            bool rbStunned;
+            if (rb == null || !rb.TryGetBoss(out name, out frac, out bSlowed, out rbStunned, out bPoisoned, out bStacks, out bTarred)) return;
+            bStunned = rbStunned;
+            bDipPct = 0f;   // dipped has no snapshot channel: local-only
         }
 
         frac = Mathf.Clamp01(frac);
@@ -1853,13 +1860,14 @@ public partial class TDGameManager : MonoBehaviour
             name.ToUpper() + "   " + Mathf.CeilToInt(frac * 100f) + "%",
             Style(18, TextAnchor.MiddleCenter, Color.white));
 
-        DrawBossStatusIcons(x + w + 10f, y + h * 0.5f, bSlowed, bPoisoned, bStacks, bTarred);
+        DrawBossStatusIcons(x + w + 10f, y + h * 0.5f, bSlowed, bStunned, bPoisoned, bStacks, bTarred, bDipPct);
     }
 
     /// <summary>Small status badges just right of the boss HUD bar, using the same
     /// procedural icon textures as the floating mob bars so a boss reads the same
-    /// on your own board and on a spectated one.</summary>
-    void DrawBossStatusIcons(float cx, float cy, bool slowed, bool poisoned, int stacks, bool tarred)
+    /// on your own board and on a spectated one. Dipped shows its total bonus
+    /// as white text over the chocolate icon (local board only).</summary>
+    void DrawBossStatusIcons(float cx, float cy, bool slowed, bool stunned, bool poisoned, int stacks, bool tarred, float dipPct)
     {
         const float size = 30f;
         const float gap = 8f;
@@ -1879,8 +1887,22 @@ public partial class TDGameManager : MonoBehaviour
             GUI.DrawTexture(new Rect(x, top, size, size), TDTextures.IconSlow(), ScaleMode.ScaleToFit, true);
             x += size + gap;
         }
+        if (stunned)
+        {
+            GUI.DrawTexture(new Rect(x, top, size, size), TDTextures.IconStun(), ScaleMode.ScaleToFit, true);
+            x += size + gap;
+        }
         if (tarred)
+        {
             GUI.DrawTexture(new Rect(x, top, size, size), TDTextures.IconTar(), ScaleMode.ScaleToFit, true);
+            x += size + gap;
+        }
+        if (dipPct > 0f)
+        {
+            GUI.DrawTexture(new Rect(x, top, size, size), TDTextures.IconDip(), ScaleMode.ScaleToFit, true);
+            GUI.Label(new Rect(x - 7f, top + size - 6f, size + 14f, 18f), "+" + Mathf.RoundToInt(dipPct * 100f) + "%",
+                Style(13, TextAnchor.MiddleCenter, Color.white));
+        }
     }
 
     /// <summary>Reopens a dismissed MP end screen while spectating.</summary>

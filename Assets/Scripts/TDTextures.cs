@@ -1312,7 +1312,7 @@ public static class TDTextures
     }
 
     // ------------------------------------------------------ mob status icons
-    static Texture2D iconBurn, iconSlow, iconTar;
+    static Texture2D iconBurn, iconSlow, iconTar, iconStun, iconDip;
 
     /// <summary>Orange burn flame on a transparent background — the
     /// damage-over-time status (replaced the green poison droplet).</summary>
@@ -1469,6 +1469,85 @@ public static class TDTextures
         t.Apply();
         t.filterMode = FilterMode.Bilinear;
         iconTar = t;
+        return t;
+    }
+
+    /// <summary>Yellow-white four-point stun spark on a transparent background.</summary>
+    public static Texture2D IconStun()
+    {
+        if (iconStun != null) return iconStun;
+        int S = 64;
+        Texture2D t = New(S);
+        t.wrapMode = TextureWrapMode.Clamp;
+        Color body = new Color(1.00f, 0.85f, 0.25f);
+        Color edge = new Color(0.85f, 0.45f, 0.08f);
+        Color core = new Color(1.00f, 1.00f, 0.92f);
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float u = (x + 0.5f) / S * 2f - 1f;
+                float v = (y + 0.5f) / S * 2f - 1f;
+                float rad = Mathf.Sqrt(u * u + v * v);
+                float ang = Mathf.Atan2(v, u);
+                float star = 0.72f * (0.42f + 0.58f * Mathf.Pow(Mathf.Abs(Mathf.Cos(ang * 2f)), 0.6f));
+                float inside = star - rad;
+                float cov = Mathf.Clamp01(inside * S * 0.5f + 0.5f);
+                if (cov <= 0.001f) { t.SetPixel(x, y, new Color(0f, 0f, 0f, 0f)); continue; }
+                Color c = Color.Lerp(edge, body, Mathf.Clamp01(inside / 0.16f));
+                float gl = Mathf.Clamp01(1f - rad / 0.24f);
+                c = Color.Lerp(c, core, gl * 0.85f);
+                t.SetPixel(x, y, new Color(c.r, c.g, c.b, cov));
+            }
+        }
+        t.Apply();
+        t.filterMode = FilterMode.Bilinear;
+        iconStun = t;
+        return t;
+    }
+
+    /// <summary>Dark chocolate dip droplet on a transparent background — the
+    /// Fondue T7 Dipped debuff (targets take extra damage).</summary>
+    public static Texture2D IconDip()
+    {
+        if (iconDip != null) return iconDip;
+        int S = 64;
+        Texture2D t = New(S);
+        t.wrapMode = TextureWrapMode.Clamp;
+        Color body = new Color(0.38f, 0.20f, 0.09f);
+        Color edge = new Color(0.13f, 0.06f, 0.03f);
+        Color gloss = new Color(0.78f, 0.52f, 0.30f);
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float u = (x + 0.5f) / S * 2f - 1f;
+                float v = (y + 0.5f) / S * 2f - 1f;
+                const float cy = -0.24f, r = 0.60f, top = 0.88f;
+                float inside;
+                if (v <= cy)
+                {
+                    float dx = u, dy = v - cy;
+                    inside = r - Mathf.Sqrt(dx * dx + dy * dy);
+                }
+                else
+                {
+                    float halfW = r * Mathf.Clamp01((top - v) / (top - cy));
+                    inside = Mathf.Min(halfW - Mathf.Abs(u), top - v);
+                }
+                float cov = Mathf.Clamp01(inside * S * 0.5f + 0.5f);
+                if (cov <= 0.001f) { t.SetPixel(x, y, new Color(0f, 0f, 0f, 0f)); continue; }
+                Color c = Color.Lerp(edge, body, Mathf.Clamp01(inside / 0.14f));
+                c = Color.Lerp(c, gloss, Mathf.Clamp01((v + 0.30f) / 0.55f) * 0.30f);
+                float gx = u + 0.22f, gy = v - 0.04f;
+                float gl = Mathf.Clamp01(1f - Mathf.Sqrt(gx * gx + gy * gy) / 0.20f);
+                c = Color.Lerp(c, gloss, gl * 0.80f);
+                t.SetPixel(x, y, new Color(c.r, c.g, c.b, cov));
+            }
+        }
+        t.Apply();
+        t.filterMode = FilterMode.Bilinear;
+        iconDip = t;
         return t;
     }
 
