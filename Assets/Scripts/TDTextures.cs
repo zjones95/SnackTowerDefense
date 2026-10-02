@@ -1173,34 +1173,39 @@ public static class TDTextures
     public static Texture2D Button() { return button != null ? button : (button = BuildButton(0)); }
     public static Texture2D ButtonHover() { return buttonHover != null ? buttonHover : (buttonHover = BuildButton(1)); }
     public static Texture2D ButtonPressed() { return buttonPressed != null ? buttonPressed : (buttonPressed = BuildButton(2)); }
-    public static Texture2D Panel() { return panel != null ? panel : (panel = Solid(new Color(0.12f, 0.13f, 0.14f, 0.96f))); }
-    public static Texture2D Field() { return field != null ? field : (field = Solid(new Color(0.08f, 0.09f, 0.10f))); }
-
-    static Texture2D Solid(Color color)
-    {
-        Texture2D t = new Texture2D(2, 2, TextureFormat.RGBA32, false);
-        t.wrapMode = TextureWrapMode.Clamp;
-        t.SetPixels(new[] { color, color, color, color });
-        t.Apply();
-        return t;
-    }
+    public static Texture2D Panel() { return panel != null ? panel :
+        (panel = Rounded(new Color(0.12f, 0.13f, 0.14f, 0.74f), new Color(0.12f, 0.13f, 0.14f, 0.74f))); }
+    public static Texture2D Field() { return field != null ? field :
+        (field = Rounded(new Color(0.08f, 0.09f, 0.10f), new Color(0.08f, 0.09f, 0.10f))); }
 
     // Top lighter than bottom; hover lifts the fill, pressed darkens it.
     static Texture2D BuildButton(int state)
     {
-        const int height = 64;
-        Texture2D t = new Texture2D(2, height, TextureFormat.RGBA32, false);
-        t.wrapMode = TextureWrapMode.Clamp;
-        t.filterMode = FilterMode.Bilinear;
         Color bottom = state == 2 ? new Color(0.07f, 0.27f, 0.13f) :
             state == 1 ? new Color(0.12f, 0.40f, 0.20f) : new Color(0.09f, 0.34f, 0.17f);
         Color top = state == 2 ? new Color(0.12f, 0.37f, 0.19f) :
             state == 1 ? new Color(0.22f, 0.55f, 0.29f) : new Color(0.17f, 0.46f, 0.24f);
-        for (int y = 0; y < height; y++)
+        return Rounded(bottom, top);
+    }
+
+    // 4px corner caps plus 9-slice borders keep radius constant at any control size.
+    static Texture2D Rounded(Color bottom, Color top)
+    {
+        const int size = 64, radius = 4;
+        Texture2D t = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        t.wrapMode = TextureWrapMode.Clamp;
+        t.filterMode = FilterMode.Bilinear;
+        for (int y = 0; y < size; y++)
         {
-            Color c = Color.Lerp(bottom, top, y / (float)(height - 1));
-            t.SetPixel(0, y, c);
-            t.SetPixel(1, y, c);
+            for (int x = 0; x < size; x++)
+            {
+                float dx = Mathf.Max(0f, radius - (x + 0.5f), x + 0.5f - (size - radius));
+                float dy = Mathf.Max(0f, radius - (y + 0.5f), y + 0.5f - (size - radius));
+                float coverage = Mathf.Clamp01(radius + 0.5f - Mathf.Sqrt(dx * dx + dy * dy));
+                Color c = Color.Lerp(bottom, top, y / (float)(size - 1));
+                c.a *= coverage;
+                t.SetPixel(x, y, c);
+            }
         }
         t.Apply();
         return t;

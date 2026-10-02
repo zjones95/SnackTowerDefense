@@ -337,14 +337,13 @@ public partial class TDGameManager
     // --------------------------------------------------------------------- GUI
     bool PgButton(Rect r, string label, bool active, int size)
     {
+        GUIStyle style = PaperButton(size);
         if (active)
         {
-            Color previous = GUI.color;
-            GUI.color = new Color(0.40f, 0.78f, 0.43f);
-            GUI.DrawTexture(new Rect(r.x - 2f, r.y - 2f, r.width + 4f, r.height + 4f), Texture2D.whiteTexture);
-            GUI.color = previous;
+            style.normal.background = TDTextures.ButtonHover();
+            style.focused.background = TDTextures.ButtonHover();
         }
-        return GUI.Button(r, label, PaperButton(size));
+        return GUI.Button(r, label, style);
     }
 
     void DrawPlayground()
@@ -361,7 +360,7 @@ public partial class TDGameManager
         float bx = (Screen.width - barW) * 0.5f;
         float by = 8f;
         pgWavePanel = new Rect(bx - 8f, by - 4f, barW + 16f, 52f);
-        GUI.DrawTexture(pgWavePanel, TDTextures.Panel());
+        DrawPanel(pgWavePanel);
 
         if (PgButton(new Rect(bx, by, 40f, 40f), "<", false, 20)) { pgWave = Mathf.Max(1, pgWave - 1); Click(); }
         string wn = MobCatalog.Get(TDBalance.Waves[Mathf.Clamp(pgWave, 1, TDBalance.TotalWaves) - 1].mob).displayName;
@@ -379,7 +378,7 @@ public partial class TDGameManager
         float px = Screen.width - 212f;
         float py = 70f;
         pgTowerPanel = new Rect(px - 10f, py - 34f, 212f, 30f + TowerCatalog.GalleryTypes.Length * 27f + 14f);
-        GUI.DrawTexture(pgTowerPanel, TDTextures.Panel());
+        DrawPanel(pgTowerPanel);
         GUI.Label(new Rect(px, py, 200f, 24f), "TOWER", Style(16, TextAnchor.MiddleLeft, Color.white));
         float ty = py + 30f;
         for (int i = 0; i < TowerCatalog.GalleryTypes.Length; i++)
@@ -392,7 +391,7 @@ public partial class TDGameManager
 
         // tier picker (right, under tower list)
         pgTierPanel = new Rect(px - 10f, ty + 2f, 212f, 46f);
-        GUI.DrawTexture(pgTierPanel, TDTextures.Panel());
+        DrawPanel(pgTierPanel);
         GUI.Label(new Rect(px, ty + 4f, 200f, 18f), "TIER", Style(13, TextAnchor.MiddleLeft, Color.white));
         float ttx = px;
         float tty = ty + 24f;
@@ -410,7 +409,7 @@ public partial class TDGameManager
 
         // bottom toolbar
         pgToolbar = new Rect(0f, Screen.height - 62f, Screen.width, 62f);
-        GUI.DrawTexture(pgToolbar, TDTextures.Panel());
+        DrawPanel(pgToolbar);
         float tbX = 12f;
         if (PgButton(new Rect(tbX, Screen.height - 52f, 90f, 40f), "Place", pgPlacing, 15)) { pgPlacing = !pgPlacing; pgDeleting = false; Click(); }
         tbX += 96f;
@@ -445,10 +444,7 @@ public partial class TDGameManager
         float gy = 64f;
         pgWaveGrid = new Rect(gx, gy, w, h);
 
-        Color old = GUI.color;
-        GUI.color = new Color(0.12f, 0.13f, 0.14f, 0.96f);
-        GUI.DrawTexture(pgWaveGrid, Texture2D.whiteTexture);
-        GUI.color = old;
+        DrawPanel(pgWaveGrid);
 
         GUI.Label(new Rect(gx, gy + 8f, w, 24f), "SELECT WAVE", Style(16, TextAnchor.MiddleCenter, new Color(0.4f, 1f, 1f)));
         for (int wv = 1; wv <= TDBalance.TotalWaves; wv++)
@@ -473,10 +469,7 @@ public partial class TDGameManager
         TowerTierStats s = t.Stats;
         pgSelPanel = new Rect(12f, 90f, 440f, 320f);
 
-        Color old = GUI.color;
-        GUI.color = new Color(0.12f, 0.13f, 0.14f, 0.94f);
-        GUI.DrawTexture(pgSelPanel, Texture2D.whiteTexture);
-        GUI.color = old;
+        DrawPanel(pgSelPanel);
 
         float x = 20f, y = 98f;
         GUI.Label(new Rect(x, y, 420f, 24f), t.DisplayName + "  -  Tier " + t.Tier,

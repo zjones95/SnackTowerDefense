@@ -465,10 +465,7 @@ public partial class TDGameManager
         float x = (Screen.width - w) * 0.5f;
         float y = Screen.height * 0.30f;
 
-        Color old = GUI.color;
-        GUI.color = new Color(0.12f, 0.13f, 0.14f, 0.92f);
-        GUI.DrawTexture(new Rect(x, y, w, h), Texture2D.whiteTexture);
-        GUI.color = old;
+        DrawPanel(new Rect(x, y, w, h));
 
         GUI.Label(new Rect(x, y + 12f, w, 34f), failed ? "RECONNECTION FAILED" : "CONNECTION LOST",
             Style(26, TextAnchor.MiddleCenter, new Color(1f, 0.62f, 0.4f)));
@@ -516,10 +513,7 @@ public partial class TDGameManager
         int rows = ms.Boards.Count;
         float panelH = 50f + rows * 20f;
 
-        Color old = GUI.color;
-        GUI.color = new Color(0.12f, 0.13f, 0.14f, 0.88f);
-        GUI.DrawTexture(new Rect(x0 - 6f, y - 8f, w + 12f, panelH + 12f), Texture2D.whiteTexture);
-        GUI.color = old;
+        DrawPanel(new Rect(x0 - 6f, y - 8f, w + 12f, panelH + 12f));
 
         if (GUI.Button(new Rect(x0 + w - tabW, y, tabW, 24f), "Scores v", PaperButton(14)))
         {
@@ -596,10 +590,7 @@ public partial class TDGameManager
         float logTop = logBottom - count * lineH;
 
         float top = (chat.Open ? logTop - 18f : logTop) - 5f;
-        Color old = GUI.color;
-        GUI.color = new Color(0.12f, 0.13f, 0.14f, 0.85f);
-        GUI.DrawTexture(new Rect(x - 6f, top, w + 12f, (inputBottom + 5f) - top), Texture2D.whiteTexture);
-        GUI.color = old;
+        DrawPanel(new Rect(x - 6f, top, w + 12f, (inputBottom + 5f) - top));
 
         int first = chat.Lines.Count - count;
         for (int i = 0; i < count; i++)

@@ -1217,24 +1217,26 @@ public partial class TDGameManager : MonoBehaviour
             StyleButton(uiSkin.button);
             uiSkin.box.normal.background = TDTextures.Panel();
             uiSkin.box.normal.textColor = Color.white;
-            uiSkin.box.border = new RectOffset(0, 0, 0, 0);
+            uiSkin.box.border = new RectOffset(4, 4, 4, 4);
             uiSkin.textField.normal.background = TDTextures.Field();
             uiSkin.textField.focused.background = TDTextures.Field();
             uiSkin.textField.normal.textColor = Color.white;
             uiSkin.textField.focused.textColor = Color.white;
-            uiSkin.textField.border = new RectOffset(0, 0, 0, 0);
+            uiSkin.textField.border = new RectOffset(4, 4, 4, 4);
             uiSkin.textField.padding = new RectOffset(8, 8, 4, 4);
             uiSkin.horizontalSlider.normal.background = TDTextures.Field();
+            uiSkin.horizontalSlider.border = new RectOffset(4, 4, 4, 4);
             uiSkin.horizontalSliderThumb.normal.background = TDTextures.Button();
             uiSkin.horizontalSliderThumb.hover.background = TDTextures.ButtonHover();
             uiSkin.horizontalSliderThumb.active.background = TDTextures.ButtonPressed();
+            uiSkin.horizontalSliderThumb.border = new RectOffset(4, 4, 4, 4);
         }
         GUI.skin = uiSkin;
     }
 
     static void StyleButton(GUIStyle s)
     {
-        s.border = new RectOffset(0, 0, 0, 0);
+        s.border = new RectOffset(4, 4, 4, 4);
         s.normal.background = s.focused.background = s.onNormal.background = TDTextures.Button();
         s.hover.background = s.onHover.background = TDTextures.ButtonHover();
         s.active.background = s.onActive.background = TDTextures.ButtonPressed();
@@ -1278,6 +1280,11 @@ public partial class TDGameManager : MonoBehaviour
         return s;
     }
 
+    void DrawPanel(Rect rect)
+    {
+        GUI.Box(rect, GUIContent.none);
+    }
+
     /// <summary>Shared green gradient button for menus and overlays.</summary>
     GUIStyle PaperButton(int size)
     {
@@ -1310,6 +1317,7 @@ public partial class TDGameManager : MonoBehaviour
         float bx = (Screen.width - bw) * 0.5f;
         float by = Screen.height * 0.30f;
         GUIStyle btn = PaperButton(22);
+        DrawPanel(new Rect(bx - 16f, by - 16f, bw + 32f, 7f * bh + 6f * gap + 32f));
 
         if (GUI.Button(new Rect(bx, by, bw, bh), "Single Player", btn))
         {
@@ -1384,10 +1392,7 @@ public partial class TDGameManager : MonoBehaviour
 
         float by = top + 34f;
         // Dark strip behind the blurbs keeps the coloured text readable over the board.
-        Color old = GUI.color;
-        GUI.color = new Color(0f, 0f, 0f, 0.45f);
-        GUI.DrawTexture(new Rect(diffX + diffW + 10f, by - 4f, blurbW + 16f, 4f * (bh + gap) + 4f), Texture2D.whiteTexture);
-        GUI.color = old;
+        DrawPanel(new Rect(diffX + diffW + 10f, by - 4f, blurbW + 16f, 4f * (bh + gap) + 4f));
 
         for (int i = 0; i < 4; i++)
         {
@@ -1419,10 +1424,7 @@ public partial class TDGameManager : MonoBehaviour
         float boxX = mapX + arrowW + 12f;
         float boxY = top + 68f;
 
-        old = GUI.color;
-        GUI.color = new Color(0f, 0f, 0f, 0.5f);
-        GUI.DrawTexture(new Rect(boxX, boxY, mapBox, mapBox), Texture2D.whiteTexture);
-        GUI.color = old;
+        DrawPanel(new Rect(boxX, boxY, mapBox, mapBox));
 
         preview.Show(ActiveTheme);
         GUI.DrawTexture(new Rect(boxX, boxY, mapBox, mapBox), preview.Texture, ScaleMode.ScaleToFit, false);
@@ -1471,8 +1473,8 @@ public partial class TDGameManager : MonoBehaviour
 
     void DrawHud()
     {
-        GUI.DrawTexture(new Rect(4f, 4f, 310f, 84f), TDTextures.Panel());
-        GUI.DrawTexture(new Rect(Screen.width - 304f, 4f, 300f, mpActive ? 108f : 84f), TDTextures.Panel());
+        DrawPanel(new Rect(4f, 4f, 310f, 84f));
+        DrawPanel(new Rect(Screen.width - 304f, 4f, 300f, mpActive ? 108f : 84f));
         GUIStyle hud = Style(18, TextAnchor.MiddleLeft, Color.white);
         GUI.Label(new Rect(12, 10, 300, 24), "Money: $" + Money, hud);
         GUI.Label(new Rect(12, 34, 300, 24), "Lives: " + Lives, hud);

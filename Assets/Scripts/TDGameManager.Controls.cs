@@ -64,10 +64,7 @@ public partial class TDGameManager
         float panelH = listH + backH + 56f;
 
         // panel behind the rows
-        old = GUI.color;
-        GUI.color = new Color(0.12f, 0.13f, 0.14f, 0.94f);
-        GUI.DrawTexture(new Rect(x - 24f, y - 20f, w + 48f, panelH), Texture2D.whiteTexture);
-        GUI.color = old;
+        DrawPanel(new Rect(x - 24f, y - 20f, w + 48f, panelH));
 
         float keyW = 150f;
         GUIStyle keyStyle = Style(18, TextAnchor.MiddleRight, new Color(1f, 0.85f, 0.4f));

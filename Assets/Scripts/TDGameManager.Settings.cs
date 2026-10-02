@@ -77,7 +77,7 @@ public partial class TDGameManager
         if (settingsOpen && settingsFromPause) return;   // the settings overlay covers the pause menu
 
         Color old = GUI.color;
-        GUI.color = new Color(0.10f, 0.11f, 0.12f, 0.88f);
+        GUI.color = new Color(0.10f, 0.11f, 0.12f, 0.70f);
         GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.whiteTexture);
         GUI.color = old;
 
@@ -137,7 +137,7 @@ public partial class TDGameManager
 
         // scrim over whatever opened this
         Color old = GUI.color;
-        GUI.color = new Color(0.10f, 0.11f, 0.12f, 0.94f);
+        GUI.color = new Color(0.10f, 0.11f, 0.12f, 0.78f);
         GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.whiteTexture);
         GUI.color = old;
 
@@ -149,10 +149,7 @@ public partial class TDGameManager
         float y = Screen.height * 0.35f;
 
         // panel behind the rows
-        old = GUI.color;
-        GUI.color = new Color(0.12f, 0.13f, 0.14f, 0.96f);
-        GUI.DrawTexture(new Rect(x - 24f, y - 24f, w + 48f, 220f), Texture2D.whiteTexture);
-        GUI.color = old;
+        DrawPanel(new Rect(x - 24f, y - 24f, w + 48f, 220f));
 
         float labelW = 120f, pctW = 80f;
         float sliderX = x + labelW + 12f;
