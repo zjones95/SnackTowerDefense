@@ -117,9 +117,11 @@ public partial class TDGameManager
         string mod6 = TowerCatalog.ModifierText(def.type, 6);
         GUIStyle mod7Style = Style(14, TextAnchor.UpperCenter, new Color(1f, 0.92f, 0.55f));
         mod7Style.wordWrap = true;
-        GUIStyle mod5Style = Style(14, TextAnchor.UpperCenter, new Color(0.72f, 0.86f, 1f));
+        // Preview is at T1 (T7 for fusions), so bonuses show greyed out here.
+        Color lockedMod = new Color(0.55f, 0.58f, 0.63f);
+        GUIStyle mod5Style = Style(14, TextAnchor.UpperCenter, lockedMod);
         mod5Style.wordWrap = true;
-        GUIStyle mod6Style = Style(14, TextAnchor.UpperCenter, new Color(1f, 0.82f, 0.45f));
+        GUIStyle mod6Style = Style(14, TextAnchor.UpperCenter, lockedMod);
         mod6Style.wordWrap = true;
         float my0 = area.y + 5f * rowH + 54f;
         if (mod7 != null)
@@ -128,9 +130,9 @@ public partial class TDGameManager
         }
         else if (mod5 != null)
         {
-            GUI.Label(new Rect(area.x - 40f, my0, area.width + 80f, 34f), "T5   " + mod5, mod5Style);
+            GUI.Label(new Rect(area.x - 40f, my0, area.width + 80f, 28f), "T5   " + mod5, mod5Style);
             if (mod6 != null)
-                GUI.Label(new Rect(area.x - 40f, my0 + 36f, area.width + 80f, 34f), "T6   " + mod6, mod6Style);
+                GUI.Label(new Rect(area.x - 40f, my0 + 30f, area.width + 80f, 28f), "T6   " + mod6, mod6Style);
         }
         else
         {

@@ -59,7 +59,72 @@ public static class TowerVisual
             SnackArt.BuildTower(modelRoot.transform, turret, type, tier);
         }
 
+        BuildTierBase(modelRoot.transform, tier);
+
         return turret;
+    }
+
+    /// <summary>Tints the tower base's bottom ring with the tier colour, adds a
+    /// slight emissive lift, and lays a soft tier-coloured glow disc under the
+    /// base. Runs at build time so merges/ascensions (which rebuild the tower)
+    /// and remote boards pick it up automatically.</summary>
+    static void BuildTierBase(Transform parent, int tier)
+    {
+        Color c = TierColour(tier);
+
+        Renderer[] rs = parent.GetComponentsInChildren<Renderer>();
+        bool hasRim = false;
+        for (int i = 0; i < rs.Length; i++)
+            if (rs[i].name.ToLower() == "rim") { hasRim = true; break; }
+
+        for (int i = 0; i < rs.Length; i++)
+        {
+            string n = rs[i].name.ToLower();
+            bool tint = n == "rim" ||
+                (!hasRim && (n == "base" || n == "stand" || n == "plate"));
+            if (!tint) continue;
+            Material m = rs[i].material;
+            if (m.HasProperty("_Color")) m.SetColor("_Color", c);
+            if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", c);
+            if (m.HasProperty("_EmissionColor"))
+            {
+                m.EnableKeyword("_EMISSION");
+                m.SetColor("_EmissionColor", new Color(c.r * 0.45f, c.g * 0.45f, c.b * 0.45f));
+            }
+        }
+
+        GameObject glow = TDVisuals.Cyl(parent, "TierGlow",
+            new Vector3(0f, 0.02f, 0f), 0.62f, 0.02f, TierGlowMat(tier));
+        Renderer gr = glow.GetComponent<Renderer>();
+        if (gr != null)
+        {
+            gr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            gr.receiveShadows = false;
+        }
+    }
+
+    static readonly Dictionary<int, Material> glowMats = new Dictionary<int, Material>();
+
+    /// <summary>Soft translucent tier-coloured disc material. Uses the build-safe
+    /// Fx shader so the glow survives in player builds.</summary>
+    static Material TierGlowMat(int tier)
+    {
+        Material m;
+        if (glowMats.TryGetValue(tier, out m) && m != null) return m;
+        Color c = TierColour(tier);
+        Shader fx = Shader.Find("Snack/Fx");
+        if (fx != null)
+        {
+            m = new Material(fx);
+            if (m.HasProperty("_Color"))
+                m.SetColor("_Color", new Color(c.r, c.g, c.b, 0.30f));
+        }
+        else
+        {
+            m = TDVisuals.TransparentMat(c, 0.30f, 0.4f);
+        }
+        glowMats[tier] = m;
+        return m;
     }
 
     /// <summary>Tier palette — the same colours for every tower type. Tiers 4-6

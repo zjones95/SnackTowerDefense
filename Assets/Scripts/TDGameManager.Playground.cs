@@ -495,14 +495,26 @@ public partial class TDGameManager
 
         GUIStyle mw = Style(12, TextAnchor.UpperLeft, new Color(0.8f, 0.88f, 0.95f));
         mw.wordWrap = true;
+        Color bonusOn = new Color(0.45f, 1f, 0.55f);
+        Color bonusOff = new Color(0.55f, 0.58f, 0.63f);
         string mod7 = TowerCatalog.ModifierText(t.Type, 7);
         if (mod7 != null) GUI.Label(new Rect(x, y, 420f, 40f), "T7: " + mod7, mw);
         else
         {
             string mod5 = TowerCatalog.ModifierText(t.Type, 5);
             string mod6 = TowerCatalog.ModifierText(t.Type, 6);
-            if (mod5 != null) GUI.Label(new Rect(x, y, 420f, 20f), "T5: " + mod5, mw);
-            if (mod6 != null) GUI.Label(new Rect(x, y + 22f, 420f, 20f), "T6: " + mod6, mw);
+            if (mod5 != null)
+            {
+                GUIStyle s5 = Style(12, TextAnchor.UpperLeft, t.Tier >= 5 ? bonusOn : bonusOff);
+                s5.wordWrap = true;
+                GUI.Label(new Rect(x, y, 420f, 20f), "T5: " + mod5, s5);
+            }
+            if (mod6 != null)
+            {
+                GUIStyle s6 = Style(12, TextAnchor.UpperLeft, t.Tier >= 6 ? bonusOn : bonusOff);
+                s6.wordWrap = true;
+                GUI.Label(new Rect(x, y + 22f, 420f, 20f), "T6: " + mod6, s6);
+            }
         }
     }
 }

@@ -1539,14 +1539,24 @@ public partial class TDGameManager : MonoBehaviour
             }
             else
             {
-                GUIStyle mod5Style = Style(12, TextAnchor.UpperLeft, new Color(0.72f, 0.86f, 1f));
-                mod5Style.wordWrap = true;
-                GUIStyle mod6Style = Style(12, TextAnchor.UpperLeft, new Color(1f, 0.82f, 0.45f));
-                mod6Style.wordWrap = true;
+                // Both bonus rows always show: green once the tower reaches the
+                // tier, greyed out before that. Tighter 22px rows.
+                Color unlocked = new Color(0.45f, 1f, 0.55f);
+                Color locked = new Color(0.55f, 0.58f, 0.63f);
                 if (mod5 != null)
-                    GUI.Label(new Rect(tx, selY + 78, 412, 34), "T5: " + mod5, mod5Style);
+                {
+                    GUIStyle mod5Style = Style(12, TextAnchor.UpperLeft,
+                        Selected.Tier >= 5 ? unlocked : locked);
+                    mod5Style.wordWrap = true;
+                    GUI.Label(new Rect(tx, selY + 78, 412, 20), "T5: " + mod5, mod5Style);
+                }
                 if (mod6 != null)
-                    GUI.Label(new Rect(tx, selY + 112, 412, 34), "T6: " + mod6, mod6Style);
+                {
+                    GUIStyle mod6Style = Style(12, TextAnchor.UpperLeft,
+                        Selected.Tier >= 6 ? unlocked : locked);
+                    mod6Style.wordWrap = true;
+                    GUI.Label(new Rect(tx, selY + 100, 412, 20), "T6: " + mod6, mod6Style);
+                }
                 if (mod5 == null)
                 {
                     GUIStyle noModStyle = Style(12, TextAnchor.UpperLeft, new Color(0.75f, 0.75f, 0.78f));
