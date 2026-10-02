@@ -423,9 +423,8 @@ public static class TowerCatalog
         d.type = TowerType.SourFizz; d.displayName = "Sour Fizz"; d.color = new Color(0.98f, 0.36f, 0.65f);
         float[] armour = { .20f, .25f, .30f, .35f, .40f, .45f };
         float[] sourTime = { 2f, 2.5f, 3f, 3.5f, 3.75f, 4f };
-        float[] sourRate = { .8f, .7f, .62f, .55f, .5f, .45f };
         for (int i = 0; i < 6; i++) d.tiers.Add(new TowerTierStats {
-            damage = 0f, range = 4.5f + .5f * i, fireInterval = sourRate[i], projectileSpeed = 20f,
+            damage = supportDmg[i], range = supportRange[i], fireInterval = supportRate[i], projectileSpeed = supportSpeed[i],
             sourArmourReduction = armour[i], sourDuration = sourTime[i], sourSpreadRadius = i >= 4 ? 1.5f : 0f
         });
         defs[d.type] = d;

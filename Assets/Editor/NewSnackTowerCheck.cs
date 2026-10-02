@@ -43,7 +43,8 @@ public static class NewSnackTowerCheck
 
         // Support towers now also fire: weak single shots plus the aura.
         if (TowerCatalog.Get(TowerType.HotSauce).Stats(1).damage <= 0f ||
-            TowerCatalog.Get(TowerType.CoffeeMug).Stats(6).damage <= 0f)
+            TowerCatalog.Get(TowerType.CoffeeMug).Stats(6).damage <= 0f ||
+            TowerCatalog.Get(TowerType.SourFizz).Stats(1).damage <= 0f)
             throw new Exception("Support towers must still fire single shots");
         if (Mathf.Abs(TowerCatalog.Get(TowerType.HotSauce).Stats(1).auraRadius - 4.375f) > .001f)
             throw new Exception("Aura ranges were not expanded by 25%");

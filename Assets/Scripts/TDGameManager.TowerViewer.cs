@@ -208,7 +208,7 @@ public partial class TDGameManager
             case TowerType.CoffeeMug: return "Weak single shots plus an attack-speed aura. Same-type auras do not stack; the strongest wins.";
             case TowerType.PopTartToaster: return "Three quick small pastries, then one large splash pastry.";
             case TowerType.CookieCrumbler: return "Fires five cookie bits that fan out from a packed cluster into a short cone.";
-            case TowerType.SourFizz: return "Sour bubbles reduce a mob's flat armour for a short time.";
+            case TowerType.SourFizz: return "Weak shots that reduce a mob's flat armour for a short time.";
             default: return "";
         }
     }

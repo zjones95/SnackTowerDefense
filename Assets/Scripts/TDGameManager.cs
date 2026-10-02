@@ -1571,7 +1571,8 @@ public partial class TDGameManager : MonoBehaviour
                     (Selected.Type == TowerType.HotSauce ? "damage" : "attack speed") +
                     " aura    Radius " + s.auraRadius.ToString("0.#");
             else if (Selected.Type == TowerType.SourFizz)
-                info += "-" + Mathf.RoundToInt(s.sourArmourReduction * 100f) + "% flat armour    Rate " + s.fireInterval.ToString("0.00") + "s";
+                info += "Damage " + s.damage + "    Rate " + s.fireInterval.ToString("0.00") + "s\n" +
+                    "-" + Mathf.RoundToInt(s.sourArmourReduction * 100f) + "% flat armour";
             else if (Selected.Type == TowerType.PopTartToaster)
                 info += "3 x " + s.toastSmallDamage + " + splash " + s.damage + "    Cycle " + s.fireInterval.ToString("0.00") + "s";
             else if (Selected.Type == TowerType.CookieCrumbler)

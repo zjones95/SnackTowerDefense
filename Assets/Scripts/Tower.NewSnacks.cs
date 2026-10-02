@@ -128,7 +128,8 @@ public partial class Tower
         }
         else
         {
-            SpawnSnackProjectile(target, 0f, 0f, .20f, s);
+            // Sour Fizz: a weak shot that also strips flat armour.
+            SpawnSnackProjectile(target, s.damage, 0f, .20f, s);
             cooldown = s.fireInterval / rate;
         }
         lastSnackShot = Time.time;
