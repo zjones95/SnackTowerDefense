@@ -39,6 +39,15 @@ public class Tower : MonoBehaviour
     public TowerTierStats Stats { get { return TowerCatalog.Get(Type).Stats(Tier); } }
     public string DisplayName { get { return TowerCatalog.Get(Type).displayName; } }
     public float TurretYaw { get { return turret != null ? turret.eulerAngles.y : 0f; } }
+
+    /// <summary>Range after roguelike mods (never mutates the shared catalog stats).</summary>
+    float EffRange(TowerTierStats s) { return RogueMods.EffRange(s.range); }
+
+    bool BossWaveNow()
+    {
+        TDGameManager gm = TDGameManager.Instance;
+        return gm != null && RogueMods.IsBossWave(gm.Wave);
+    }
     /// <summary>Selection state (the yellow tile outline is drawn by the manager).</summary>
     public bool IsSelected { get { return isSelected; } }
 
@@ -159,7 +168,7 @@ public class Tower : MonoBehaviour
         TowerTierStats s = Stats;
         var mobs = TDGameManager.Instance != null ? TDGameManager.Instance.Mobs : null;
 
-        Mob target = PickTarget(mobs, s.range);
+        Mob target = PickTarget(mobs, EffRange(s));
 
         if (turret != null && target != null)
         {
@@ -200,7 +209,7 @@ public class Tower : MonoBehaviour
         float interval = s.fireInterval;
         if (Type == TowerType.BobaBlaster && s.rateMinInterval > 0f && s.spinUpTime > 0f)
             interval = Mathf.Lerp(s.fireInterval, s.rateMinInterval, Mathf.Clamp01(bobaSpin / s.spinUpTime));
-        cooldown = interval;
+        cooldown = interval / RogueMods.EffRate(BossWaveNow());
         if (Type == TowerType.BobaBlaster) bobaLastFire = Time.time;   // spin persists across targets; idleness resets it
         if (TDAudio.Instance != null) TDAudio.Instance.Shot(Type);
 
@@ -271,8 +280,8 @@ public class Tower : MonoBehaviour
         if (crit) dmg *= s.critMult;
 
         Vector3 hitPoint = target.transform.position + Vector3.up * 0.4f;
-        if (crit && s.critPierceArmour) target.TakeDamageIgnoringArmour(dmg);
-        else target.TakeDamage(dmg);
+        if (crit && s.critPierceArmour) target.TakeDamageFromTowerIgnoringArmour(dmg, this);
+        else target.TakeDamageFromTower(dmg, this);
         AddDamage(dmg);
 
         if (s.deadeyeRamp > 0f)
@@ -326,8 +335,8 @@ public class Tower : MonoBehaviour
         p.Speed = 9f;                      // slow: it visibly walks to the enemy
         p.Damage = s.damage;
         p.Width = s.pierceWidth;
-        p.MaxHits = Mathf.Max(1, s.pierceCount);
-        p.MaxDistance = s.range;
+        p.MaxHits = Mathf.Max(1, s.pierceCount + (RogueMods.Artillery ? 1 : 0));
+        p.MaxDistance = EffRange(s);
         p.Boomerang = s.boomerangReturn;   // Pierce T6: return pass at full damage
     }
 
@@ -362,9 +371,9 @@ public class Tower : MonoBehaviour
             parent.Add(par);
             hit.Add(cur);
 
-            // Sticky Sour (T6) ignores the 0.75^i falloff; T5 keeps it by depth.
-            float dmg = s.chainFullDamage ? s.damage : s.damage * Mathf.Pow(0.75f, depth);
-            cur.TakeDamage(dmg);
+            // Sticky Sour (T6) ignores the 0.75^i falloff; Sour Power extends that to every chain.
+            float dmg = (s.chainFullDamage || RogueMods.SourPower) ? s.damage : s.damage * Mathf.Pow(0.75f, depth);
+            cur.TakeDamageFromTower(dmg, this);
             AddDamage(dmg);
             if (s.slowFactor > 0f) cur.ApplySlow(s.slowFactor, s.slowDuration);
             if (s.stunChance > 0f && Random.value < s.stunChance) cur.ApplyStun(s.stunDuration);
@@ -406,7 +415,7 @@ public class Tower : MonoBehaviour
     {
         if (target == null) return;
 
-        target.TakeDamage(s.damage);
+        target.TakeDamageFromTower(s.damage, this);
         AddDamage(s.damage);
 
         GameObject go = new GameObject("PizzaZone");
@@ -429,7 +438,7 @@ public class Tower : MonoBehaviour
         if (target == null) return;
 
         Vector3 hit = target.transform.position + Vector3.up * 0.4f;
-        target.TakeDamage(s.damage);
+        target.TakeDamageFromTower(s.damage, this);
         AddDamage(s.damage);
         if (s.dippedBonus > 0f)
             target.ApplyDipped(s.dippedBonus, s.dippedDuration, s.dippedMaxStacks);
@@ -470,14 +479,14 @@ public class Tower : MonoBehaviour
         {
             Mob m = mobs[i];
             if (m == null) continue;
-            if (Vector3.Distance(transform.position, m.transform.position) <= s.range)
+            if (Vector3.Distance(transform.position, m.transform.position) <= EffRange(s))
                 inRange.Add(m);
         }
         if (inRange.Count == 0) return;
         RankInRange(inRange);
 
-        int shots = Mathf.Min(s.multiShot > 0 ? s.multiShot : 1, inRange.Count);
-        cooldown = s.fireInterval;
+        int shots = Mathf.Min((s.multiShot > 0 ? s.multiShot : 1) + (RogueMods.DoubleScoop && s.multiShot > 1 ? 1 : 0), inRange.Count);
+        cooldown = s.fireInterval / RogueMods.EffRate(BossWaveNow());
         if (TDAudio.Instance != null) TDAudio.Instance.Shot(Type);
 
         Vector3 muzzle = Muzzle();
@@ -588,13 +597,13 @@ public class Tower : MonoBehaviour
         {
             Mob m = mobs[i];
             if (m == null) continue;
-            if (Vector3.Distance(transform.position, m.transform.position) <= s.range)
+            if (Vector3.Distance(transform.position, m.transform.position) <= EffRange(s))
                 inRange.Add(m);
         }
         if (inRange.Count == 0) { SpawnProjectile(from, target, s); return; }
         inRange.Sort((a, b) => b.Progress.CompareTo(a.Progress));
 
-        int shots = Mathf.Min(s.multiShot, inRange.Count);
+        int shots = Mathf.Min(s.multiShot + (RogueMods.DoubleScoop && s.multiShot > 1 ? 1 : 0), inRange.Count);
         for (int i = 0; i < shots; i++)
             SpawnProjectile(from, inRange[i], s);
     }

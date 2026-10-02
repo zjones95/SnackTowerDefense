@@ -44,6 +44,9 @@ public partial class TDGameManager
         Selected = null;
         merging = building = goldBuilding = reRolling = false;
         cleared = eliminated = false;
+        RogueMods.Reset();
+        rogueOpen = false;
+        rogueOffered = null;
         if (worldRoot != null) Destroy(worldRoot.gameObject);
 
         Money = 0;

@@ -79,7 +79,7 @@ public class PizzaZone : MonoBehaviour
                 if (m == null) continue;
                 if (Vector3.Distance(m.transform.position, transform.position) <= Radius)
                 {
-                    m.TakeDamage(dmg);
+                    m.TakeDamageFromTower(dmg, Source);
                     if (Source != null) Source.AddDamage(dmg);
                 }
             }

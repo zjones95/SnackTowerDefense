@@ -391,6 +391,9 @@ public partial class TDGameManager : MonoBehaviour
         reRolling = false;
         cleared = false;
         eliminated = false;
+        RogueMods.Reset();
+        rogueOpen = false;
+        rogueOffered = null;
         if (worldRoot != null) Destroy(worldRoot.gameObject);
 
         Money = TDBalance.StartMoney;
@@ -505,6 +508,15 @@ public partial class TDGameManager : MonoBehaviour
         message = "Round cleared! +$" + bonus;
         messageTimer = 2.5f;
         if (TDAudio.Instance != null) TDAudio.Instance.RoundClear();
+
+        RogueOnWaveCleared();
+        RogueDef[] roguePool;
+        int rogueCount;
+        if (RogueOfferFor(Wave, out roguePool, out rogueCount))
+        {
+            OpenRogueOffer(roguePool, rogueCount, mpActive);
+            return;
+        }
 
         if (mpActive)
         {
@@ -653,6 +665,23 @@ public partial class TDGameManager : MonoBehaviour
             HandlePauseInput();
             if (!paused) return;   // resumed this frame: don't re-open on the same Esc press
             // else fall through: sim/camera/spectate below keep ticking, input stays blocked
+        }
+
+        // Roguelike pick: the next wave waits (15s auto-pick); world clicks,
+        // hotkeys and pause stay suppressed while the modal is open.
+        if (rogueOpen)
+        {
+            TickRogueOffer();
+            rogueComboTimer -= Time.deltaTime;
+            if (rogueComboTimer <= 0f)
+            {
+                rogueComboTimer = 0.5f;
+                if (RogueMods.ComboMeal || RogueMods.GiantSlayer) RefreshRogueCensus();
+            }
+            HideHover();
+            UpdateCamera(Time.deltaTime);
+            if (mpActive) { UpdateRemoteBoards(); UpdateSpectate(); }
+            return;
         }
 
         if (!paused && Input.GetKeyDown(KeyCode.Escape) && !ChatSync.IsTyping)
@@ -957,7 +986,8 @@ public partial class TDGameManager : MonoBehaviour
     /// <summary>Money for a merge at this tier: the cheap cost below T4, else the fusion cost.</summary>
     static int MergeCostFor(int tier)
     {
-        return tier == TowerCatalog.MaxTier - 1 ? TDBalance.FuseCost : TDBalance.MergeCost;
+        int baseCost = tier == TowerCatalog.MaxTier - 1 ? TDBalance.FuseCost : TDBalance.MergeCost;
+        return RogueMods.EffMergeCost(baseCost);
     }
 
     /// <summary>Cash ascension (hotkey U): upgrades the selected tier 4/5 tower in
@@ -1068,7 +1098,7 @@ public partial class TDGameManager : MonoBehaviour
         if (a.Tier >= TowerCatalog.MaxTier) return false;
         if (a.Type == TowerType.Gold || b.Type == TowerType.Gold) return false;   // Gold upgrades with cash
 
-        int cost = fuse ? TDBalance.FuseCost : TDBalance.MergeCost;
+        int cost = MergeCostFor(a.Tier);
         if (Money < cost)
         {
             message = "Not enough money to merge ($" + cost + ")";
@@ -1270,6 +1300,7 @@ public partial class TDGameManager : MonoBehaviour
             else if (State == GameState.Victory) DrawEnd(true);
             DrawDamageTestResult();   // fading final total, drawn over the end screen
             DrawPauseMenu();
+            if (rogueOpen) DrawRogueModal();
         }
 
         // Drawn last so it sits on top of whichever screen opened it.
@@ -1509,6 +1540,10 @@ public partial class TDGameManager : MonoBehaviour
         if (!string.IsNullOrEmpty(message))
             GUI.Label(new Rect(0, 40, Screen.width, 26), message, Style(16, TextAnchor.MiddleCenter, new Color(0.6f, 1f, 0.6f)));
 
+        if (RogueMods.Owned.Count > 0)
+            GUI.Label(new Rect(0, 66, Screen.width, 18), "Upgrades: " + string.Join(", ", RogueMods.Owned.ToArray()),
+                Style(11, TextAnchor.MiddleCenter, new Color(0.55f, 0.9f, 0.6f)));
+
         if (Selected != null)
         {
             TowerTierStats s = Selected.Stats;
@@ -1592,7 +1627,7 @@ public partial class TDGameManager : MonoBehaviour
             bool canFuse = Selected.Type != TowerType.Gold && Selected.Tier == TowerCatalog.MaxTier - 1;
             bool canMerge = Selected.Type != TowerType.Gold &&
                             (Selected.Tier <= TowerCatalog.MaxMergeTier || canFuse);
-            int mergeCost = canFuse ? TDBalance.FuseCost : TDBalance.MergeCost;
+            int mergeCost = MergeCostFor(Selected.Tier);
             int ascendCost = UpgradeCost(Selected);   // Gold 1->2->3->4; others ascend 4->5->6
             bool canAscend = ascendCost > 0;
             bool canReRoll = Selected.Tier >= 2 && Selected.Tier < TowerCatalog.MaxTier;   // T7 is terminal

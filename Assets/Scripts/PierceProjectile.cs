@@ -86,7 +86,7 @@ public class PierceProjectile : MonoBehaviour
                 if (Vector3.Distance(m.transform.position, transform.position) <= Width)
                 {
                     alreadyHit.Add(m);
-                    m.TakeDamage(Damage);
+                    m.TakeDamageFromTower(Damage, Source);
                     if (Source != null) Source.AddDamage(Damage);
                     hits++;
                 }

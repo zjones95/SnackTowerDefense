@@ -137,7 +137,7 @@ public class Mob : MonoBehaviour
         {
             for (int i = 0; i < poisonStacks.Count; i++)
             {
-                float dmg = poisonStacks[i].dps * Time.deltaTime;
+                float dmg = poisonStacks[i].dps * RogueMods.DamageMult() * Time.deltaTime;
                 if (Def.invincible)
                     DamageTaken += dmg;   // recorded for scoring; health never drops
                 else
@@ -196,7 +196,7 @@ public class Mob : MonoBehaviour
     public void ApplySlow(float removedFraction, float duration)
     {
         if (Def.slowResist >= 1f) return;   // a fully slow-immune boss
-        float mul = 1f - Mathf.Clamp01(removedFraction * (1f - Def.slowResist));
+        float mul = 1f - Mathf.Clamp01(removedFraction * RogueMods.SlowStrength * (1f - Def.slowResist));
         if (mul < speedMul) speedMul = mul;
         slowTimer = Mathf.Max(slowTimer, duration);
     }
@@ -306,18 +306,40 @@ public class Mob : MonoBehaviour
 
     public void TakeDamage(float dmg)
     {
-        TakeDamage(dmg, false);
+        TakeDamage(dmg, false, null);
     }
 
     /// <summary>Sniper T5 "Powdered Sour": crit damage that ignores flat armour.</summary>
     public void TakeDamageIgnoringArmour(float dmg)
     {
-        TakeDamage(dmg, true);
+        TakeDamage(dmg, true, null);
     }
 
-    void TakeDamage(float dmg, bool ignoreArmour)
+    /// <summary>Tower-originated damage: applies the local run's roguelike mods
+    /// (global/crit/source-specific) before armour.</summary>
+    public void TakeDamageFromTower(float dmg, Tower src)
+    {
+        TakeDamage(dmg, false, src);
+    }
+
+    public void TakeDamageFromTowerIgnoringArmour(float dmg, Tower src)
+    {
+        TakeDamage(dmg, true, src);
+    }
+
+    void TakeDamage(float dmg, bool ignoreArmour, Tower src)
     {
         if (dmg <= 0f || Health <= 0f) return;
+        dmg *= RogueMods.DamageMult();
+        if (src != null)
+        {
+            if (RogueMods.Artillery && src.Type == TowerType.Sniper) dmg *= 1.3f;
+            if (RogueMods.Caramelized && poisonStacks.Count > 0) dmg *= 1.25f;
+            if (RogueMods.GiantSlayer && RogueMods.MaxTier > 0 && src.Tier == RogueMods.MaxTier)
+                dmg += 0.02f * Health;
+        }
+        if (!ignoreArmour && RogueMods.CritChance > 0f && Random.value < RogueMods.CritChance)
+            dmg *= RogueMods.CritMult;
         if (tarBonus > 0f && tarTimer > 0f) dmg *= 1f + tarBonus;   // tar hits every source
         if (dipStacks.Count > 0) dmg *= 1f + DipTotal();            // Fondue T7: dipped enemies take more
         if (!ignoreArmour)
@@ -385,7 +407,7 @@ public class Mob : MonoBehaviour
             if (m == null) continue;
             m.ApplyPoison(dps, poisonSourceDuration, poisonSourceMaxStacks, poisonSource,
                           poisonDetonateRadius, poisonDetonateFraction);
-            m.TakeDamage(dmg);
+            m.TakeDamageFromTower(dmg, poisonSource);
             if (poisonSource != null) poisonSource.AddDamage(dmg);
         }
     }

@@ -108,7 +108,7 @@ public class Projectile : MonoBehaviour
                     {
                         // Splash T6 "Sticky Soda": the splash also slows everything caught.
                         if (SplashSlowFactor > 0f) m.ApplySlow(SplashSlowFactor, SplashSlowDuration);
-                        m.TakeDamage(Damage);
+                        m.TakeDamageFromTower(Damage, Source);
                         if (Source != null) Source.AddDamage(Damage);
                         // Ice Cream T7 "Brain Freeze": the splash can briefly stun.
                         if (StunChance > 0f && Random.value < StunChance) m.ApplyStun(StunDuration);
@@ -122,7 +122,7 @@ public class Projectile : MonoBehaviour
             if (PoisonDps > 0f)
                 Target.ApplyPoison(PoisonDps, PoisonDuration, PoisonMaxStacks, Source,
                                    PoisonDetonateRadius, PoisonDetonateFraction);
-            Target.TakeDamage(Damage);
+            Target.TakeDamageFromTower(Damage, Source);
             if (Source != null) Source.AddDamage(Damage);
             // tar is applied after this impact so the same gumball doesn't buff itself
             if (TarDamageBonus > 0f && Target != null) Target.ApplyTar(TarDamageBonus, TarLinger);
@@ -132,8 +132,9 @@ public class Projectile : MonoBehaviour
             // economy towers pay out only on a confirmed hit (the target still exists)
             if (GoldPerHit > 0)
             {
-                if (gm != null) gm.AwardMoney(GoldPerHit);
-                if (Source != null) Source.GoldEarned += GoldPerHit;
+                int gold = gm != null ? RogueMods.EffGold(GoldPerHit, RogueMods.IsBossWave(gm.Wave)) : GoldPerHit;
+                if (gm != null) gm.AwardMoney(gold);
+                if (Source != null) Source.GoldEarned += gold;
             }
         }
 
