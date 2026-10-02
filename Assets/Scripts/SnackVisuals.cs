@@ -93,8 +93,19 @@ public static class TowerVisual
             }
         }
 
-        GameObject glow = TDVisuals.Cyl(parent, "TierGlow",
-            new Vector3(0f, 0.02f, 0f), 0.62f, 0.02f, TierGlowMat(tier));
+        GameObject glow = GameObject.CreatePrimitive(PrimitiveType.Quad);
+        Collider gc = glow.GetComponent<Collider>();
+        if (gc != null)
+        {
+            if (Application.isPlaying) Object.Destroy(gc);
+            else Object.DestroyImmediate(gc);
+        }
+        glow.name = "TierGlow";
+        glow.transform.SetParent(parent, false);
+        glow.transform.localPosition = new Vector3(0f, 0.03f, 0f);
+        glow.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f);
+        glow.transform.localScale = new Vector3(2.0f, 2.0f, 1f);
+        glow.GetComponent<Renderer>().sharedMaterial = TierGlowMat(tier);
         Renderer gr = glow.GetComponent<Renderer>();
         if (gr != null)
         {
@@ -104,24 +115,59 @@ public static class TowerVisual
     }
 
     static readonly Dictionary<int, Material> glowMats = new Dictionary<int, Material>();
+    static readonly Dictionary<int, Texture2D> glowTexs = new Dictionary<int, Texture2D>();
 
-    /// <summary>Soft translucent tier-coloured disc material. Uses the build-safe
-    /// Fx shader so the glow survives in player builds.</summary>
+    /// <summary>Radial hot-core glow texture: white centre fading to the tier
+    /// colour with soft starburst rays, fading to transparent at the edge.</summary>
+    static Texture2D TierGlowTexture(int tier)
+    {
+        Texture2D t;
+        if (glowTexs.TryGetValue(tier, out t) && t != null) return t;
+        const int S = 128;
+        Color c = TierColour(tier);
+        Color white = Color.white;
+        t = new Texture2D(S, S, TextureFormat.RGBA32, false);
+        t.wrapMode = TextureWrapMode.Clamp;
+        t.filterMode = FilterMode.Bilinear;
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float u = (x + 0.5f) / S * 2f - 1f;
+                float v = (y + 0.5f) / S * 2f - 1f;
+                float d = Mathf.Sqrt(u * u + v * v);
+                float theta = Mathf.Atan2(v, u);
+                float rays = 1f + 0.30f * Mathf.Cos(theta * 8f) * Mathf.Clamp01(1f - d);
+                float core = Mathf.Clamp01(1f - d / 0.28f);
+                core *= core;
+                float halo = Mathf.Clamp01(1f - d);
+                halo *= halo;
+                Color rgb = Color.Lerp(c, white, core);
+                rgb.a = Mathf.Clamp01(core + halo * (0.45f + 0.30f * rays));
+                t.SetPixel(x, y, rgb);
+            }
+        }
+        t.Apply();
+        glowTexs[tier] = t;
+        return t;
+    }
+
+    /// <summary>Soft tier-coloured ground glow. Uses the build-safe Fx shader
+    /// with the radial texture baked above, so the glow survives player builds.</summary>
     static Material TierGlowMat(int tier)
     {
         Material m;
         if (glowMats.TryGetValue(tier, out m) && m != null) return m;
-        Color c = TierColour(tier);
         Shader fx = Shader.Find("Snack/Fx");
         if (fx != null)
         {
             m = new Material(fx);
-            if (m.HasProperty("_Color"))
-                m.SetColor("_Color", new Color(c.r, c.g, c.b, 0.30f));
+            m.mainTexture = TierGlowTexture(tier);
+            if (m.HasProperty("_Color")) m.SetColor("_Color", Color.white);
         }
         else
         {
-            m = TDVisuals.TransparentMat(c, 0.30f, 0.4f);
+            m = TDVisuals.TransparentMat(TierColour(tier), 0.30f, 0.4f);
         }
         glowMats[tier] = m;
         return m;
