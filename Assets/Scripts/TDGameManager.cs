@@ -71,7 +71,7 @@ public partial class TDGameManager : MonoBehaviour
     private const float GameYaw = 45f, GamePitch = 42f, GameDist = 32f;
     // bottom HUD chrome: build toolbar pinned to the screen bottom
     private const float ToolbarButtonH = 34f;
-    private const float ToolbarBottomMargin = 6f;
+    private const float ToolbarBottomMargin = 16f;
     private const float ToolbarLegendH = 0f;   // hotkey legend removed; kept at 0 so layout math still compiles
     private float camYaw = GameYaw, camPitch = GamePitch;
     private float camDist = GameDist;
@@ -776,7 +776,12 @@ public partial class TDGameManager : MonoBehaviour
         float my = Screen.height - Input.mousePosition.y;
         if (my < 84f) return true;                                    // top stats (top-left build buttons removed)
         if (my > Screen.height - ToolbarBottomMargin - ToolbarButtonH - ToolbarLegendH) return true;  // bottom toolbar
-        if (Selected != null && mx < 460f && my < 474f) return true;  // selected-tower panel
+        if (Selected != null)
+        {
+            float selX = (Screen.width - 440f) * 0.5f;
+            float selY = Screen.height - ToolbarBottomMargin - ToolbarButtonH - 8f - 344f;
+            if (mx >= selX && mx <= selX + 440f && my >= selY && my <= selY + 344f) return true;
+        }
         return false;
     }
 
@@ -1507,7 +1512,11 @@ public partial class TDGameManager : MonoBehaviour
         if (Selected != null)
         {
             TowerTierStats s = Selected.Stats;
-            GUI.Box(new Rect(12, 118, 440, 344), GUIContent.none);
+            float selX = (Screen.width - 440f) * 0.5f;
+            float btnTop = Screen.height - ToolbarBottomMargin - ToolbarButtonH;
+            float selY = btnTop - 8f - 344f;
+            float tx = selX + 8f;
+            GUI.Box(new Rect(selX, selY, 440, 344), GUIContent.none);
             string info = Selected.DisplayName + "  -  Tier " + Selected.Tier + "\n";
             if (Selected.Type == TowerType.Gold)
                 info += "Gold +" + s.goldPerHit + " per hit    Rate " + s.fireInterval.ToString("0.00") + "s";
@@ -1516,7 +1525,7 @@ public partial class TDGameManager : MonoBehaviour
             info += "\nDamage done: " + Mathf.RoundToInt(Selected.DamageDone);
             if (Selected.Type == TowerType.Gold)
                 info += "\nGold made: $" + Selected.GoldEarned;
-            GUI.Label(new Rect(20, 122, 412, 72), info, Style(14, TextAnchor.UpperLeft, Color.white));
+            GUI.Label(new Rect(tx, selY + 4, 412, 72), info, Style(14, TextAnchor.UpperLeft, Color.white));
 
             // unique tier 5/6 modifiers, or the tier 7 fusion tag (word-wrapped)
             string mod5 = TowerCatalog.ModifierText(Selected.Type, 5);
@@ -1526,7 +1535,7 @@ public partial class TDGameManager : MonoBehaviour
             {
                 GUIStyle mod7Style = Style(12, TextAnchor.UpperLeft, new Color(1f, 0.92f, 0.55f));
                 mod7Style.wordWrap = true;
-                GUI.Label(new Rect(20, 196, 412, 34), "T7: " + mod7, mod7Style);
+                GUI.Label(new Rect(tx, selY + 78, 412, 34), "T7: " + mod7, mod7Style);
             }
             else
             {
@@ -1535,20 +1544,20 @@ public partial class TDGameManager : MonoBehaviour
                 GUIStyle mod6Style = Style(12, TextAnchor.UpperLeft, new Color(1f, 0.82f, 0.45f));
                 mod6Style.wordWrap = true;
                 if (mod5 != null)
-                    GUI.Label(new Rect(20, 196, 412, 34), "T5: " + mod5, mod5Style);
+                    GUI.Label(new Rect(tx, selY + 78, 412, 34), "T5: " + mod5, mod5Style);
                 if (mod6 != null)
-                    GUI.Label(new Rect(20, 230, 412, 34), "T6: " + mod6, mod6Style);
+                    GUI.Label(new Rect(tx, selY + 112, 412, 34), "T6: " + mod6, mod6Style);
                 if (mod5 == null)
                 {
                     GUIStyle noModStyle = Style(12, TextAnchor.UpperLeft, new Color(0.75f, 0.75f, 0.78f));
                     noModStyle.wordWrap = true;
-                    GUI.Label(new Rect(20, 196, 412, 34), "No tier 5/6 modifiers" +
+                    GUI.Label(new Rect(tx, selY + 78, 412, 34), "No tier 5/6 modifiers" +
                         (Selected.Type == TowerType.Gold ? " (Gold max tier 4)" : ""), noModStyle);
                 }
             }
 
             // targeting mode: full names, 3 columns x 2 rows
-            GUI.Label(new Rect(20, 268, 120, 18), "Target:",
+            GUI.Label(new Rect(tx, selY + 150, 120, 18), "Target:",
                 Style(12, TextAnchor.MiddleLeft, new Color(0.80f, 0.85f, 0.92f)));
             TowerTargeting[] tmodes = { TowerTargeting.Default, TowerTargeting.Nearest, TowerTargeting.Farthest,
                                         TowerTargeting.Random, TowerTargeting.HighestHealth, TowerTargeting.LowestHealth };
@@ -1559,7 +1568,7 @@ public partial class TDGameManager : MonoBehaviour
                 Color oldBg = GUI.backgroundColor;
                 if (on) GUI.backgroundColor = new Color(0.72f, 1f, 0.76f);
                 int col = i % 3, row = i / 3;
-                if (GUI.Button(new Rect(20 + col * 140, 288 + row * 28, 132, 26), tnames[i]))
+                if (GUI.Button(new Rect(tx + col * 140, selY + 170 + row * 28, 132, 26), tnames[i]))
                 {
                     if (TDAudio.Instance != null) TDAudio.Instance.Click();
                     Selected.SetTargeting(tmodes[i]);
@@ -1568,7 +1577,7 @@ public partial class TDGameManager : MonoBehaviour
             }
             GUIStyle targetStyle = Style(12, TextAnchor.UpperLeft, new Color(0.85f, 0.85f, 0.88f));
             targetStyle.wordWrap = true;
-            GUI.Label(new Rect(20, 346, 412, 26), TargetingName(Selected.Targeting), targetStyle);
+            GUI.Label(new Rect(tx, selY + 228, 412, 26), TargetingName(Selected.Targeting), targetStyle);
 
             bool canFuse = Selected.Type != TowerType.Gold && Selected.Tier == TowerCatalog.MaxTier - 1;
             bool canMerge = Selected.Type != TowerType.Gold &&
@@ -1581,30 +1590,30 @@ public partial class TDGameManager : MonoBehaviour
 
             if (merging)
             {
-                GUI.Label(new Rect(20, 376, 412, 20),
+                GUI.Label(new Rect(tx, selY + 258, 412, 20),
                     Selected.Tier == TowerCatalog.MaxTier - 1
                         ? "Select another Tier 6 tower to fuse with"
                         : "Select a Tier " + Selected.Tier + " tower to merge with",
                     Style(13, TextAnchor.UpperLeft, new Color(1f, 0.9f, 0.4f)));
-                if (GUI.Button(new Rect(20, 400, 110, 26), "Cancel"))
+                if (GUI.Button(new Rect(tx, selY + 282, 110, 26), "Cancel"))
                 {
                     if (TDAudio.Instance != null) TDAudio.Instance.Click();
                     CancelMode();
                 }
-                if (GUI.Button(new Rect(140, 400, 150, 26), "Sell (X)  $" + sellValue))
+                if (GUI.Button(new Rect(tx + 120, selY + 282, 150, 26), "Sell (X)  $" + sellValue))
                     TrySell();
             }
             else if (reRolling)
             {
-                GUI.Label(new Rect(20, 376, 412, 20),
+                GUI.Label(new Rect(tx, selY + 258, 412, 20),
                     "Select a Tier " + (Selected.Tier - 1) + " tower to re-roll with",
                     Style(13, TextAnchor.UpperLeft, new Color(1f, 0.9f, 0.4f)));
-                if (GUI.Button(new Rect(20, 400, 110, 26), "Cancel"))
+                if (GUI.Button(new Rect(tx, selY + 282, 110, 26), "Cancel"))
                 {
                     if (TDAudio.Instance != null) TDAudio.Instance.Click();
                     CancelMode();
                 }
-                if (GUI.Button(new Rect(140, 400, 150, 26), "Sell (X)  $" + sellValue))
+                if (GUI.Button(new Rect(tx + 120, selY + 282, 150, 26), "Sell (X)  $" + sellValue))
                     TrySell();
             }
             else
@@ -1617,7 +1626,7 @@ public partial class TDGameManager : MonoBehaviour
                     bool canAfford = Money >= mergeCost;
                     GUI.enabled = canAfford;
                     string mergeLabel = (canFuse ? "Fuse (E)  $" : "Merge (E)  $") + mergeCost;
-                    if (GUI.Button(new Rect(20, 378, 190, 30), mergeLabel))
+                    if (GUI.Button(new Rect(tx, selY + 260, 190, 30), mergeLabel))
                         TryStartMerge();
                     GUI.enabled = true;
                     drewAction = true;
@@ -1627,31 +1636,31 @@ public partial class TDGameManager : MonoBehaviour
                     bool canAfford = Money >= ascendCost;
                     GUI.enabled = canAfford;
                     string upLabel = (Selected.Type == TowerType.Gold ? "Upgrade (U)  $" : "Ascend (U)  $") + ascendCost;
-                    if (GUI.Button(new Rect(218, 378, 190, 30), upLabel))
+                    if (GUI.Button(new Rect(tx + 198, selY + 260, 190, 30), upLabel))
                         TryStartAscend();
                     GUI.enabled = true;
                     drewAction = true;
                 }
                 if (!drewAction)
                 {
-                    GUI.Label(new Rect(20, 382, 190, 22), "Max tier",
+                    GUI.Label(new Rect(tx, selY + 264, 190, 22), "Max tier",
                         Style(13, TextAnchor.MiddleLeft, new Color(0.8f, 0.8f, 0.8f)));
                 }
 
-                if (canReRoll && GUI.Button(new Rect(20, 412, 150, 30), "Re-roll (R)"))
+                if (canReRoll && GUI.Button(new Rect(tx, selY + 294, 150, 30), "Re-roll (R)"))
                     TryStartReRoll();
-                if (GUI.Button(new Rect(180, 412, 160, 30), "Sell (X)  $" + sellValue))
+                if (GUI.Button(new Rect(tx + 160, selY + 294, 160, 30), "Sell (X)  $" + sellValue))
                     TrySell();
             }
         }
 
-        // ---- bottom toolbar: build slots (room for future options) ----
+        // ---- bottom toolbar: build slots, centered with 16px bottom margin ----
         // (hotkey legend removed; full keybinding map lives in Settings -> Controls)
         if (ViewingOwnBoard)
         {
             float btnY = Screen.height - ToolbarBottomMargin - ToolbarButtonH;
             const float slotW = 200f, slotGap = 8f;
-            float slotX = 12f;
+            float slotX = (Screen.width - (slotW * 2f + slotGap)) * 0.5f;
 
             Color prevBg = GUI.backgroundColor;
             if (building) GUI.backgroundColor = new Color(0.45f, 1f, 0.5f);
