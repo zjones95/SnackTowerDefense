@@ -1590,8 +1590,10 @@ public partial class TDGameManager : MonoBehaviour
             GUI.Box(new Rect(selX, selY, 440, 344), GUIContent.none);
             // Effective per-hit damage and fire rate: catalog stats times this
             // tower's support-aura buffs and the run's roguelike modifiers.
-            float dmgMult = RogueMods.DamageMult() * Selected.DamageMultiplier;
-            float rateMult = RogueMods.EffRate(RogueMods.IsBossWave(Wave)) * (1f + Selected.SpeedBuff);
+            float runDmg = RogueMods.DamageMult();
+            float runRate = RogueMods.EffRate(RogueMods.IsBossWave(Wave));
+            float dmgMult = runDmg * Selected.DamageMultiplier;
+            float rateMult = runRate * (1f + Selected.SpeedBuff);
             float effDamage = s.damage * dmgMult;
             float effRate = s.fireInterval / Mathf.Max(0.0001f, rateMult);
 
@@ -1621,10 +1623,10 @@ public partial class TDGameManager : MonoBehaviour
             if (Selected.SpeedBuff > 0.0005f)
                 auraText += (auraText.Length > 0 ? " " : "") + "+" + Mathf.RoundToInt(Selected.SpeedBuff * 100f) + "% SPD";
             string runText = "";
-            if (dmgMult > 1.005f)
-                runText += "+" + Mathf.RoundToInt((dmgMult - 1f) * 100f) + "% DMG";
-            if (rateMult > 1.005f)
-                runText += (runText.Length > 0 ? " " : "") + "+" + Mathf.RoundToInt((rateMult - 1f) * 100f) + "% SPD";
+            if (runDmg > 1.005f)
+                runText += "+" + Mathf.RoundToInt((runDmg - 1f) * 100f) + "% DMG";
+            if (runRate > 1.005f)
+                runText += (runText.Length > 0 ? " " : "") + "+" + Mathf.RoundToInt((runRate - 1f) * 100f) + "% SPD";
             if (Mathf.Abs(RogueMods.Range - 1f) > 0.005f)
                 runText += (runText.Length > 0 ? " " : "") + (RogueMods.Range >= 1f ? "+" : "") +
                     Mathf.RoundToInt((RogueMods.Range - 1f) * 100f) + "% RNG";
