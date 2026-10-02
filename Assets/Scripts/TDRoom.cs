@@ -128,6 +128,9 @@ public static class TDRoom
         // lamp
         TDVisuals.Cyl(parent, "LampPole", new Vector3(westX - 0.6f, 1.1f, 10f), 0.08f, 2.2f, metal);
         TDVisuals.Cyl(parent, "LampShade", new Vector3(westX - 0.6f, 2.35f, 10f), 0.55f, 0.7f, shade);
+
+        // wooden toy train circling the play mat on the carpet (decor only)
+        TrainSet.Build(parent, map);
     }
 
     static void BuildArctic(Transform parent, TDMap map)
