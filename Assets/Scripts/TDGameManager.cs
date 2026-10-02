@@ -1322,7 +1322,7 @@ public partial class TDGameManager : MonoBehaviour
         float bx = (Screen.width - bw) * 0.5f;
         float by = Screen.height * 0.30f;
         GUIStyle btn = PaperButton(22);
-        DrawPanel(new Rect(bx - 32f, by - 64f, bw + 64f, 7f * bh + 6f * gap + 128f));
+        DrawPanel(new Rect(bx - 32f, by - 32f, bw + 64f, 7f * bh + 6f * gap + 64f));
 
         if (GUI.Button(new Rect(bx, by, bw, bh), "Single Player", btn))
         {
